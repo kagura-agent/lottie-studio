@@ -1,4 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { animationEvents } from "@/lib/events";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -52,6 +53,9 @@ export async function PUT(
   }
 
   const row = db.prepare("SELECT * FROM animations WHERE id = ?").get(id);
+
+  animationEvents.emit("updated", { animationId: id });
+
   return Response.json(row);
 }
 
