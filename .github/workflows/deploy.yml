@@ -27,11 +27,14 @@ jobs:
         run: |
           mkdir -p deploy
           # Copy standalone output (nested under project name)
+          # Use shopt dotglob so hidden dirs like .next are included
+          shopt -s dotglob
           if [ -d .next/standalone/lottie-studio ]; then
             cp -r .next/standalone/lottie-studio/* deploy/
           else
             cp -r .next/standalone/* deploy/
           fi
+          shopt -u dotglob
           # Copy static assets (not included in standalone)
           mkdir -p deploy/.next
           cp -r .next/static deploy/.next/static
