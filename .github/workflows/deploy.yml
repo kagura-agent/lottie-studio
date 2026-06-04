@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npx next build
+
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy
+          # Copy standalone output (nested under project name)
+          if [ -d .next/standalone/lottie-studio ]; then
+            cp -r .next/standalone/lottie-studio/* deploy/
+          else
+            cp -r .next/standalone/* deploy/
+          fi
+          # Copy static assets (not included in standalone)
+          mkdir -p deploy/.next
+          cp -r .next/static deploy/.next/static
+          # Copy public directory
+          cp -r public deploy/public 2>/dev/null || true
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM1_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H moltbook.kagura-agent.com >> ~/.ssh/known_hosts
+
+      - name: Deploy to VM1
+        env:
+          SSH_OPTS: -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no
+          SSH_TARGET: azureuser@moltbook.kagura-agent.com
+          DEPLOY_DIR: /home/azureuser/lottie-studio
+        run: |
+          # Create target directory
+          ssh $SSH_OPTS $SSH_TARGET "mkdir -p $DEPLOY_DIR"
+
+          # Sync deployment package
+          rsync -avz --delete \
+            -e "ssh $SSH_OPTS" \
+            deploy/ $SSH_TARGET:$DEPLOY_DIR/
+
+          # Install production dependencies on server (needed for better-sqlite3 native addon)
+          ssh $SSH_OPTS $SSH_TARGET "cd $DEPLOY_DIR && npm install --omit=dev better-sqlite3"
+
+          # Ensure data directory exists for SQLite database
+          ssh $SSH_OPTS $SSH_TARGET "mkdir -p $DEPLOY_DIR/data"
+
+          # Create/update systemd service
+          ssh $SSH_OPTS $SSH_TARGET "sudo tee /etc/systemd/system/lottie-studio.service > /dev/null << 'UNIT'
+          [Unit]
+          Description=Lottie Studio
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=azureuser
+          WorkingDirectory=/home/azureuser/lottie-studio
+          ExecStart=/usr/bin/node server.js
+          Environment=NODE_ENV=production
+          Environment=PORT=3400
+          Environment=HOSTNAME=0.0.0.0
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          UNIT"
+
+          # Reload and restart
+          ssh $SSH_OPTS $SSH_TARGET "sudo systemctl daemon-reload && sudo systemctl enable lottie-studio && sudo systemctl restart lottie-studio"
+
+          # Wait for startup
+          sleep 3
+
+          # Health check
+          ssh $SSH_OPTS $SSH_TARGET "curl -sf http://localhost:3400/api/health || (sudo journalctl -u lottie-studio -n 20 --no-pager && exit 1)"
