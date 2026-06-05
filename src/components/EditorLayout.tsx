@@ -6,6 +6,7 @@ import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
 import Controls from "./Controls";
+import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 
 interface EditorPageProps {
   id: string;
@@ -27,6 +28,24 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleExternalUpdate = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/animations/${id}`);
+      if (!res.ok) return;
+      const result = await res.json();
+      if (result.data) {
+        const text = JSON.stringify(result.data, null, 2);
+        setJsonText(text);
+        setAnimationData(result.data);
+      }
+      if (result.name) setName(result.name);
+    } catch {
+      // ignore fetch errors
+    }
+  }, [id]);
+
+  useAnimationSocket(id, handleExternalUpdate);
 
   const handleJsonChange = useCallback((value: string) => {
     setJsonText(value);
