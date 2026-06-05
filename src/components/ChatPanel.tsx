@@ -6,6 +6,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  warning?: string;
 }
 
 interface ChatPanelProps {
@@ -19,6 +20,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
@@ -150,7 +152,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
           if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
           const data = trimmed.slice(6);
-          let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string };
+          let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string };
           try {
             parsed = JSON.parse(data);
           } catch {
@@ -232,9 +234,10 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             // Replace streaming content with final reply for accuracy
             if (assistantMsgId && parsed.reply) {
               const msgId = assistantMsgId;
+              const warningText = parsed.warning as string | undefined;
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === msgId ? { ...m, content: parsed.reply! } : m
+                  m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText } : m
                 )
               );
             }
@@ -260,6 +263,9 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
   };
 
   const dismissError = useCallback(() => setError(null), []);
+  const dismissWarning = useCallback((msgId: string) => {
+    setDismissedWarnings((prev) => new Set(prev).add(msgId));
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-zinc-900">
@@ -271,19 +277,35 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
           </div>
         )}
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={msg.id}>
             <div
-              className={`max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-zinc-700 text-zinc-100"
-              }`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.content}
+              <div
+                className={`max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-zinc-700 text-zinc-100"
+                }`}
+              >
+                {msg.content}
+              </div>
             </div>
+            {msg.warning && !dismissedWarnings.has(msg.id) && (
+              <div className="flex justify-start mt-1">
+                <div className="max-w-[80%] px-3 py-1.5 rounded-md bg-amber-900/30 border border-amber-700/40 text-amber-200/80 text-xs flex items-start gap-1.5">
+                  <span className="shrink-0">⚠️</span>
+                  <span className="flex-1">{msg.warning}</span>
+                  <button
+                    onClick={() => dismissWarning(msg.id)}
+                    className="text-amber-400/60 hover:text-amber-200 font-bold leading-none ml-1"
+                    aria-label="Dismiss warning"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {isThinking && (
