@@ -124,6 +124,12 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
       const decoder = new TextDecoder();
       let sseBuffer = "";
       let assistantMsgId: string | null = null;
+      // Track full accumulated content (including JSON) and visible-only content
+      let fullContent = "";
+      let visibleContent = "";
+      let insideJsonBlock = false;
+      // Buffer for detecting partial code fences across chunks
+      let fenceBuffer = "";
 
       setIsThinking(false);
       setIsStreaming(true);
@@ -152,21 +158,70 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
           }
 
           if (parsed.type === "token") {
+            const tokenText = parsed.text || "";
+            fullContent += tokenText;
+
+            // Process token text character by character to handle
+            // code fences that may arrive split across chunks
+            let visibleChunk = "";
+            for (const ch of tokenText) {
+              fenceBuffer += ch;
+
+              if (!insideJsonBlock) {
+                // Looking for opening ```json fence
+                if (fenceBuffer.endsWith("```json")) {
+                  // Remove the "```json" from visible output
+                  visibleChunk = visibleChunk.slice(0, -("```json".length - 1));
+                  insideJsonBlock = true;
+                  fenceBuffer = "";
+                } else if ("```json".startsWith(fenceBuffer)) {
+                  // Potential partial match — hold in buffer, don't emit yet
+                } else {
+                  // No match possible — flush buffer to visible
+                  visibleChunk += fenceBuffer[0];
+                  // Re-check remaining buffer chars (shift by 1)
+                  fenceBuffer = fenceBuffer.slice(1);
+                  // Continue checking if remainder could still be a prefix
+                  while (fenceBuffer.length > 0 && !"```json".startsWith(fenceBuffer)) {
+                    visibleChunk += fenceBuffer[0];
+                    fenceBuffer = fenceBuffer.slice(1);
+                  }
+                }
+              } else {
+                // Inside JSON block — looking for closing ``` fence
+                if (fenceBuffer.endsWith("```")) {
+                  insideJsonBlock = false;
+                  fenceBuffer = "";
+                } else if ("```".startsWith(fenceBuffer)) {
+                  // Potential partial closing fence — keep buffering
+                } else {
+                  // Not a fence — discard (we're inside hidden block)
+                  fenceBuffer = fenceBuffer.slice(1);
+                  while (fenceBuffer.length > 0 && !"```".startsWith(fenceBuffer)) {
+                    fenceBuffer = fenceBuffer.slice(1);
+                  }
+                }
+              }
+            }
+
+            visibleContent += visibleChunk;
+
             if (!assistantMsgId) {
               // Create the assistant message on first token
               assistantMsgId = crypto.randomUUID();
               const newMsg: Message = {
                 id: assistantMsgId,
                 role: "assistant",
-                content: parsed.text || "",
+                content: visibleContent,
               };
               setMessages((prev) => [...prev, newMsg]);
             } else {
-              // Append to existing assistant message
+              // Update assistant message with current visible content
               const msgId = assistantMsgId;
+              const currentVisible = visibleContent;
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === msgId ? { ...m, content: m.content + (parsed.text || "") } : m
+                  m.id === msgId ? { ...m, content: currentVisible } : m
                 )
               );
             }
