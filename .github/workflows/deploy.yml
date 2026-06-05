@@ -21,7 +21,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npx next build
+        run: npm run build
 
       - name: Prepare deployment package
         run: |
@@ -35,6 +35,8 @@ jobs:
             cp -r .next/standalone/* deploy/
           fi
           shopt -u dotglob
+          # Replace default standalone server.js with our custom WebSocket-enabled server
+          cp dist/server.js deploy/server.js
           # Copy static assets (not included in standalone)
           mkdir -p deploy/.next
           cp -r .next/static deploy/.next/static
