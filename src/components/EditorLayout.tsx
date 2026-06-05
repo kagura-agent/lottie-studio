@@ -198,7 +198,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ChatPanel />
+              <ChatPanel animationId={id} />
             ) : (
               <JsonEditor value={jsonText} onChange={handleJsonChange} />
             )}
