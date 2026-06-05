@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
+import ChatPanel from "./ChatPanel";
 import Controls from "./Controls";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 
@@ -27,6 +28,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
+  const [rightPanel, setRightPanel] = useState<"chat" | "json">("chat");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleExternalUpdate = useCallback(async () => {
@@ -171,8 +173,36 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
         </div>
 
         {/* Editor panel */}
-        <div className="flex-1 min-h-[300px] md:min-h-0">
-          <JsonEditor value={jsonText} onChange={handleJsonChange} />
+        <div className="flex flex-col flex-1 min-h-[300px] md:min-h-0">
+          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
+            <button
+              onClick={() => setRightPanel("chat")}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                rightPanel === "chat"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setRightPanel("json")}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                rightPanel === "json"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              JSON
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            {rightPanel === "chat" ? (
+              <ChatPanel />
+            ) : (
+              <JsonEditor value={jsonText} onChange={handleJsonChange} />
+            )}
+          </div>
         </div>
       </div>
     </div>
