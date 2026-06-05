@@ -16,6 +16,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -33,7 +34,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isThinking, scrollToBottom]);
+  }, [messages, isThinking, isStreaming, scrollToBottom]);
 
   // Load conversation history on mount / when animationId changes
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || isThinking) return;
+    if (!text || isThinking || isStreaming) return;
 
     setError(null);
 
@@ -94,32 +95,107 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
         }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.error || `Request failed (${res.status})`;
-        throw new Error(errMsg);
+      // Fallback: if not SSE (e.g. error JSON response), handle like old path
+      const contentType = res.headers.get("Content-Type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.error || `Request failed (${res.status})`;
+          throw new Error(errMsg);
+        }
+        const data = await res.json();
+        if (!currentAnimationId && data.animationId) {
+          setCurrentAnimationId(data.animationId);
+        }
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.reply,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsThinking(false);
+        return;
       }
 
-      const data = await res.json();
+      // SSE streaming path
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-      // If this was a new animation (no animationId), capture the returned id
-      if (!currentAnimationId && data.animationId) {
-        setCurrentAnimationId(data.animationId);
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+      let assistantMsgId: string | null = null;
+
+      setIsThinking(false);
+      setIsStreaming(true);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        sseBuffer += decoder.decode(value, { stream: true });
+
+        // Split on double newlines to get complete SSE events
+        const parts = sseBuffer.split("\n\n");
+        // Keep the last potentially incomplete part
+        sseBuffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+          const data = trimmed.slice(6);
+          let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string };
+          try {
+            parsed = JSON.parse(data);
+          } catch {
+            continue;
+          }
+
+          if (parsed.type === "token") {
+            if (!assistantMsgId) {
+              // Create the assistant message on first token
+              assistantMsgId = crypto.randomUUID();
+              const newMsg: Message = {
+                id: assistantMsgId,
+                role: "assistant",
+                content: parsed.text || "",
+              };
+              setMessages((prev) => [...prev, newMsg]);
+            } else {
+              // Append to existing assistant message
+              const msgId = assistantMsgId;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === msgId ? { ...m, content: m.content + (parsed.text || "") } : m
+                )
+              );
+            }
+          } else if (parsed.type === "done") {
+            if (!currentAnimationId && parsed.animationId) {
+              setCurrentAnimationId(parsed.animationId);
+            }
+            // Replace streaming content with final reply for accuracy
+            if (assistantMsgId && parsed.reply) {
+              const msgId = assistantMsgId;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === msgId ? { ...m, content: parsed.reply! } : m
+                )
+              );
+            }
+          } else if (parsed.type === "error") {
+            setError(parsed.error || "An unexpected error occurred");
+          }
+        }
       }
-
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data.reply,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errMsg);
     } finally {
       setIsThinking(false);
+      setIsStreaming(false);
     }
-  }, [input, isThinking, currentAnimationId]);
+  }, [input, isThinking, isStreaming, currentAnimationId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -193,12 +269,12 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Describe your animation..."
-            disabled={isThinking}
+            disabled={isThinking || isStreaming}
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isThinking}
+            disabled={!input.trim() || isThinking || isStreaming}
             className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send

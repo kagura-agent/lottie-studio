@@ -1,5 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
-import { chatCompletion } from "@/lib/llm";
+import { chatCompletionStream, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { animationEvents } from "@/lib/events";
 import { randomUUID } from "node:crypto";
@@ -56,50 +56,120 @@ export async function POST(request: Request) {
     "SELECT role, content FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
   ).all(animationId) as MessageRow[];
 
-  const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+  const llmMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system", content: buildSystemPrompt(currentAnimation) },
     ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user", content: message },
   ];
 
-  let reply: string;
-  let lottieJson: object | null;
-
+  let llmResponse: Response;
   try {
-    const result = await chatCompletion(messages);
-    reply = result.reply;
-    lottieJson = result.lottieJson;
+    llmResponse = await chatCompletionStream(llmMessages);
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Unknown error";
     return Response.json({ error: `LLM request failed: ${errMsg}` }, { status: 502 });
   }
 
-  db.prepare(
-    "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
-  ).run(randomUUID(), animationId, message);
-
-  db.prepare(
-    "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
-  ).run(randomUUID(), animationId, reply, lottieJson ? JSON.stringify(lottieJson) : null);
-
-  if (lottieJson) {
-    fs.writeFileSync(animationFile, JSON.stringify(lottieJson));
-
-    const lottie = lottieJson as Record<string, unknown>;
-    const frameCount = (lottie.op as number) ?? null;
-    const frameRate = (lottie.fr as number) ?? 30;
-    const durationSeconds = frameCount != null ? frameCount / frameRate : null;
-
-    db.prepare(
-      "UPDATE animations SET frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
-    ).run(frameCount, durationSeconds, animationId);
-
-    animationEvents.emit("updated", { animationId });
+  const llmBody = llmResponse.body;
+  if (!llmBody) {
+    return Response.json({ error: "LLM returned no body" }, { status: 502 });
   }
 
-  return Response.json({
-    animationId,
-    reply,
-    animationData: lottieJson,
+  // Capture animationId in closure for the stream
+  const capturedAnimationId = animationId;
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const reader = llmBody.getReader();
+      let accumulated = "";
+      let sseBuffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          sseBuffer += decoder.decode(value, { stream: true });
+
+          // Process complete SSE lines
+          const lines = sseBuffer.split("\n");
+          // Keep the last potentially incomplete line in the buffer
+          sseBuffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+            const data = trimmed.slice(6);
+            if (data === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                accumulated += content;
+                const chunk = JSON.stringify({ type: "token", text: content });
+                controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+              }
+            } catch {
+              // Skip malformed JSON chunks
+            }
+          }
+        }
+
+        // Stream ended — finalize
+        const { reply, lottieJson } = parseResponse(accumulated);
+
+        // Save messages to DB
+        db.prepare(
+          "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
+        ).run(randomUUID(), capturedAnimationId, message);
+
+        db.prepare(
+          "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
+        ).run(randomUUID(), capturedAnimationId, reply, lottieJson ? JSON.stringify(lottieJson) : null);
+
+        // Save animation file and update DB if we got Lottie JSON
+        if (lottieJson) {
+          fs.writeFileSync(animationFile, JSON.stringify(lottieJson));
+
+          const lottie = lottieJson as Record<string, unknown>;
+          const frameCount = (lottie.op as number) ?? null;
+          const frameRate = (lottie.fr as number) ?? 30;
+          const durationSeconds = frameCount != null ? frameCount / frameRate : null;
+
+          db.prepare(
+            "UPDATE animations SET frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
+          ).run(frameCount, durationSeconds, capturedAnimationId);
+
+          animationEvents.emit("updated", { animationId: capturedAnimationId });
+        }
+
+        // Emit final done event
+        const doneEvent = JSON.stringify({
+          type: "done",
+          reply,
+          lottieJson,
+          animationId: capturedAnimationId,
+        });
+        controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Stream processing error";
+        const errorEvent = JSON.stringify({ type: "error", error: errMsg });
+        controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
   });
 }

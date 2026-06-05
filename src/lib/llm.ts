@@ -37,7 +37,31 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<LLMRespon
   return parseResponse(content);
 }
 
-function parseResponse(content: string): LLMResponse {
+export async function chatCompletionStream(messages: ChatMessage[]): Promise<Response> {
+  const url = `${LLM_API_URL}/chat/completions`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages,
+      temperature: 0.7,
+      max_tokens: 16384,
+      stream: true,
+    }),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`LLM API error ${response.status}: ${body}`);
+  }
+
+  return response;
+}
+
+export function parseResponse(content: string): LLMResponse {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
 
   if (!jsonMatch) {
