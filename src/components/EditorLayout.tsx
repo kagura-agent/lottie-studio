@@ -68,6 +68,19 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     };
   }, []);
 
+  const handleExport = () => {
+    if (!animationData) return;
+    const json = JSON.stringify(animationData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${sanitized}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaveStatus("idle");
@@ -122,6 +135,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onChange={(e) => setName(e.target.value)}
           className="bg-transparent border-b border-zinc-700 text-zinc-100 text-lg font-semibold px-1 py-0.5 focus:outline-none focus:border-zinc-400 transition-colors flex-1 min-w-0"
         />
+        <button
+          onClick={handleExport}
+          disabled={animationData === null}
+          className="px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Export
+        </button>
         <button
           onClick={handleSave}
           disabled={saving || animationData === null}
