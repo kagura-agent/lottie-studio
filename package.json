@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch server.ts",
-    "build": "next build",
+    "build": "next build && esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist/server.js --external:next --external:better-sqlite3",
     "start": "tsx server.ts",
     "lint": "eslint"
   },
@@ -33,6 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
