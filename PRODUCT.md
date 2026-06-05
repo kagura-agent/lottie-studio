@@ -121,6 +121,34 @@ The agent needs:
 
 Use Floway (LLM proxy on VM1, port 3201) or direct provider API. Config via environment variable so it's swappable.
 
+## Architecture Reference: Claude Code Source
+
+Path: `/mnt/data/claude-code-ref/` — Claude Code leaked source (2026-03-31).
+
+### Key patterns to adopt:
+
+1. **Query Loop** (`src/query.ts`): The core agent loop.
+   - `while(true)`: send messages to LLM → stream response → if response has tool_use → execute tool → append tool_result → loop. Exit when no tool_use in response.
+   - This maps to our chat flow: user message → LLM generates Lottie JSON → save animation → respond. No tool_use needed for v1 (LLM returns JSON directly), but the loop pattern enables future tools ("fetch this SVG", "sample color from image").
+
+2. **Streaming Messages** (`src/bridge/bridgeMessaging.ts`): WebSocket protocol.
+   - Messages are streamed token-by-token to the UI as they arrive.
+   - Message types: user | assistant | system. We simplify to user | assistant for chat.
+   - Apply to our chat: stream the agent's text reply AND the generated JSON separately.
+
+3. **Session + History** (`src/bridge/codeSessionApi.ts`, `src/services/SessionMemory/`):
+   - Each session has an ID, persisted messages, and context.
+   - Maps to our animation editor: each animation = a session with its chat history.
+
+4. **Tool Definitions** (`src/Tool.ts`, `src/tools/`):
+   - Tools are registered with name + schema + handler.
+   - Future: register Lottie-specific tools ("save animation", "add layer", "set keyframe") that the agent can call.
+
+### What NOT to copy:
+- The permission system (we don't need user approval for generating JSON)
+- The bridge/remote-control infra (we're a web app, not a CLI)
+- The complex compaction/context management (our context is small: one animation JSON)
+
 ## Tech Stack
 
 - **Frontend**: Next.js 16 + React 19 + Tailwind CSS + lottie-web
