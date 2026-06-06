@@ -29,6 +29,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
   const [rightPanel, setRightPanel] = useState<"chat" | "json">("chat");
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleExternalUpdate = useCallback(async () => {
@@ -141,6 +142,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           className="px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export
+        </button>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`${window.location.origin}/share/${id}`);
+            setShareStatus("copied");
+            setTimeout(() => setShareStatus("idle"), 2000);
+          }}
+          className="px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors"
+        >
+          {shareStatus === "copied" ? "Copied!" : "Share"}
         </button>
         <button
           onClick={handleSave}
