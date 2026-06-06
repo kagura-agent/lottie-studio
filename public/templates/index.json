@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bouncing-ball",
+    "name": "Bouncing Ball",
+    "description": "Classic bounce with squash & stretch",
+    "category": "Motion",
+    "file": "bouncing-ball.json"
+  },
+  {
+    "id": "spinning-logo",
+    "name": "Spinning Logo",
+    "description": "360° rotation loop for logos and icons",
+    "category": "Rotation",
+    "file": "spinning-logo.json"
+  },
+  {
+    "id": "pulse-heartbeat",
+    "name": "Pulse Heartbeat",
+    "description": "Rhythmic scale pulse with glow ring",
+    "category": "Scale",
+    "file": "pulse-heartbeat.json"
+  },
+  {
+    "id": "loading-spinner",
+    "name": "Loading Spinner",
+    "description": "8-dot circular spinner with opacity trail",
+    "category": "Looping",
+    "file": "loading-spinner.json"
+  },
+  {
+    "id": "fade-text",
+    "name": "Fade In Text",
+    "description": "Sequential text lines fading in with slide",
+    "category": "Opacity",
+    "file": "fade-text.json"
+  },
+  {
+    "id": "floating-particles",
+    "name": "Floating Particles",
+    "description": "Colorful particles drifting upward",
+    "category": "Multi-layer",
+    "file": "floating-particles.json"
+  }
+]
