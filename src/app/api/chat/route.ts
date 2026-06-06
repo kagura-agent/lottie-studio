@@ -120,7 +120,23 @@ export async function POST(request: Request) {
         }
 
         // Stream ended — finalize
-        const { reply, lottieJson } = parseResponse(accumulated);
+        const { reply, lottieJson, parseError } = parseResponse(accumulated);
+
+        // Build warning message when Lottie JSON generation failed
+        let warning: string | undefined;
+        if (!lottieJson && parseError) {
+          switch (parseError) {
+            case "invalid_json":
+              warning = "The generated animation code was malformed. Try rephrasing your request.";
+              break;
+            case "invalid_lottie":
+              warning = "The response contained JSON but it wasn\u2019t a valid Lottie animation. Try describing your animation more specifically.";
+              break;
+            case "no_json":
+              warning = "Could not generate animation from the response. Try describing your animation more specifically.";
+              break;
+          }
+        }
 
         // Save messages to DB
         db.prepare(
@@ -153,6 +169,7 @@ export async function POST(request: Request) {
           reply,
           lottieJson,
           animationId: capturedAnimationId,
+          ...(warning ? { warning } : {}),
         });
         controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
       } catch (err) {

@@ -6,9 +6,12 @@ interface ChatMessage {
   content: string;
 }
 
+type ParseError = "no_json" | "invalid_json" | "invalid_lottie" | null;
+
 interface LLMResponse {
   reply: string;
   lottieJson: object | null;
+  parseError: ParseError;
 }
 
 export async function chatCompletion(messages: ChatMessage[]): Promise<LLMResponse> {
@@ -65,7 +68,7 @@ export function parseResponse(content: string): LLMResponse {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
 
   if (!jsonMatch) {
-    return { reply: content.trim(), lottieJson: null };
+    return { reply: content.trim(), lottieJson: null, parseError: "no_json" };
   }
 
   const jsonStr = jsonMatch[1].trim();
@@ -76,10 +79,10 @@ export function parseResponse(content: string): LLMResponse {
   try {
     const parsed = JSON.parse(jsonStr);
     if (!parsed.v || !parsed.layers) {
-      return { reply: content.trim(), lottieJson: null };
+      return { reply: content.trim(), lottieJson: null, parseError: "invalid_lottie" };
     }
-    return { reply: reply || "Here's the animation.", lottieJson: parsed };
+    return { reply: reply || "Here's the animation.", lottieJson: parsed, parseError: null };
   } catch {
-    return { reply: content.trim(), lottieJson: null };
+    return { reply: content.trim(), lottieJson: null, parseError: "invalid_json" };
   }
 }
