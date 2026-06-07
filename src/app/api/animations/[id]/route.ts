@@ -1,5 +1,6 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { animationEvents } from "@/lib/events";
+import { invalidateThumbnail } from "@/lib/thumbnail";
 import _has from "lodash/has";
 import _set from "lodash/set";
 import fs from "node:fs";
@@ -50,6 +51,7 @@ export async function PUT(
     db.prepare(
       "UPDATE animations SET name = COALESCE(?, name), frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
     ).run(name, frameCount, durationSeconds, id);
+    invalidateThumbnail(id);
   } else if (name) {
     db.prepare("UPDATE animations SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name, id);
   }
@@ -126,6 +128,7 @@ export async function PATCH(
 
   // Save updated data
   fs.writeFileSync(filePath, JSON.stringify(data));
+  invalidateThumbnail(id);
 
   // Update DB metadata
   const frameCount = data.op ?? data.totalFrames ?? null;
@@ -162,6 +165,7 @@ export async function DELETE(
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
+  invalidateThumbnail(id);
 
   return Response.json({ success: true });
 }
