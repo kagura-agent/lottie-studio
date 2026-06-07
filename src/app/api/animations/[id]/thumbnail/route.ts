@@ -83,8 +83,8 @@ export async function GET(
   // Check cache
   const cachePath = path.join(THUMBNAILS_DIR, `${id}.png`);
   if (fs.existsSync(cachePath)) {
-    const buffer = fs.readFileSync(cachePath);
-    return new NextResponse(buffer, {
+    const cached = fs.readFileSync(cachePath);
+    return new NextResponse(new Uint8Array(cached), {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
@@ -99,7 +99,7 @@ export async function GET(
   // Cache to filesystem
   fs.writeFileSync(cachePath, buffer);
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "image/png",
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
