@@ -8,6 +8,7 @@ import JsonEditor from "./JsonEditor";
 import ChatPanel from "./ChatPanel";
 import Controls from "./Controls";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
+import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 
 interface EditorPageProps {
   id: string;
@@ -19,6 +20,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const router = useRouter();
   const [jsonText, setJsonText] = useState(() => JSON.stringify(initialData, null, 2));
   const [animationData, setAnimationData] = useState<object | null>(initialData);
+  const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData);
   const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -43,14 +45,47 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
         const text = JSON.stringify(result.data, null, 2);
         setJsonText(text);
         setAnimationData(result.data);
+        pushState(result.data);
       }
       if (result.name) setName(result.name);
     } catch {
       // ignore fetch errors
     }
-  }, [id]);
+  }, [id, pushState]);
 
   useAnimationSocket(id, handleExternalUpdate);
+
+  const applyHistoryState = useCallback((data: object) => {
+    const text = JSON.stringify(data, null, 2);
+    setJsonText(text);
+    setAnimationData(data);
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    const state = undo();
+    if (state) applyHistoryState(state);
+  }, [undo, applyHistoryState]);
+
+  const handleRedo = useCallback(() => {
+    const state = redo();
+    if (state) applyHistoryState(state);
+  }, [redo, applyHistoryState]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo, handleRedo]);
 
   const handleJsonChange = useCallback((value: string) => {
     setJsonText(value);
@@ -59,11 +94,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       try {
         const parsed = JSON.parse(value);
         setAnimationData(parsed);
+        pushState(parsed);
       } catch {
         setAnimationData(null);
       }
     }, 500);
-  }, []);
+  }, [pushState]);
 
   useEffect(() => {
     return () => {
@@ -229,7 +265,23 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             totalFrames={totalFrames}
             onSeek={handleSeek}
           />
-          <div className="flex justify-center px-4 pb-3">
+          <div className="flex justify-center gap-2 px-4 pb-3">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Undo
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Redo
+            </button>
             <button
               onClick={handleRestart}
               className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors"
