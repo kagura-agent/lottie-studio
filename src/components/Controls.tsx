@@ -39,7 +39,7 @@ export default function Controls({
   const totalDuration = totalFrames / frameRate;
 
   return (
-    <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 bg-zinc-900 border-t border-zinc-800">
+    <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 bg-zinc-900 flex-1">
       <button
         onClick={onTogglePlay}
         className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"

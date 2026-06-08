@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import lottie, { AnimationItem } from "lottie-web";
+import type { CanvasBackground } from "./BackgroundPicker";
 
 interface LottiePreviewProps {
   animationData: object | null;
@@ -10,6 +11,23 @@ interface LottiePreviewProps {
   loop: boolean;
   onFrameChange?: (currentFrame: number, totalFrames: number) => void;
   seekToFrame?: number;
+  background?: CanvasBackground;
+}
+
+function getBackgroundStyle(bg: CanvasBackground = "checkered"): { className: string; style?: React.CSSProperties } {
+  if (bg === "white") return { className: "bg-white" };
+  if (bg === "black") return { className: "bg-black" };
+  if (bg.startsWith("#")) return { className: "", style: { backgroundColor: bg } };
+  // checkered (default)
+  return {
+    className: "bg-zinc-900",
+    style: {
+      backgroundImage:
+        "linear-gradient(45deg, #27272a 25%, transparent 25%), linear-gradient(-45deg, #27272a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #27272a 75%), linear-gradient(-45deg, transparent 75%, #27272a 75%)",
+      backgroundSize: "20px 20px",
+      backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+    },
+  };
 }
 
 export default function LottiePreview({
@@ -19,6 +37,7 @@ export default function LottiePreview({
   loop,
   onFrameChange,
   seekToFrame,
+  background = "checkered",
 }: LottiePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
@@ -95,14 +114,12 @@ export default function LottiePreview({
     }
   }, [seekToFrame]);
 
+  const bgProps = getBackgroundStyle(background);
+
   return (
-    <div className="preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden bg-zinc-900"
-      style={{
-        backgroundImage:
-          "linear-gradient(45deg, #27272a 25%, transparent 25%), linear-gradient(-45deg, #27272a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #27272a 75%), linear-gradient(-45deg, transparent 75%, #27272a 75%)",
-        backgroundSize: "20px 20px",
-        backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-      }}
+    <div
+      className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden ${bgProps.className}`}
+      style={bgProps.style}
     >
       {animationData ? (
         <div ref={containerRef} className="w-full h-full max-w-[500px] max-h-[500px]" />

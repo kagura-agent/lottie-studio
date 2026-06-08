@@ -7,6 +7,7 @@ import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
 import ChatPanel from "./ChatPanel";
 import Controls from "./Controls";
+import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 
@@ -36,8 +37,19 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [gifProgress, setGifProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"canvas" | "chat">("chat");
+  const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem(`lottie-bg-${id}`) as CanvasBackground) || "checkered";
+    }
+    return "checkered";
+  });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleBgChange = useCallback((bg: CanvasBackground) => {
+    setCanvasBg(bg);
+    localStorage.setItem(`lottie-bg-${id}`, bg);
+  }, [id]);
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -333,20 +345,26 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               loop={loop}
               onFrameChange={handleFrameChange}
               seekToFrame={seekFrame}
+              background={canvasBg}
             />
           </div>
-          <Controls
-            isPlaying={isPlaying}
-            onTogglePlay={() => setIsPlaying((p) => !p)}
-            speed={speed}
-            onSpeedChange={setSpeed}
-            loop={loop}
-            onToggleLoop={() => setLoop((l) => !l)}
-            currentFrame={currentFrame}
-            totalFrames={totalFrames}
-            onSeek={handleSeek}
-            frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
-          />
+          <div className="flex items-center border-t border-zinc-800">
+            <Controls
+              isPlaying={isPlaying}
+              onTogglePlay={() => setIsPlaying((p) => !p)}
+              speed={speed}
+              onSpeedChange={setSpeed}
+              loop={loop}
+              onToggleLoop={() => setLoop((l) => !l)}
+              currentFrame={currentFrame}
+              totalFrames={totalFrames}
+              onSeek={handleSeek}
+              frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
+            />
+            <div className="px-2 py-2 bg-zinc-900">
+              <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
+            </div>
+          </div>
           <div className="flex justify-center gap-2 px-4 pb-3">
             <button
               onClick={handleUndo}
