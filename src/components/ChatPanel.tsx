@@ -71,8 +71,8 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     return () => { cancelled = true; };
   }, [animationId]);
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
+  const handleSend = useCallback(async (promptOverride?: string) => {
+    const text = (promptOverride ?? input).trim();
     if (!text || isThinking || isStreaming) return;
 
     setError(null);
@@ -267,13 +267,36 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
 
+  const suggestedPrompts = [
+    "\uD83C\uDF88 A bouncing red ball with a shadow",
+    "\uD83C\uDF38 Sakura petals falling and spinning",
+    "\u2B50 A pulsing loading spinner",
+    "\uD83C\uDFA8 A colorful rotating pinwheel",
+    "\uD83D\uDCAB Stars twinkling in the night sky",
+    "\uD83D\uDD04 A smooth progress circle animation",
+  ];
+
   return (
     <div className="flex flex-col h-full bg-zinc-900">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-            Describe an animation to get started
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <p className="text-zinc-400 text-sm">
+              Describe any animation and I'll create it for you.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 max-w-md">
+              {suggestedPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  disabled={isThinking || isStreaming}
+                  className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 active:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg) => (
@@ -350,7 +373,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50"
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || isThinking || isStreaming}
             className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
