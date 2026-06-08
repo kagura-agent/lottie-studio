@@ -98,10 +98,10 @@ export async function exportToGif({
 
     // Encoding phase: gif.js encodes (~50% of progress)
     return await new Promise<Blob>((resolve, reject) => {
-      gif.on("progress", (p) => {
+      gif.on("progress", (p: number) => {
         if (onProgress) onProgress(0.5 + p * 0.5);
       });
-      gif.on("finished", (blob) => {
+      gif.on("finished", (blob: Blob) => {
         resolve(blob);
       });
       gif.on("abort", () => {
