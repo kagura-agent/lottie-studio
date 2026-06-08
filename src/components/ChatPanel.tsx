@@ -18,6 +18,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [retryingMsgId, setRetryingMsgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
@@ -71,6 +72,171 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     return () => { cancelled = true; };
   }, [animationId]);
 
+  // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
+  // to update an existing message in-place instead of appending a new one.
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string) => {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        animationId: currentAnimationId,
+        message: text,
+      }),
+    });
+
+    // Fallback: if not SSE (e.g. error JSON response), handle like old path
+    const contentType = res.headers.get("Content-Type") || "";
+    if (!contentType.includes("text/event-stream")) {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || `Request failed (${res.status})`;
+        throw new Error(errMsg);
+      }
+      const data = await res.json();
+      if (!currentAnimationId && data.animationId) {
+        setCurrentAnimationId(data.animationId);
+      }
+      if (existingAssistantMsgId) {
+        const msgId = existingAssistantMsgId;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId ? { ...m, content: data.reply, warning: undefined } : m
+          )
+        );
+      } else {
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.reply,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+      setIsThinking(false);
+      return;
+    }
+
+    // SSE streaming path
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body");
+
+    const decoder = new TextDecoder();
+    let sseBuffer = "";
+    let assistantMsgId: string | null = existingAssistantMsgId ?? null;
+    let fullContent = "";
+    let visibleContent = "";
+    let insideJsonBlock = false;
+    let fenceBuffer = "";
+
+    setIsThinking(false);
+    setIsStreaming(true);
+
+    // For retry, clear the old content immediately so it streams fresh
+    if (existingAssistantMsgId) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === existingAssistantMsgId ? { ...m, content: "", warning: undefined } : m
+        )
+      );
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      sseBuffer += decoder.decode(value, { stream: true });
+
+      const parts = sseBuffer.split("\n\n");
+      sseBuffer = parts.pop() || "";
+
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+        const data = trimmed.slice(6);
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string };
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          continue;
+        }
+
+        if (parsed.type === "token") {
+          const tokenText = parsed.text || "";
+          fullContent += tokenText;
+
+          let visibleChunk = "";
+          for (const ch of tokenText) {
+            fenceBuffer += ch;
+
+            if (!insideJsonBlock) {
+              if (fenceBuffer.endsWith("```json")) {
+                visibleChunk = visibleChunk.slice(0, -("```json".length - 1));
+                insideJsonBlock = true;
+                fenceBuffer = "";
+              } else if ("```json".startsWith(fenceBuffer)) {
+                // Potential partial match — hold in buffer
+              } else {
+                visibleChunk += fenceBuffer[0];
+                fenceBuffer = fenceBuffer.slice(1);
+                while (fenceBuffer.length > 0 && !"```json".startsWith(fenceBuffer)) {
+                  visibleChunk += fenceBuffer[0];
+                  fenceBuffer = fenceBuffer.slice(1);
+                }
+              }
+            } else {
+              if (fenceBuffer.endsWith("```")) {
+                insideJsonBlock = false;
+                fenceBuffer = "";
+              } else if ("```".startsWith(fenceBuffer)) {
+                // Potential partial closing fence
+              } else {
+                fenceBuffer = fenceBuffer.slice(1);
+                while (fenceBuffer.length > 0 && !"```".startsWith(fenceBuffer)) {
+                  fenceBuffer = fenceBuffer.slice(1);
+                }
+              }
+            }
+          }
+
+          visibleContent += visibleChunk;
+
+          if (!assistantMsgId) {
+            assistantMsgId = crypto.randomUUID();
+            const newMsg: Message = {
+              id: assistantMsgId,
+              role: "assistant",
+              content: visibleContent,
+            };
+            setMessages((prev) => [...prev, newMsg]);
+          } else {
+            const msgId = assistantMsgId;
+            const currentVisible = visibleContent;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId ? { ...m, content: currentVisible } : m
+              )
+            );
+          }
+        } else if (parsed.type === "done") {
+          if (!currentAnimationId && parsed.animationId) {
+            setCurrentAnimationId(parsed.animationId);
+          }
+          if (assistantMsgId && parsed.reply) {
+            const msgId = assistantMsgId;
+            const warningText = parsed.warning as string | undefined;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText } : m
+              )
+            );
+          }
+        } else if (parsed.type === "error") {
+          setError(parsed.error || "An unexpected error occurred");
+        }
+      }
+    }
+  }, [currentAnimationId]);
+
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();
     if (!text || isThinking || isStreaming) return;
@@ -88,164 +254,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     setIsThinking(true);
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          animationId: currentAnimationId,
-          message: text,
-        }),
-      });
-
-      // Fallback: if not SSE (e.g. error JSON response), handle like old path
-      const contentType = res.headers.get("Content-Type") || "";
-      if (!contentType.includes("text/event-stream")) {
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          const errMsg = errData.error || `Request failed (${res.status})`;
-          throw new Error(errMsg);
-        }
-        const data = await res.json();
-        if (!currentAnimationId && data.animationId) {
-          setCurrentAnimationId(data.animationId);
-        }
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: data.reply,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        setIsThinking(false);
-        return;
-      }
-
-      // SSE streaming path
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let sseBuffer = "";
-      let assistantMsgId: string | null = null;
-      // Track full accumulated content (including JSON) and visible-only content
-      let fullContent = "";
-      let visibleContent = "";
-      let insideJsonBlock = false;
-      // Buffer for detecting partial code fences across chunks
-      let fenceBuffer = "";
-
-      setIsThinking(false);
-      setIsStreaming(true);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        sseBuffer += decoder.decode(value, { stream: true });
-
-        // Split on double newlines to get complete SSE events
-        const parts = sseBuffer.split("\n\n");
-        // Keep the last potentially incomplete part
-        sseBuffer = parts.pop() || "";
-
-        for (const part of parts) {
-          const trimmed = part.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-          const data = trimmed.slice(6);
-          let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string };
-          try {
-            parsed = JSON.parse(data);
-          } catch {
-            continue;
-          }
-
-          if (parsed.type === "token") {
-            const tokenText = parsed.text || "";
-            fullContent += tokenText;
-
-            // Process token text character by character to handle
-            // code fences that may arrive split across chunks
-            let visibleChunk = "";
-            for (const ch of tokenText) {
-              fenceBuffer += ch;
-
-              if (!insideJsonBlock) {
-                // Looking for opening ```json fence
-                if (fenceBuffer.endsWith("```json")) {
-                  // Remove the "```json" from visible output
-                  visibleChunk = visibleChunk.slice(0, -("```json".length - 1));
-                  insideJsonBlock = true;
-                  fenceBuffer = "";
-                } else if ("```json".startsWith(fenceBuffer)) {
-                  // Potential partial match — hold in buffer, don't emit yet
-                } else {
-                  // No match possible — flush buffer to visible
-                  visibleChunk += fenceBuffer[0];
-                  // Re-check remaining buffer chars (shift by 1)
-                  fenceBuffer = fenceBuffer.slice(1);
-                  // Continue checking if remainder could still be a prefix
-                  while (fenceBuffer.length > 0 && !"```json".startsWith(fenceBuffer)) {
-                    visibleChunk += fenceBuffer[0];
-                    fenceBuffer = fenceBuffer.slice(1);
-                  }
-                }
-              } else {
-                // Inside JSON block — looking for closing ``` fence
-                if (fenceBuffer.endsWith("```")) {
-                  insideJsonBlock = false;
-                  fenceBuffer = "";
-                } else if ("```".startsWith(fenceBuffer)) {
-                  // Potential partial closing fence — keep buffering
-                } else {
-                  // Not a fence — discard (we're inside hidden block)
-                  fenceBuffer = fenceBuffer.slice(1);
-                  while (fenceBuffer.length > 0 && !"```".startsWith(fenceBuffer)) {
-                    fenceBuffer = fenceBuffer.slice(1);
-                  }
-                }
-              }
-            }
-
-            visibleContent += visibleChunk;
-
-            if (!assistantMsgId) {
-              // Create the assistant message on first token
-              assistantMsgId = crypto.randomUUID();
-              const newMsg: Message = {
-                id: assistantMsgId,
-                role: "assistant",
-                content: visibleContent,
-              };
-              setMessages((prev) => [...prev, newMsg]);
-            } else {
-              // Update assistant message with current visible content
-              const msgId = assistantMsgId;
-              const currentVisible = visibleContent;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === msgId ? { ...m, content: currentVisible } : m
-                )
-              );
-            }
-          } else if (parsed.type === "done") {
-            if (!currentAnimationId && parsed.animationId) {
-              setCurrentAnimationId(parsed.animationId);
-            }
-            // Replace streaming content with final reply for accuracy
-            if (assistantMsgId && parsed.reply) {
-              const msgId = assistantMsgId;
-              const warningText = parsed.warning as string | undefined;
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText } : m
-                )
-              );
-            }
-          } else if (parsed.type === "error") {
-            setError(parsed.error || "An unexpected error occurred");
-          }
-        }
-      }
+      await streamResponse(text);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errMsg);
@@ -253,7 +262,41 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, currentAnimationId]);
+  }, [input, isThinking, isStreaming, streamResponse]);
+
+  const handleRetry = useCallback(async (assistantMsgId: string) => {
+    if (isThinking || isStreaming) return;
+
+    // Find the user message that precedes this assistant message
+    const msgIndex = messages.findIndex((m) => m.id === assistantMsgId);
+    if (msgIndex < 1) return;
+
+    let userMsgIndex = msgIndex - 1;
+    while (userMsgIndex >= 0 && messages[userMsgIndex].role !== "user") {
+      userMsgIndex--;
+    }
+    if (userMsgIndex < 0) return;
+
+    const userText = messages[userMsgIndex].content;
+
+    // Remove any messages after the target assistant message, keep it for in-place update
+    setMessages((prev) => prev.slice(0, msgIndex + 1));
+
+    setError(null);
+    setRetryingMsgId(assistantMsgId);
+    setIsThinking(true);
+
+    try {
+      await streamResponse(userText, assistantMsgId);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errMsg);
+    } finally {
+      setIsThinking(false);
+      setIsStreaming(false);
+      setRetryingMsgId(null);
+    }
+  }, [isThinking, isStreaming, messages, streamResponse]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -304,14 +347,36 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             <div
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-zinc-700 text-zinc-100"
-                }`}
-              >
-                {msg.content}
+              <div className={`group relative max-w-[80%] ${msg.role === "assistant" ? "pr-7" : ""}`}>
+                <div
+                  className={`px-3 py-2 rounded-lg text-sm leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-zinc-700 text-zinc-100"
+                  }`}
+                >
+                  {retryingMsgId === msg.id && !msg.content ? (
+                    <span className="inline-flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                    </span>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+                {msg.role === "assistant" && !isThinking && !isStreaming && (
+                  <button
+                    onClick={() => handleRetry(msg.id)}
+                    className="absolute top-1.5 -right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-600"
+                    aria-label="Retry this response"
+                    title="Regenerate response"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.681.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-.908l.84.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44.908l-.84-.84v1.456a.75.75 0 0 1-1.5 0V9.342a.75.75 0 0 1 .75-.75h3.182a.75.75 0 0 1 0 1.5h-1.37l.84.84a4.5 4.5 0 0 0 7.08-.68.75.75 0 0 1 1.274.724Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
             {msg.warning && !dismissedWarnings.has(msg.id) && (
@@ -331,7 +396,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             )}
           </div>
         ))}
-        {isThinking && (
+        {isThinking && !retryingMsgId && (
           <div className="flex justify-start">
             <div className="bg-zinc-700 px-3 py-2 rounded-lg">
               <span className="inline-flex gap-1">
