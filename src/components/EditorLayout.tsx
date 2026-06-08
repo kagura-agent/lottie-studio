@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
@@ -30,6 +30,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
   const [rightPanel, setRightPanel] = useState<"chat" | "json">("chat");
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
+  const [gifExporting, setGifExporting] = useState(false);
+  const [gifProgress, setGifProgress] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleExternalUpdate = useCallback(async () => {
@@ -80,6 +82,33 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     a.download = `${sanitized}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportGif = async (e: MouseEvent) => {
+    e.preventDefault();
+    if (!animationData || gifExporting) return;
+    setGifExporting(true);
+    setGifProgress(0);
+    try {
+      const { exportToGif } = await import("@/lib/gifExporter");
+      const blob = await exportToGif({
+        animationData,
+        onProgress: setGifProgress,
+      });
+      const url = URL.createObjectURL(blob);
+      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sanitized}.gif`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("GIF export failed:", err);
+      alert("GIF export failed. Please try again.");
+    } finally {
+      setGifExporting(false);
+      setGifProgress(0);
+    }
   };
 
   const handleSave = async () => {
@@ -142,6 +171,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           className="px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export
+        </button>
+        <button
+          onClick={handleExportGif}
+          disabled={animationData === null || gifExporting}
+          className="px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {gifExporting ? `GIF ${Math.round(gifProgress * 100)}%` : "Export GIF"}
         </button>
         <button
           onClick={() => {
