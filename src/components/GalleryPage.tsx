@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
 import Link from "next/link";
+import { parseLottieFile } from "@/lib/importLottie";
 
 interface Animation {
   id: string;
@@ -25,6 +27,12 @@ export default function GalleryPage() {
   const [animations, setAnimations] = useState<Animation[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCountRef = useRef(0);
+  const router = useRouter();
 
   useEffect(() => {
     Promise.all([
@@ -42,6 +50,57 @@ export default function GalleryPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleImport = useCallback(async (file: File) => {
+    setImportError(null);
+    setImporting(true);
+    try {
+      const { name, data } = await parseLottieFile(file);
+      const res = await fetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, data }),
+      });
+      if (!res.ok) throw new Error("Failed to save animation");
+      const anim = await res.json();
+      router.push(`/editor/${anim.id}`);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+      setTimeout(() => setImportError(null), 5000);
+    } finally {
+      setImporting(false);
+    }
+  }, [router]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImport(file);
+    e.target.value = "";
+  }, [handleImport]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCountRef.current++;
+    setDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCountRef.current--;
+    if (dragCountRef.current === 0) setDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCountRef.current = 0;
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImport(file);
+  }, [handleImport]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center flex-1">
@@ -51,8 +110,21 @@ export default function GalleryPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div
+      className="flex-1 overflow-y-auto"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Import error alert */}
+        {importError && (
+          <div className="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+            {importError}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -66,12 +138,28 @@ export default function GalleryPage() {
               </p>
             )}
           </div>
-          <Link
-            href="/editor/new"
-            className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
-          >
-            Create Animation
-          </Link>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.lottie"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            >
+              {importing ? "Importing..." : "Import"}
+            </button>
+            <Link
+              href="/editor/new"
+              className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
+            >
+              Create Animation
+            </Link>
+          </div>
         </div>
 
         {/* Templates Section */}
@@ -194,6 +282,33 @@ export default function GalleryPage() {
           </div>
         )}
       </div>
+
+      {/* Drag-and-drop overlay */}
+      {dragging && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-zinc-500 px-16 py-12 text-center">
+            <svg
+              className="w-12 h-12 text-zinc-400 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            <p className="text-lg font-medium text-zinc-200">
+              Drop .json or .lottie file to import
+            </p>
+            <p className="text-sm text-zinc-500 mt-1">
+              Lottie animation files only
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
