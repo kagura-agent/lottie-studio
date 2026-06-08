@@ -70,6 +70,29 @@ Colors use RGBA with values 0-1:
 - Yellow: [1, 1, 0, 1]
 - Purple: [0.5, 0, 0.5, 1]
 - Orange: [1, 0.5, 0, 1]
+
+## Trim Paths (ty: "tm")
+Animates stroke drawing by controlling which portion of a path is visible.
+- "s": start — animated property, 0-100 (percentage along the path)
+- "e": end — animated property, 0-100
+- "o": offset — animated property, 0-360 (degrees, shifts the visible segment)
+Place after stroke ("st") in a group's "it" array. Animate "e" from 0→100 to draw a stroke on, or animate "s" from 0→100 to erase it.
+
+## Repeater (ty: "rp")
+Creates copies of shapes in a group with cumulative transforms.
+- "c": copies — animated property (number of copies including original)
+- "o": offset — animated property (shifts the starting index)
+- "tr": transform per copy — contains "p" (position offset), "r" (rotation), "s" (scale), "o" (opacity) applied cumulatively to each copy
+Place at the end of a group's "it" array (before the group transform "tr"). Example: 8 copies with 45° rotation each = a radial pattern.
+
+## Gradient Fills (ty: "gf")
+Fills shapes with a linear or radial gradient.
+- "t": gradient type — 1 = linear, 2 = radial
+- "s": start point — animated [x, y]
+- "e": end point — animated [x, y]
+- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
+  Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
+- "o": opacity — animated, 0-100
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -151,6 +174,245 @@ const EXAMPLE_SPINNING_SQUARE = JSON.stringify({
   }]
 });
 
+const EXAMPLE_FADE_IN_OUT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Fade Circle", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: {
+        a: 1,
+        k: [
+          { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 20, s: [100], e: [100], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+          { t: 40, s: [100], e: [0], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 60, s: [0] }
+        ]
+      },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Circle Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_SCALE_PULSE = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 30, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Pulse Heart", ind: 0, ip: 0, op: 30,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: {
+        a: 1,
+        k: [
+          { t: 0, s: [100, 100], e: [130, 130], i: { x: [0.4], y: [1.6] }, o: { x: [0.3], y: [0] } },
+          { t: 10, s: [130, 130], e: [90, 90], i: { x: [0.4], y: [1.4] }, o: { x: [0.3], y: [0] } },
+          { t: 20, s: [90, 90], e: [100, 100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 30, s: [100, 100] }
+        ]
+      },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Heart Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [120, 120] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.9, 0.2, 0.3, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_LOADING_SPINNER = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Spinner", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: {
+        a: 1,
+        k: [
+          { t: 0, s: [0], e: [360], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 60, s: [360] }
+        ]
+      },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Arc Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] } },
+        { ty: "st", nm: "Stroke", c: { a: 0, k: [0.3, 0.5, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 12 }, lc: 2, lj: 2 },
+        { ty: "tm", nm: "Trim", s: { a: 0, k: 0 }, e: { a: 0, k: 75 }, o: {
+          a: 1,
+          k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 60, s: [360] }
+          ]
+        } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_MULTI_LAYER = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [
+    {
+      ty: 4, nm: "Circle 1", ind: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: {
+          a: 1,
+          k: [
+            { t: 0, s: [0, 0], e: [100, 100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 20, s: [100, 100] }
+          ]
+        },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "C1",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [180, 180] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 60 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Circle 2", ind: 1, ip: 10, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: {
+          a: 1,
+          k: [
+            { t: 10, s: [0, 0], e: [100, 100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 30, s: [100, 100] }
+          ]
+        },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "C2",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [120, 120] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.4, 0.2, 1] }, o: { a: 0, k: 70 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Circle 3", ind: 2, ip: 20, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: {
+          a: 1,
+          k: [
+            { t: 20, s: [0, 0], e: [100, 100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 40, s: [100, 100] }
+          ]
+        },
+        r: {
+          a: 1,
+          k: [
+            { t: 20, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ]
+        },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "C3",
+        it: [
+          { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [60, 60] }, r: { a: 0, k: 8 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.8, 0.4, 1] }, o: { a: 0, k: 80 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
+const EXAMPLE_COLOR_TRANSITION = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Color Shift", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Shape Group",
+      it: [
+        { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] }, r: { a: 0, k: 20 } },
+        { ty: "fl", nm: "Fill", c: {
+          a: 1,
+          k: [
+            { t: 0, s: [0.2, 0.6, 1, 1], e: [0.9, 0.2, 0.5, 1], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 30, s: [0.9, 0.2, 0.5, 1], e: [0.2, 0.8, 0.4, 1], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 60, s: [0.2, 0.8, 0.4, 1], e: [0.2, 0.6, 1, 1], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 90, s: [0.2, 0.6, 1, 1] }
+          ]
+        }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_PATH_ANIMATION = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Path Mover", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: {
+        a: 1,
+        k: [
+          { t: 0, s: [100, 400], e: [256, 100], i: { x: 0.33, y: 1 }, o: { x: 0.67, y: 0 }, to: [0, -80], ti: [0, 0] },
+          { t: 30, s: [256, 100], e: [412, 400], i: { x: 0.33, y: 1 }, o: { x: 0.67, y: 0 }, to: [0, 0], ti: [0, -80] },
+          { t: 60, s: [412, 400], e: [100, 400], i: { x: 0.33, y: 1 }, o: { x: 0.67, y: 0 }, to: [80, 0], ti: [-80, 0] },
+          { t: 90, s: [100, 400] }
+        ]
+      },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Dot Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [40, 40] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.6, 0, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
 export function buildSystemPrompt(currentAnimation: object | null): string {
   let prompt = `You are a Lottie animation expert. You create and modify Lottie JSON animations based on user descriptions.
 
@@ -171,6 +433,36 @@ ${EXAMPLE_BOUNCING_BALL}
 ### Green spinning square (animated rotation)
 \`\`\`json
 ${EXAMPLE_SPINNING_SQUARE}
+\`\`\`
+
+### Fade in/out (animated opacity)
+\`\`\`json
+${EXAMPLE_FADE_IN_OUT}
+\`\`\`
+
+### Scale pulse / heartbeat (animated scale with overshoot easing)
+\`\`\`json
+${EXAMPLE_SCALE_PULSE}
+\`\`\`
+
+### Loading spinner (rotation + trim paths)
+\`\`\`json
+${EXAMPLE_LOADING_SPINNER}
+\`\`\`
+
+### Multi-layer composition (staggered timing, 3 elements)
+\`\`\`json
+${EXAMPLE_MULTI_LAYER}
+\`\`\`
+
+### Color transition (animated fill color)
+\`\`\`json
+${EXAMPLE_COLOR_TRANSITION}
+\`\`\`
+
+### Path animation (bezier curve movement with tangents)
+\`\`\`json
+${EXAMPLE_PATH_ANIMATION}
 \`\`\`
 
 ## Your Response Format
