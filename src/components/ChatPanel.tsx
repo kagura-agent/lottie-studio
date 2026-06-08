@@ -24,6 +24,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
 
   // Keep currentAnimationId in sync when prop changes
@@ -71,6 +72,22 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     loadHistory();
     return () => { cancelled = true; };
   }, [animationId]);
+
+  // Keep chat input visible when mobile keyboard opens
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      if (inputAreaRef.current) {
+        // When keyboard opens, visualViewport.height shrinks.
+        // Scroll the input into view so it stays accessible.
+        inputAreaRef.current.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
@@ -425,7 +442,7 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
       )}
 
       {/* Input area */}
-      <div className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900">
+      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -435,12 +452,13 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
             onKeyDown={handleKeyDown}
             placeholder="Describe your animation..."
             disabled={isThinking || isStreaming}
+            enterKeyHint="send"
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50"
           />
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || isThinking || isStreaming}
-            className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
           </button>
