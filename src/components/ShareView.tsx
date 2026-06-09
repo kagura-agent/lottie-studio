@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
+import type { LoopConfig } from "@/types/loopConfig";
 
 interface ShareViewProps {
   id: string;
@@ -14,7 +15,7 @@ interface ShareViewProps {
 export default function ShareView({ id, name, animationData }: ShareViewProps) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
-  const [loop, setLoop] = useState(true);
+  const [loopConfig, setLoopConfig] = useState<LoopConfig>({ mode: "loop" });
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
@@ -56,7 +57,7 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
               animationData={animationData}
               isPlaying={isPlaying}
               speed={speed}
-              loop={loop}
+              loopConfig={loopConfig}
               onFrameChange={handleFrameChange}
               seekToFrame={seekFrame}
             />
@@ -66,8 +67,8 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
             onTogglePlay={() => setIsPlaying((p) => !p)}
             speed={speed}
             onSpeedChange={setSpeed}
-            loop={loop}
-            onToggleLoop={() => setLoop((l) => !l)}
+            loopConfig={loopConfig}
+            onLoopConfigChange={setLoopConfig}
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onSeek={handleSeek}

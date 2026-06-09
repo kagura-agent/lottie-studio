@@ -3,12 +3,13 @@
 import { useEffect, useRef, useCallback } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import type { CanvasBackground } from "./BackgroundPicker";
+import type { LoopConfig } from "@/types/loopConfig";
 
 interface LottiePreviewProps {
   animationData: object | null;
   isPlaying: boolean;
   speed: number;
-  loop: boolean;
+  loopConfig: LoopConfig;
   onFrameChange?: (currentFrame: number, totalFrames: number) => void;
   seekToFrame?: number;
   background?: CanvasBackground;
@@ -34,7 +35,7 @@ export default function LottiePreview({
   animationData,
   isPlaying,
   speed,
-  loop,
+  loopConfig,
   onFrameChange,
   seekToFrame,
   background = "checkered",
@@ -43,6 +44,10 @@ export default function LottiePreview({
   const animRef = useRef<AnimationItem | null>(null);
   const frameCallbackRef = useRef(onFrameChange);
   frameCallbackRef.current = onFrameChange;
+  const loopConfigRef = useRef(loopConfig);
+  loopConfigRef.current = loopConfig;
+  const directionRef = useRef<1 | -1>(1);
+  const loopCountRef = useRef(0);
 
   const destroyAnim = useCallback(() => {
     if (animRef.current) {
@@ -58,23 +63,47 @@ export default function LottiePreview({
     }
 
     destroyAnim();
+    directionRef.current = 1;
+    loopCountRef.current = 0;
+
+    const needsLoop = loopConfig.mode === "loop" || loopConfig.mode === "bounce";
 
     try {
       const anim = lottie.loadAnimation({
         container: containerRef.current,
         renderer: "svg",
-        loop,
+        loop: needsLoop,
         autoplay: isPlaying,
         animationData,
       });
 
       anim.setSpeed(speed);
+      anim.setDirection(1);
 
       anim.addEventListener("enterFrame", () => {
         frameCallbackRef.current?.(
           Math.floor(anim.currentFrame),
           Math.floor(anim.totalFrames)
         );
+      });
+
+      anim.addEventListener("loopComplete", () => {
+        const cfg = loopConfigRef.current;
+        if (cfg.mode === "bounce") {
+          directionRef.current = directionRef.current === 1 ? -1 : 1;
+          anim.setDirection(directionRef.current);
+        }
+      });
+
+      anim.addEventListener("complete", () => {
+        const cfg = loopConfigRef.current;
+        if (cfg.mode === "count") {
+          loopCountRef.current++;
+          const target = cfg.count ?? 3;
+          if (loopCountRef.current < target) {
+            anim.goToAndPlay(0, true);
+          }
+        }
       });
 
       animRef.current = anim;
@@ -103,10 +132,29 @@ export default function LottiePreview({
   }, [speed]);
 
   useEffect(() => {
-    if (animRef.current) {
-      animRef.current.loop = loop;
+    const anim = animRef.current;
+    if (!anim) return;
+
+    directionRef.current = 1;
+    loopCountRef.current = 0;
+    anim.setDirection(1);
+
+    if (loopConfig.mode === "loop") {
+      anim.loop = true;
+    } else if (loopConfig.mode === "once") {
+      anim.loop = false;
+    } else if (loopConfig.mode === "bounce") {
+      anim.loop = true;
+    } else if (loopConfig.mode === "count") {
+      anim.loop = false;
+      loopCountRef.current = 0;
     }
-  }, [loop]);
+
+    if (isPlaying) {
+      anim.goToAndPlay(0, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loopConfig]);
 
   useEffect(() => {
     if (animRef.current && seekToFrame !== undefined) {
