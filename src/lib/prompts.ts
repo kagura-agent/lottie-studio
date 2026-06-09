@@ -16,6 +16,7 @@ A Lottie animation is a JSON object with these top-level properties:
 - Type 1: Solid layer
 - Type 2: Image layer
 - Type 3: Null layer (invisible, used as parent for other layers)
+- Type 5: Text layer (displays text content, requires font registration)
 
 ## Shape Layer Structure
 A shape layer (ty: 4) has:
@@ -93,6 +94,50 @@ Fills shapes with a linear or radial gradient.
 - "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
   Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
 - "o": opacity — animated, 0-100
+
+## Text Layer (ty: 5)
+A text layer displays text content. It has ty: 5 and a "t" property containing text data.
+
+Text layer structure:
+- "ty": 5
+- "nm": layer name
+- "ind": layer index
+- "ip": in-point, "op": out-point
+- "ks": standard transform (position, scale, rotation, opacity) — animate these for movement/effects
+- "t": text data object (see below)
+
+### Text Data ("t" property)
+- "d": animated text document
+  - "k": array of text document keyframes, each with:
+    - "t": time (frame number)
+    - "s": text document object:
+      - "f": font family name (must match fName in fonts list)
+      - "fc": fill color [r, g, b, a] (0-1 range)
+      - "sc": stroke color [r, g, b, a] (optional)
+      - "sw": stroke width (optional)
+      - "s": font size (number)
+      - "t": text content string (use \r for newlines)
+      - "j": justify — 0 = left, 1 = right, 2 = center
+      - "lh": line height (optional)
+      - "tr": tracking / letter spacing (optional)
+      - "ls": baseline shift (optional)
+      - "sz": text box size [width, height] (optional, for wrapping)
+      - "ps": text box position [x, y] (optional)
+- "a": text animators/ranges array (optional, for per-character effects — advanced)
+- "m": alignment options (optional)
+
+### Font Registration (REQUIRED)
+Fonts must be registered at the animation root level:
+"fonts": { "list": [{ "fFamily": "Arial", "fName": "Arial", "fStyle": "Regular" }] }
+
+Use web-safe fonts that don't need external loading:
+- Arial, Helvetica, Georgia, Times New Roman, Courier New, monospace
+
+### Important Notes
+- Text content changes are discrete — keyframes switch text instantly, no interpolation between text states
+- Animate text movement/appearance using the standard "ks" transform (position, scale, rotation, opacity)
+- Each font used must have a corresponding entry in the root "fonts.list" array
+- The "f" value in the text document must match an "fName" in fonts.list
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -383,6 +428,84 @@ const EXAMPLE_COLOR_TRANSITION = JSON.stringify({
   }]
 });
 
+const EXAMPLE_STATIC_TEXT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  layers: [{
+    ty: 5, nm: "Hello Text", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    t: {
+      d: { k: [{ t: 0, s: { f: "Arial", fc: [0, 0, 0, 1], s: 48, t: "Hello World", j: 2, lh: 60 } }] },
+      a: [],
+      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+    }
+  }]
+});
+
+const EXAMPLE_FADE_IN_TEXT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  layers: [{
+    ty: 5, nm: "Fade In Text", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: {
+        a: 1,
+        k: [
+          { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 30, s: [100] }
+        ]
+      },
+      a: { a: 0, k: [0, 0] }
+    },
+    t: {
+      d: { k: [{ t: 0, s: { f: "Arial", fc: [0.2, 0.6, 1, 1], s: 42, t: "Fade In", j: 2, lh: 52 } }] },
+      a: [],
+      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+    }
+  }]
+});
+
+const EXAMPLE_SLIDE_UP_TEXT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  layers: [{
+    ty: 5, nm: "Slide Up Text", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: {
+        a: 1,
+        k: [
+          { t: 0, s: [256, 400], e: [256, 256], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 30, s: [256, 256] }
+        ]
+      },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: {
+        a: 1,
+        k: [
+          { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 20, s: [100] }
+        ]
+      },
+      a: { a: 0, k: [0, 0] }
+    },
+    t: {
+      d: { k: [{ t: 0, s: { f: "Arial", fc: [0.2, 0.8, 0.4, 1], s: 36, t: "Slide Up", j: 2, lh: 46 } }] },
+      a: [],
+      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+    }
+  }]
+});
+
 const EXAMPLE_PATH_ANIMATION = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [{
@@ -463,6 +586,21 @@ ${EXAMPLE_COLOR_TRANSITION}
 ### Path animation (bezier curve movement with tangents)
 \`\`\`json
 ${EXAMPLE_PATH_ANIMATION}
+\`\`\`
+
+### Static centered text (text layer, type 5)
+\`\`\`json
+${EXAMPLE_STATIC_TEXT}
+\`\`\`
+
+### Fade-in text (text layer with opacity animation)
+\`\`\`json
+${EXAMPLE_FADE_IN_TEXT}
+\`\`\`
+
+### Slide-up text (text layer with position + opacity animation)
+\`\`\`json
+${EXAMPLE_SLIDE_UP_TEXT}
 \`\`\`
 
 ## Your Response Format
