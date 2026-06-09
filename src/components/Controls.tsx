@@ -10,6 +10,16 @@ interface ControlsProps {
   currentFrame: number;
   totalFrames: number;
   onSeek: (frame: number) => void;
+  frameRate?: number;
+}
+
+function formatTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toFixed(1).padStart(4, "0")}`;
 }
 
 export default function Controls({
@@ -22,8 +32,11 @@ export default function Controls({
   currentFrame,
   totalFrames,
   onSeek,
+  frameRate = 30,
 }: ControlsProps) {
   const speeds = [0.5, 1, 2];
+  const currentTime = currentFrame / frameRate;
+  const totalDuration = totalFrames / frameRate;
 
   return (
     <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 bg-zinc-900 border-t border-zinc-800">
@@ -70,8 +83,11 @@ export default function Controls({
         className="flex-1 accent-zinc-400 h-2 touch-pan-x"
       />
 
-      <span className="text-xs text-zinc-400 font-mono whitespace-nowrap hidden md:inline">
-        {currentFrame} / {totalFrames}
+      <span
+        className="text-xs text-zinc-400 font-mono whitespace-nowrap"
+        title={`${currentFrame} / ${totalFrames} frames`}
+      >
+        {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
     </div>
   );
