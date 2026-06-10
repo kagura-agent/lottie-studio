@@ -7,6 +7,7 @@ import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
 import ChatPanel from "./ChatPanel";
+import LayerPanel from "./LayerPanel";
 import Controls from "./Controls";
 import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
@@ -40,14 +41,15 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
-  const [rightPanel, setRightPanel] = useState<"chat" | "json">("chat");
+  const [rightPanel, setRightPanel] = useState<"chat" | "json" | "layers">("chat");
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
   const [gifExporting, setGifExporting] = useState(false);
   const [gifProgress, setGifProgress] = useState(0);
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<"canvas" | "chat">("chat");
+  const [mobileView, setMobileView] = useState<"canvas" | "chat" | "layers">("chat");
+  const [insertText, setInsertText] = useState("");
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem(`lottie-bg-${id}`) as CanvasBackground) || "checkered";
@@ -294,6 +296,24 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     setTimeout(() => setSeekFrame(undefined), 50);
   }, []);
 
+  const handleSelectLayer = useCallback((layerName: string) => {
+    setInsertText(layerName);
+    setRightPanel("chat");
+    setMobileView("chat");
+    setTimeout(() => setInsertText(""), 0);
+  }, []);
+
+  const handleToggleVisibility = useCallback((layerIndex: number, hidden: boolean) => {
+    if (!animationData) return;
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
+      cloned.layers[layerIndex].hd = hidden;
+      setAnimationData(cloned);
+      setJsonText(JSON.stringify(cloned, null, 2));
+      pushState(cloned);
+    }
+  }, [animationData, pushState]);
+
   return (
     <div className="flex flex-col h-[100dvh]">
       {/* Header */}
@@ -416,7 +436,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           Canvas
         </button>
         <button
-          onClick={() => setMobileView("chat")}
+          onClick={() => { setMobileView("chat"); setRightPanel("chat"); }}
           className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
             mobileView === "chat"
               ? "text-zinc-100 border-b-2 border-zinc-100"
@@ -424,6 +444,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           }`}
         >
           Chat
+        </button>
+        <button
+          onClick={() => { setMobileView("layers"); setRightPanel("layers"); }}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+            mobileView === "layers"
+              ? "text-zinc-100 border-b-2 border-zinc-100"
+              : "text-zinc-400"
+          }`}
+        >
+          Layers
         </button>
       </div>
 
@@ -489,7 +519,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
 
         {/* Editor panel - hidden on mobile when canvas is active */}
         <div className={`flex-col flex-1 md:min-h-0 ${
-          mobileView === "chat" ? "flex" : "hidden md:flex"
+          mobileView === "canvas" ? "hidden md:flex" : "flex"
         }`}>
           <div className="flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
             <button
@@ -512,10 +542,26 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             >
               JSON
             </button>
+            <button
+              onClick={() => setRightPanel("layers")}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                rightPanel === "layers"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Layers
+            </button>
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ChatPanel animationId={id} />
+              <ChatPanel animationId={id} insertText={insertText} />
+            ) : rightPanel === "layers" ? (
+              <LayerPanel
+                animationData={animationData}
+                onSelectLayer={handleSelectLayer}
+                onToggleVisibility={handleToggleVisibility}
+              />
             ) : (
               <JsonEditor value={jsonText} onChange={handleJsonChange} />
             )}
