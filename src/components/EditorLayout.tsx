@@ -108,6 +108,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   }, [redo, applyHistoryState]);
 
   useEffect(() => {
+    const speeds = [0.5, 1, 2];
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         if (e.shiftKey) {
@@ -117,11 +118,49 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           e.preventDefault();
           handleUndo();
         }
+        return;
+      }
+
+      const tag = (e.target as HTMLElement).tagName;
+      const isEditable = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable;
+      if (isEditable) return;
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          setIsPlaying((p) => !p);
+          break;
+        case "ArrowLeft":
+          setSeekFrame(Math.max(0, currentFrame - 1));
+          setIsPlaying(false);
+          break;
+        case "ArrowRight":
+          setSeekFrame(Math.min(totalFrames - 1, currentFrame + 1));
+          setIsPlaying(false);
+          break;
+        case "Home":
+          setSeekFrame(0);
+          setIsPlaying(false);
+          break;
+        case "End":
+          setSeekFrame(Math.max(0, totalFrames - 1));
+          setIsPlaying(false);
+          break;
+        case "[": {
+          const idx = speeds.indexOf(speed);
+          if (idx > 0) setSpeed(speeds[idx - 1]);
+          break;
+        }
+        case "]": {
+          const idx = speeds.indexOf(speed);
+          if (idx < speeds.length - 1) setSpeed(speeds[idx + 1]);
+          break;
+        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, currentFrame, totalFrames, speed]);
 
   useEffect(() => {
     localStorage.setItem(`lottie-loop-${id}`, JSON.stringify(loopConfig));
