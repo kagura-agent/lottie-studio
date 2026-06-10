@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
+import type { LoopConfig } from "@/types/loopConfig";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
@@ -27,7 +28,15 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
-  const [loop, setLoop] = useState(true);
+  const [loopConfig, setLoopConfig] = useState<LoopConfig>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`lottie-loop-${id}`);
+        if (stored) return JSON.parse(stored) as LoopConfig;
+      } catch { /* ignore */ }
+    }
+    return { mode: "loop" };
+  });
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
@@ -113,6 +122,10 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [handleUndo, handleRedo]);
+
+  useEffect(() => {
+    localStorage.setItem(`lottie-loop-${id}`, JSON.stringify(loopConfig));
+  }, [id, loopConfig]);
 
   const handleJsonChange = useCallback((value: string) => {
     setJsonText(value);
@@ -342,7 +355,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               animationData={animationData}
               isPlaying={isPlaying}
               speed={speed}
-              loop={loop}
+              loopConfig={loopConfig}
               onFrameChange={handleFrameChange}
               seekToFrame={seekFrame}
               background={canvasBg}
@@ -354,8 +367,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               onTogglePlay={() => setIsPlaying((p) => !p)}
               speed={speed}
               onSpeedChange={setSpeed}
-              loop={loop}
-              onToggleLoop={() => setLoop((l) => !l)}
+              loopConfig={loopConfig}
+              onLoopConfigChange={setLoopConfig}
               currentFrame={currentFrame}
               totalFrames={totalFrames}
               onSeek={handleSeek}
