@@ -53,7 +53,9 @@ export default function Controls({
   const currentTime = currentFrame / frameRate;
   const totalDuration = totalFrames / frameRate;
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const shortcutsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!popoverOpen) return;
@@ -65,6 +67,17 @@ export default function Controls({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [popoverOpen]);
+
+  useEffect(() => {
+    if (!shortcutsOpen) return;
+    const handler = (e: globalThis.MouseEvent) => {
+      if (shortcutsRef.current && !shortcutsRef.current.contains(e.target as Node)) {
+        setShortcutsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [shortcutsOpen]);
 
   const selectMode = (mode: LoopMode) => {
     if (mode === "count") {
@@ -163,6 +176,32 @@ export default function Controls({
       >
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
+
+      <div className="relative" ref={shortcutsRef}>
+        <button
+          onClick={() => setShortcutsOpen((v) => !v)}
+          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm transition-colors"
+          title="Keyboard shortcuts"
+        >
+          ⌨
+        </button>
+        {shortcutsOpen && (
+          <div className="absolute bottom-full right-0 mb-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-3 px-4 min-w-[220px]">
+            <p className="text-xs font-semibold text-zinc-200 mb-2">Keyboard Shortcuts</p>
+            <div className="space-y-1.5 text-xs text-zinc-400">
+              <div className="flex justify-between"><span>Play / Pause</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Space</kbd></div>
+              <div className="flex justify-between"><span>Previous frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">←</kbd></div>
+              <div className="flex justify-between"><span>Next frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">→</kbd></div>
+              <div className="flex justify-between"><span>First frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Home</kbd></div>
+              <div className="flex justify-between"><span>Last frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">End</kbd></div>
+              <div className="flex justify-between"><span>Slower</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">[</kbd></div>
+              <div className="flex justify-between"><span>Faster</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">]</kbd></div>
+              <div className="flex justify-between"><span>Undo</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+Z</kbd></div>
+              <div className="flex justify-between"><span>Redo</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+⇧+Z</kbd></div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
