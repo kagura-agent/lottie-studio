@@ -345,6 +345,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onSeek={handleSeek}
+            frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
           />
           <div className="flex justify-center gap-2 px-4 pb-3">
             <button

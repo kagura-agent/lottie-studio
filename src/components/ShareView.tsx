@@ -71,6 +71,7 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onSeek={handleSeek}
+            frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
           />
         </div>
       </div>
