@@ -44,6 +44,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
   const [gifExporting, setGifExporting] = useState(false);
   const [gifProgress, setGifProgress] = useState(0);
+  const [videoExporting, setVideoExporting] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"canvas" | "chat">("chat");
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
@@ -226,6 +228,34 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   };
 
+  const handleExportVideo = async (e: MouseEvent) => {
+    e.preventDefault();
+    if (!animationData || videoExporting) return;
+    setVideoExporting(true);
+    setVideoProgress(0);
+    try {
+      const { exportToVideo, getVideoExtension } = await import("@/lib/videoExporter");
+      const blob = await exportToVideo({
+        animationData,
+        onProgress: setVideoProgress,
+      });
+      const ext = getVideoExtension();
+      const url = URL.createObjectURL(blob);
+      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sanitized}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Video export failed:", err);
+      alert("Video export failed. Please try again.");
+    } finally {
+      setVideoExporting(false);
+      setVideoProgress(0);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaveStatus("idle");
@@ -297,6 +327,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           {gifExporting ? `GIF ${Math.round(gifProgress * 100)}%` : "Export GIF"}
         </button>
         <button
+          onClick={handleExportVideo}
+          disabled={animationData === null || videoExporting}
+          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {videoExporting ? `Video ${Math.round(videoProgress * 100)}%` : "Export Video"}
+        </button>
+        <button
           onClick={() => {
             navigator.clipboard.writeText(`${window.location.origin}/share/${id}`);
             setShareStatus("copied");
@@ -342,6 +379,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {gifExporting ? `Export GIF (${Math.round(gifProgress * 100)}%)` : "Export GIF"}
+              </button>
+              <button
+                onClick={(e) => { handleExportVideo(e as unknown as MouseEvent); setMobileMenuOpen(false); }}
+                disabled={animationData === null || videoExporting}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {videoExporting ? `Export Video (${Math.round(videoProgress * 100)}%)` : "Export Video"}
               </button>
               <button
                 onClick={() => {
