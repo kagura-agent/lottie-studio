@@ -11,9 +11,10 @@ interface Message {
 
 interface ChatPanelProps {
   animationId?: string;
+  insertText?: string;
 }
 
-export default function ChatPanel({ animationId }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -88,6 +89,13 @@ export default function ChatPanel({ animationId }: ChatPanelProps) {
     vv.addEventListener("resize", onResize);
     return () => vv.removeEventListener("resize", onResize);
   }, []);
+
+  // Append text from layer panel selection
+  useEffect(() => {
+    if (!insertText) return;
+    setInput((prev) => prev + insertText);
+    inputRef.current?.focus();
+  }, [insertText]);
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
