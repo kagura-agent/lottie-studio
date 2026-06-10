@@ -439,7 +439,7 @@ const EXAMPLE_COLOR_TRANSITION = JSON.stringify({
   }]
 });
 
-const EXAMPLE_TEXT_HELLO = JSON.stringify({
+const EXAMPLE_TEXT_STATIC = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
   fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
@@ -452,53 +452,18 @@ const EXAMPLE_TEXT_HELLO = JSON.stringify({
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ s: { s: 48, f: "Arial", t: "Hello World", fc: [0, 0, 0], j: 2, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Hello World", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
       a: [],
-      p: {}
-    }
-  }]
-});
-
-const EXAMPLE_TEXT_FADE_IN = JSON.stringify({
-  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
-  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
-  layers: [{
-    ty: 5, nm: "Fade In Text", ind: 0, ip: 0, op: 60,
-    ks: {
-      p: { a: 0, k: [256, 256] },
-      s: { a: 0, k: [100, 100] },
-      r: { a: 0, k: 0 },
-      o: { a: 0, k: 100 },
-      a: { a: 0, k: [0, 0] }
-    },
-    t: {
-      d: { k: [{ s: { s: 42, f: "Arial", t: "Fade In", fc: [0.2, 0.6, 1], j: 2, sz: [400, 80], ps: [-200, -40] }, t: 0 }] },
-      a: [{
-        a: { o: { a: 0, k: 0 } },
-        s: {
-          t: 0, b: 1, sh: 2,
-          s: { a: 1, k: [
-            { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-            { t: 50, s: [100] }
-          ] },
-          e: { a: 1, k: [
-            { t: 0, s: [10], e: [110], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-            { t: 50, s: [110] }
-          ] },
-          ne: { a: 0, k: 0 },
-          xe: { a: 0, k: 0 }
-        }
-      }],
-      p: {}
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
 
 const EXAMPLE_TEXT_TYPEWRITER = JSON.stringify({
-  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
-  fonts: { list: [{ fName: "Courier New", fFamily: "Courier New", fStyle: "Regular" }] },
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
-    ty: 5, nm: "Typewriter", ind: 0, ip: 0, op: 90,
+    ty: 5, nm: "Typewriter Text", ind: 0, ip: 0, op: 60,
     ks: {
       p: { a: 0, k: [256, 256] },
       s: { a: 0, k: [100, 100] },
@@ -507,30 +472,34 @@ const EXAMPLE_TEXT_TYPEWRITER = JSON.stringify({
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ s: { s: 36, f: "Courier New", t: "Typewriter", fc: [0.1, 0.1, 0.1], j: 0, sz: [400, 60], ps: [-200, -30] }, t: 0 }] },
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Typewriter Effect", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [450, 100], ps: [-225, -50] }, t: 0 }] },
       a: [{
         a: { o: { a: 0, k: 0 } },
         s: {
-          t: 0, b: 1, sh: 1,
-          s: { a: 0, k: 0 },
-          e: { a: 1, k: [
-            { t: 0, s: [0], e: [100], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
-            { t: 75, s: [100] }
-          ] },
-          ne: { a: 0, k: 100 },
-          xe: { a: 0, k: 100 }
+          r: 1,
+          b: 1,
+          ne: { a: 0, k: 0 },
+          xe: { a: 0, k: 0 },
+          o: {
+            a: 1,
+            k: [
+              { t: 0, s: [0], e: [100], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+              { t: 50, s: [100] }
+            ]
+          },
+          a: { a: 0, k: 100 }
         }
       }],
-      p: {}
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
 
-const EXAMPLE_TEXT_SCALE_BOUNCE = JSON.stringify({
+const EXAMPLE_TEXT_BOUNCE_IN = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
   fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
-    ty: 5, nm: "Scale Bounce Text", ind: 0, ip: 0, op: 60,
+    ty: 5, nm: "Bounce In Text", ind: 0, ip: 0, op: 60,
     ks: {
       p: { a: 0, k: [256, 256] },
       s: { a: 0, k: [100, 100] },
@@ -539,24 +508,25 @@ const EXAMPLE_TEXT_SCALE_BOUNCE = JSON.stringify({
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ s: { s: 52, f: "Arial", t: "Bounce!", fc: [0.9, 0.2, 0.3], j: 2, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Bounce In!", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
       a: [{
         a: { s: { a: 0, k: [0, 0] } },
         s: {
-          t: 0, b: 1, sh: 5,
-          s: { a: 1, k: [
-            { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-            { t: 45, s: [100] }
-          ] },
-          e: { a: 1, k: [
-            { t: 0, s: [8], e: [108], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-            { t: 45, s: [108] }
-          ] },
-          ne: { a: 0, k: 30 },
-          xe: { a: 0, k: 30 }
+          r: 1,
+          b: 1,
+          ne: { a: 0, k: 0 },
+          xe: { a: 0, k: 6 },
+          o: {
+            a: 1,
+            k: [
+              { t: 0, s: [0], e: [100], i: { x: [0.2], y: [1.5] }, o: { x: [0.8], y: [0] } },
+              { t: 45, s: [100] }
+            ]
+          },
+          a: { a: 0, k: 100 }
         }
       }],
-      p: {}
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
@@ -643,24 +613,19 @@ ${EXAMPLE_COLOR_TRANSITION}
 ${EXAMPLE_PATH_ANIMATION}
 \`\`\`
 
-### Static text display (text layer)
+### Static text display
 \`\`\`json
-${EXAMPLE_TEXT_HELLO}
+${EXAMPLE_TEXT_STATIC}
 \`\`\`
 
-### Text fade-in character by character (text animator with opacity)
-\`\`\`json
-${EXAMPLE_TEXT_FADE_IN}
-\`\`\`
-
-### Typewriter effect (text animator with hard-edge reveal)
+### Typewriter effect (character-by-character)
 \`\`\`json
 ${EXAMPLE_TEXT_TYPEWRITER}
 \`\`\`
 
-### Text scale-bounce entrance (per-character scale animator)
+### Bounce-in text (per-character scale)
 \`\`\`json
-${EXAMPLE_TEXT_SCALE_BOUNCE}
+${EXAMPLE_TEXT_BOUNCE_IN}
 \`\`\`
 
 ## Your Response Format
