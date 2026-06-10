@@ -50,6 +50,36 @@ export default function GalleryPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/animations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setAnimations((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      setImportError("Failed to delete animation");
+      setTimeout(() => setImportError(null), 5000);
+    }
+  }, []);
+
+  const handleDuplicate = useCallback(async (id: string) => {
+    try {
+      const dataRes = await fetch(`/api/animations/${id}`);
+      if (!dataRes.ok) throw new Error("Failed to fetch animation");
+      const { data, name } = await dataRes.json();
+      const createRes = await fetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: `${name} (copy)`, data }),
+      });
+      if (!createRes.ok) throw new Error("Failed to duplicate");
+      const newAnim = await createRes.json();
+      router.push(`/editor/${newAnim.id}`);
+    } catch {
+      setImportError("Failed to duplicate animation");
+      setTimeout(() => setImportError(null), 5000);
+    }
+  }, [router]);
+
   const handleImport = useCallback(async (file: File) => {
     setImportError(null);
     setImporting(true);
@@ -222,6 +252,8 @@ export default function GalleryPage() {
                   name={anim.name}
                   frameCount={anim.frame_count}
                   durationSeconds={anim.duration_seconds}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
                 />
               ))}
             </div>
