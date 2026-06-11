@@ -226,6 +226,15 @@ export async function POST(request: Request) {
             "UPDATE animations SET frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
           ).run(frameCount, durationSeconds, capturedAnimationId);
 
+          // Auto-save version
+          const lastVersion = db.prepare(
+            "SELECT MAX(version_num) as max_num FROM versions WHERE animation_id = ?"
+          ).get(capturedAnimationId) as { max_num: number | null } | undefined;
+          const nextVersion = (lastVersion?.max_num ?? 0) + 1;
+          db.prepare(
+            "INSERT INTO versions (animation_id, version_num, lottie_json, trigger_message) VALUES (?, ?, ?, ?)"
+          ).run(capturedAnimationId, nextVersion, JSON.stringify(lottieJson), message);
+
           animationEvents.emit("updated", { animationId: capturedAnimationId });
         }
 

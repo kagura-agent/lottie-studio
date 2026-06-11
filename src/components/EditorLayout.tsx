@@ -12,6 +12,7 @@ import Controls from "./Controls";
 import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
+import VersionHistory from "./VersionHistory";
 
 interface EditorPageProps {
   id: string;
@@ -50,6 +51,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"canvas" | "chat" | "layers">("chat");
   const [insertText, setInsertText] = useState("");
+  const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem(`lottie-bg-${id}`) as CanvasBackground) || "checkered";
@@ -552,6 +554,21 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             >
               Layers
             </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => setVersionPanelOpen((v) => !v)}
+              title="Version History"
+              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+                versionPanelOpen
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </button>
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
@@ -568,6 +585,11 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
         </div>
       </div>
+      <VersionHistory
+        animationId={id}
+        open={versionPanelOpen}
+        onClose={() => setVersionPanelOpen(false)}
+      />
     </div>
   );
 }
