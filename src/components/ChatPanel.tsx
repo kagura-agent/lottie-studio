@@ -19,6 +19,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
   const [retryingMsgId, setRetryingMsgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
@@ -242,7 +243,10 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
               )
             );
           }
+        } else if (parsed.type === "repairing") {
+          setIsRepairing(true);
         } else if (parsed.type === "done") {
+          setIsRepairing(false);
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
           }
@@ -284,6 +288,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
       const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errMsg);
     } finally {
+      setIsRepairing(false);
       setIsThinking(false);
       setIsStreaming(false);
     }
@@ -317,6 +322,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
       const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errMsg);
     } finally {
+      setIsRepairing(false);
       setIsThinking(false);
       setIsStreaming(false);
       setRetryingMsgId(null);
@@ -421,14 +427,24 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
             )}
           </div>
         ))}
-        {isThinking && !retryingMsgId && (
+        {(isThinking || isRepairing) && !retryingMsgId && (
           <div className="flex justify-start">
             <div className="bg-zinc-700 px-3 py-2 rounded-lg">
-              <span className="inline-flex gap-1">
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
-              </span>
+              {isRepairing ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-amber-300">
+                  <svg className="w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  Auto-repairing...
+                </span>
+              ) : (
+                <span className="inline-flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                </span>
+              )}
             </div>
           </div>
         )}
