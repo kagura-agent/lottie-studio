@@ -1,5 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
-import { chatCompletionStream, chatCompletionRepair, parseResponse } from "@/lib/llm";
+import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { animationEvents } from "@/lib/events";
 import { randomUUID } from "node:crypto";
@@ -137,12 +137,50 @@ export async function POST(request: Request) {
           controller.enqueue(encoder.encode(`data: ${repairingEvent}\n\n`));
 
           try {
-            const repaired = await chatCompletionRepair(llmMessages, accumulated, parseError);
-            if (repaired.lottieJson && !repaired.parseError) {
-              // Repair succeeded — use repaired result
-              reply = repaired.reply;
-              lottieJson = repaired.lottieJson;
-              parseError = null;
+            const repairResponse = await chatCompletionRepairStream(llmMessages, accumulated, parseError);
+            const repairBody = repairResponse.body;
+            if (repairBody) {
+              const repairReader = repairBody.getReader();
+              const repairDecoder = new TextDecoder();
+              let repairAccumulated = "";
+              let repairSseBuffer = "";
+
+              while (true) {
+                const { done: repairDone, value: repairValue } = await repairReader.read();
+                if (repairDone) break;
+
+                repairSseBuffer += repairDecoder.decode(repairValue, { stream: true });
+
+                const repairLines = repairSseBuffer.split("\n");
+                repairSseBuffer = repairLines.pop() || "";
+
+                for (const repairLine of repairLines) {
+                  const repairTrimmed = repairLine.trim();
+                  if (!repairTrimmed || !repairTrimmed.startsWith("data: ")) continue;
+
+                  const repairData = repairTrimmed.slice(6);
+                  if (repairData === "[DONE]") continue;
+
+                  try {
+                    const repairParsed = JSON.parse(repairData);
+                    const repairContent = repairParsed.choices?.[0]?.delta?.content;
+                    if (repairContent) {
+                      repairAccumulated += repairContent;
+                      const repairChunk = JSON.stringify({ type: "repair_token", text: repairContent });
+                      controller.enqueue(encoder.encode(`data: ${repairChunk}\n\n`));
+                    }
+                  } catch {
+                    // Skip malformed JSON chunks
+                  }
+                }
+              }
+
+              const repaired = parseResponse(repairAccumulated);
+              if (repaired.lottieJson && !repaired.parseError) {
+                reply = repaired.reply;
+                lottieJson = repaired.lottieJson;
+                parseError = null;
+              }
             }
             // If repair also failed, fall through to original warning behavior
           } catch {

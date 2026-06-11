@@ -7,6 +7,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   warning?: string;
+  isRepair?: boolean;
 }
 
 interface ChatPanelProps {
@@ -152,6 +153,10 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
     let visibleContent = "";
     let insideJsonBlock = false;
     let fenceBuffer = "";
+    let repairContent = "";
+    let repairVisibleContent = "";
+    let repairInsideJsonBlock = false;
+    let repairFenceBuffer = "";
 
     setIsThinking(false);
     setIsStreaming(true);
@@ -245,6 +250,64 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
           }
         } else if (parsed.type === "repairing") {
           setIsRepairing(true);
+        } else if (parsed.type === "repair_token") {
+          const tokenText = parsed.text || "";
+          repairContent += tokenText;
+
+          let visibleChunk = "";
+          for (const ch of tokenText) {
+            repairFenceBuffer += ch;
+
+            if (!repairInsideJsonBlock) {
+              if (repairFenceBuffer.endsWith("```json")) {
+                visibleChunk = visibleChunk.slice(0, -("```json".length - 1));
+                repairInsideJsonBlock = true;
+                repairFenceBuffer = "";
+              } else if ("```json".startsWith(repairFenceBuffer)) {
+                // Potential partial match — hold in buffer
+              } else {
+                visibleChunk += repairFenceBuffer[0];
+                repairFenceBuffer = repairFenceBuffer.slice(1);
+                while (repairFenceBuffer.length > 0 && !"```json".startsWith(repairFenceBuffer)) {
+                  visibleChunk += repairFenceBuffer[0];
+                  repairFenceBuffer = repairFenceBuffer.slice(1);
+                }
+              }
+            } else {
+              if (repairFenceBuffer.endsWith("```")) {
+                repairInsideJsonBlock = false;
+                repairFenceBuffer = "";
+              } else if ("```".startsWith(repairFenceBuffer)) {
+                // Potential partial closing fence
+              } else {
+                repairFenceBuffer = repairFenceBuffer.slice(1);
+                while (repairFenceBuffer.length > 0 && !"```".startsWith(repairFenceBuffer)) {
+                  repairFenceBuffer = repairFenceBuffer.slice(1);
+                }
+              }
+            }
+          }
+
+          repairVisibleContent += visibleChunk;
+
+          if (!assistantMsgId) {
+            assistantMsgId = crypto.randomUUID();
+            const newMsg: Message = {
+              id: assistantMsgId,
+              role: "assistant",
+              content: repairVisibleContent,
+              isRepair: true,
+            };
+            setMessages((prev) => [...prev, newMsg]);
+          } else {
+            const msgId = assistantMsgId;
+            const currentVisible = repairVisibleContent;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId ? { ...m, content: currentVisible, isRepair: true } : m
+              )
+            );
+          }
         } else if (parsed.type === "done") {
           setIsRepairing(false);
           if (!currentAnimationId && parsed.animationId) {
@@ -255,7 +318,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
             const warningText = parsed.warning as string | undefined;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined } : m
               )
             );
           }
@@ -392,6 +455,8 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
                       <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
                       <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
                     </span>
+                  ) : msg.isRepair ? (
+                    <span className="text-amber-300">{msg.content}</span>
                   ) : (
                     msg.content
                   )}
