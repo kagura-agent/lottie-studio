@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lottie Studio
+
+**Create animations by chatting, not by dragging timelines.**
+
+Lottie Studio is a chat-driven animation creator where you describe what you want in plain language and an AI agent generates production-ready Lottie animations in real-time. No Lottie knowledge required, no JSON editing, no timeline dragging — just tell it what to build.
+
+Try it live at [lottie.kagura-agent.com](https://lottie.kagura-agent.com)
+
+## Features
+
+**Chat-Driven Creation**
+- Describe animations in natural language with streaming LLM responses
+- Suggested prompts to help you get started
+- Retry and regenerate any response
+- Text layer support for dynamic typography
+
+**Live Preview & Editing**
+- Real-time canvas preview with WebSocket updates
+- Undo/redo support
+- Loop mode and playback controls
+- Keyboard shortcuts for navigation and playback
+- Layer panel with visibility toggle and selection
+- Background color picker
+- Collapsible JSON editor for fine-tuning
+
+**Templates & Gallery**
+- 6 starter templates to build from
+- Gallery view with delete and duplicate actions
+- Import `.json` and `.lottie` files
+
+**Sharing & Export**
+- Shareable links with Open Graph meta tags
+- Embed code generation
+- GIF export
+- WebM video export
+- Remix from any shared animation
+
+**Mobile-Friendly**
+- Responsive layout that works on phones and tablets
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm
+
+### Setup
 
 ```bash
+git clone https://github.com/kagura-agent/lottie-studio.git
+cd lottie-studio
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework:** Next.js + React
+- **Styling:** Tailwind CSS
+- **Animation:** lottie-web
+- **Database:** SQLite (better-sqlite3)
+- **Real-time:** WebSocket (ws)
+- **Code Editor:** CodeMirror 6
+- **Export:** gif.js, canvas, JSZip
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+Production builds run on a self-hosted VM behind a Caddy reverse proxy.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+npm start
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The project includes a custom `server.ts` that handles both Next.js routing and WebSocket connections. Deployment is automated via GitHub Actions on push to `main`.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Not yet specified.
