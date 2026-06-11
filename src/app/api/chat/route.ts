@@ -1,5 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
-import { chatCompletionStream, parseResponse } from "@/lib/llm";
+import { chatCompletionStream, chatCompletionRepair, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { animationEvents } from "@/lib/events";
 import { randomUUID } from "node:crypto";
@@ -120,7 +120,35 @@ export async function POST(request: Request) {
         }
 
         // Stream ended — finalize
-        const { reply, lottieJson, parseError } = parseResponse(accumulated);
+        let { reply, lottieJson, parseError } = parseResponse(accumulated);
+
+        // Auto-repair: if parse failed, try once with error context
+        const shouldRetryNoJson =
+          parseError === "no_json" &&
+          (/"v"\s*:/.test(accumulated) || /"layers"\s*:/.test(accumulated));
+
+        if (
+          !lottieJson &&
+          parseError &&
+          (parseError === "invalid_json" || parseError === "invalid_lottie" || shouldRetryNoJson)
+        ) {
+          // Notify client that a repair attempt is starting
+          const repairingEvent = JSON.stringify({ type: "repairing" });
+          controller.enqueue(encoder.encode(`data: ${repairingEvent}\n\n`));
+
+          try {
+            const repaired = await chatCompletionRepair(llmMessages, accumulated, parseError);
+            if (repaired.lottieJson && !repaired.parseError) {
+              // Repair succeeded — use repaired result
+              reply = repaired.reply;
+              lottieJson = repaired.lottieJson;
+              parseError = null;
+            }
+            // If repair also failed, fall through to original warning behavior
+          } catch {
+            // Repair request failed — fall through to original warning behavior
+          }
+        }
 
         // Build warning message when Lottie JSON generation failed
         let warning: string | undefined;

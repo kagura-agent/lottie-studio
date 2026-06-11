@@ -64,6 +64,53 @@ export async function chatCompletionStream(messages: ChatMessage[]): Promise<Res
   return response;
 }
 
+export async function chatCompletionRepair(
+  originalMessages: ChatMessage[],
+  failedResponse: string,
+  errorType: ParseError
+): Promise<LLMResponse> {
+  const errorDescriptions: Record<string, string> = {
+    invalid_json: "The JSON in your response was malformed and could not be parsed.",
+    invalid_lottie: "The JSON in your response was valid JSON but not a valid Lottie animation (missing required 'v' or 'layers' fields).",
+    no_json: "Your response did not include the Lottie JSON in a ```json code block, but it appears you were trying to generate one.",
+  };
+
+  const description = errorDescriptions[errorType || "invalid_json"];
+
+  const repairMessages: ChatMessage[] = [
+    ...originalMessages,
+    { role: "assistant", content: failedResponse },
+    {
+      role: "user",
+      content: `Your response had an error: ${description} Please fix the Lottie JSON and respond again with the corrected animation in a \`\`\`json code block.`,
+    },
+  ];
+
+  const url = `${LLM_API_URL}/chat/completions`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages: repairMessages,
+      temperature: 0.5,
+      max_tokens: 16384,
+    }),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`LLM API error ${response.status}: ${body}`);
+  }
+
+  const data = await response.json();
+  const content: string = data.choices?.[0]?.message?.content ?? "";
+
+  return parseResponse(content);
+}
+
 export function parseResponse(content: string): LLMResponse {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
 
