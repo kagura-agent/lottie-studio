@@ -40,5 +40,33 @@
     "description": "Colorful particles drifting upward",
     "category": "Multi-layer",
     "file": "floating-particles.json"
+  },
+  {
+    "id": "toggle-switch",
+    "name": "Toggle Switch",
+    "description": "Smooth on/off toggle with sliding knob",
+    "category": "UI",
+    "file": "toggle-switch.json"
+  },
+  {
+    "id": "checkmark-success",
+    "name": "Checkmark Success",
+    "description": "Animated checkmark with drawing circle",
+    "category": "UI",
+    "file": "checkmark-success.json"
+  },
+  {
+    "id": "confetti-burst",
+    "name": "Confetti Burst",
+    "description": "Colorful confetti particles bursting outward",
+    "category": "Decorative",
+    "file": "confetti-burst.json"
+  },
+  {
+    "id": "wave-background",
+    "name": "Wave Background",
+    "description": "Gentle animated wave shapes for backgrounds",
+    "category": "Decorative",
+    "file": "wave-background.json"
   }
 ]
