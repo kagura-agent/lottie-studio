@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
 interface Message {
   id: string;
@@ -430,31 +430,39 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
 
-  const suggestedPrompts = [
-    "\uD83C\uDF88 A bouncing red ball with a shadow",
-    "\uD83C\uDF38 Sakura petals falling and spinning",
-    "\u2B50 A pulsing loading spinner",
-    "\uD83C\uDFA8 A colorful rotating pinwheel",
-    "\uD83D\uDCAB Stars twinkling in the night sky",
-    "\uD83D\uDD04 A smooth progress circle animation",
-  ];
+  const starterChips = useMemo(() => {
+    const allPrompts = [
+      "\uD83C\uDF88 A bouncing red ball with a shadow",
+      "\uD83C\uDF38 Sakura petals falling and spinning",
+      "\u2B50 A pulsing loading spinner",
+      "\uD83C\uDFA8 A colorful rotating pinwheel",
+      "\uD83D\uDCAB Stars twinkling in the night sky",
+      "\uD83D\uDD04 A smooth progress circle animation",
+      "\uD83D\uDE80 A rocket launching with flame particles",
+      "\uD83C\uDF0A An ocean wave rolling across the screen",
+      "\u2764\uFE0F A heartbeat pulse animation",
+      "\uD83C\uDF19 A day-to-night sky transition",
+    ];
+    const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-zinc-900">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <p className="text-zinc-400 text-sm">
-              Describe any animation and I'll create it for you.
-            </p>
+          <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
+            <h2 className="text-zinc-300 text-base font-medium">
+              What would you like to create?
+            </h2>
             <div className="flex flex-wrap justify-center gap-2 max-w-md">
-              {suggestedPrompts.map((prompt) => (
+              {starterChips.map((prompt) => (
                 <button
                   key={prompt}
                   onClick={() => handleSend(prompt)}
                   disabled={isThinking || isStreaming}
-                  className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 active:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {prompt}
                 </button>
