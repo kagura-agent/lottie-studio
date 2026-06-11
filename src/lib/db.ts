@@ -37,4 +37,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_messages_animation_id ON messages(animation_id, created_at)
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS versions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    animation_id TEXT NOT NULL,
+    version_num INTEGER NOT NULL,
+    lottie_json TEXT NOT NULL,
+    message_id TEXT,
+    trigger_message TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (animation_id) REFERENCES animations(id)
+  )
+`);
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_versions_animation ON versions(animation_id, version_num)
+`);
+
 export { db, ANIMATIONS_DIR };
