@@ -29,6 +29,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Keep currentAnimationId in sync when prop changes
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
-  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string) => {
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal) => {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -109,6 +110,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
         animationId: currentAnimationId,
         message: text,
       }),
+      signal,
     });
 
     // Fallback: if not SSE (e.g. error JSON response), handle like old path
@@ -345,12 +347,20 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
     setInput("");
     setIsThinking(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      await streamResponse(text);
+      await streamResponse(text, undefined, controller.signal);
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errMsg);
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled — not an error
+      } else {
+        const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+        setError(errMsg);
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsRepairing(false);
       setIsThinking(false);
       setIsStreaming(false);
@@ -379,12 +389,20 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
     setRetryingMsgId(assistantMsgId);
     setIsThinking(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      await streamResponse(userText, assistantMsgId);
+      await streamResponse(userText, assistantMsgId, controller.signal);
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errMsg);
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled — not an error
+      } else {
+        const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+        setError(errMsg);
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsRepairing(false);
       setIsThinking(false);
       setIsStreaming(false);
@@ -398,6 +416,14 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
       handleSend();
     }
   };
+
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsThinking(false);
+    setIsStreaming(false);
+    setIsRepairing(false);
+  }, []);
 
   const dismissError = useCallback(() => setError(null), []);
   const dismissWarning = useCallback((msgId: string) => {
@@ -544,13 +570,24 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
             enterKeyHint="send"
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50"
           />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isThinking || isStreaming}
-            className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+          {isThinking || isStreaming ? (
+            <button
+              onClick={handleStop}
+              className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors flex items-center justify-center"
+              aria-label="Stop generation"
+              title="Stop generation"
+            >
+              <span className="inline-block w-3 h-3 bg-white rounded-sm" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleSend()}
+              disabled={!input.trim()}
+              className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          )}
         </div>
       </div>
     </div>
