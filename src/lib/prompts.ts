@@ -185,6 +185,38 @@ To animate text character-by-character, animate the range selector's "s" (start)
 - Default to "Arial" if no font specified
 - Lottie players must have the font available; web-safe fonts ensure broadest compatibility
 - For the "fonts" top-level property, list fonts used: {"list": [{"fName": "Arial", "fFamily": "Arial", "fStyle": "Regular"}]}
+
+## Mask Shapes (masksProperties)
+Masks clip or reveal portions of a layer using animated paths. Any layer can have a "masksProperties" array.
+Each mask object:
+- "inv": boolean — invert the mask (default false)
+- "mode": mask mode string:
+  - "a" = Add (union — default, most common)
+  - "s" = Subtract (cut away)
+  - "i" = Intersect (keep overlap)
+  - "l" = Lighten
+  - "d" = Darken
+  - "f" = Difference
+- "pt": path data — same format as shape paths ("sh" type): {"a": 0/1, "k": {"v": [...], "i": [...], "o": [...], "c": true}}
+- "o": opacity — animated property, 0-100 (controls mask strength)
+- "x": expansion — animated property (expands/contracts the mask edge in pixels)
+
+Common pattern: Animate the mask path vertices ("pt" with a:1) over time for wipe/reveal effects.
+Example mask (rectangle covering left half of 512×512 canvas):
+{"inv": false, "mode": "a", "pt": {"a": 0, "k": {"v": [[0,0],[256,0],[256,512],[0,512]], "i": [[0,0],[0,0],[0,0],[0,0]], "o": [[0,0],[0,0],[0,0],[0,0]], "c": true}}, "o": {"a": 0, "k": 100}, "x": {"a": 0, "k": 0}}
+
+## Track Mattes (tt / td)
+Track mattes use one layer to define the visibility of another layer.
+The matte layer (the "stencil") sits directly ABOVE the content layer in the layers array.
+- Matte layer: has "td": 1 — marks it as a track matte source. This layer is invisible in the final render.
+- Content layer: has "tt" property defining the matte type:
+  - tt: 1 = Alpha Matte — content is visible where the matte layer has opacity
+  - tt: 2 = Alpha Inverted Matte — content is visible where the matte layer is transparent
+  - tt: 3 = Luma Matte — content is visible where the matte layer is bright
+  - tt: 4 = Luma Inverted Matte — content is visible where the matte layer is dark
+
+Layer order matters: in the "layers" array, the matte layer (td: 1) must come BEFORE the content layer (tt: N) since layers are rendered top-to-bottom (lower index = on top).
+The matte layer's shapes/content define the clipping region — animate its shapes or transform to create dynamic clipping effects.
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -597,6 +629,128 @@ const EXAMPLE_PATH_ANIMATION = JSON.stringify({
   }]
 });
 
+const EXAMPLE_MASK_TEXT_REVEAL = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
+  layers: [{
+    ty: 5, nm: "Revealed Text", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    masksProperties: [{
+      inv: false,
+      mode: "a",
+      pt: {
+        a: 1,
+        k: [
+          { t: 0, s: [{ v: [[0, 150], [0, 150], [0, 362], [0, 362]], i: [[0,0],[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0],[0,0]], c: true }], e: [{ v: [[0, 150], [512, 150], [512, 362], [0, 362]], i: [[0,0],[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0],[0,0]], c: true }], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 45, s: [{ v: [[0, 150], [512, 150], [512, 362], [0, 362]], i: [[0,0],[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0],[0,0]], c: true }] }
+        ]
+      },
+      o: { a: 0, k: 100 },
+      x: { a: 0, k: 0 }
+    }],
+    t: {
+      d: { k: [{ s: { s: 52, f: "Arial", t: "REVEAL", fc: [1, 1, 1], j: 2, lh: 62, sz: [400, 80], ps: [-200, -40] }, t: 0 }] },
+      a: [],
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
+    }
+  }]
+});
+
+const EXAMPLE_MASK_CIRCLE_REVEAL = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Circle Reveal Shape", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    masksProperties: [{
+      inv: false,
+      mode: "a",
+      pt: {
+        a: 1,
+        k: [
+          { t: 0, s: [{ v: [[256,251],[251,256],[256,261],[261,256]], i: [[0,-2.76],[2.76,0],[0,2.76],[-2.76,0]], o: [[0,2.76],[-2.76,0],[0,-2.76],[2.76,0]], c: true }], e: [{ v: [[256,6],[6,256],[256,506],[506,256]], i: [[0,-138],[138,0],[0,138],[-138,0]], o: [[0,138],[-138,0],[0,-138],[138,0]], c: true }], i: { x: [0.25], y: [1] }, o: { x: [0.75], y: [0] } },
+          { t: 50, s: [{ v: [[256,6],[6,256],[256,506],[506,256]], i: [[0,-138],[138,0],[0,138],[-138,0]], o: [[0,138],[-138,0],[0,-138],[138,0]], c: true }] }
+        ]
+      },
+      o: { a: 0, k: 100 },
+      x: { a: 0, k: 0 }
+    }],
+    shapes: [{
+      ty: "gr", nm: "Colorful Square",
+      it: [
+        { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [400, 400] }, r: { a: 0, k: 0 } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_TRACK_MATTE_CLIP = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [
+    {
+      ty: 4, nm: "Matte Shape", ind: 0, ip: 0, op: 90, td: 1,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: {
+          a: 1,
+          k: [
+            { t: 0, s: [60, 60], e: [100, 100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 45, s: [100, 100] }
+          ]
+        },
+        r: {
+          a: 1,
+          k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ]
+        },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Star Matte",
+        it: [
+          { ty: "sr", nm: "Star", sy: 1, p: { a: 0, k: [0, 0] }, or: { a: 0, k: 180 }, os: { a: 0, k: 0 }, ir: { a: 0, k: 90 }, is: { a: 0, k: 0 }, r: { a: 0, k: 0 }, pt: { a: 0, k: 5 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 1, 1, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Clipped Content", ind: 1, ip: 0, op: 90, tt: 1,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Gradient Rect",
+        it: [
+          { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [400, 400] }, r: { a: 0, k: 0 } },
+          { ty: "gf", nm: "Gradient", t: 1, s: { a: 0, k: [-200, -200] }, e: { a: 0, k: [200, 200] }, g: { p: 3, k: { a: 0, k: [0, 1, 0.2, 0.3, 0.5, 0.2, 0.6, 1, 1, 0.8, 0.2, 0.9] } }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
 export function buildSystemPrompt(currentAnimation: object | null): string {
   let prompt = `You are a Lottie animation expert. You create and modify Lottie JSON animations based on user descriptions.
 
@@ -662,6 +816,21 @@ ${EXAMPLE_TEXT_TYPEWRITER}
 ### Bounce-in text (per-character scale)
 \`\`\`json
 ${EXAMPLE_TEXT_BOUNCE_IN}
+\`\`\`
+
+### Text reveal wipe (animated mask expands left to right)
+\`\`\`json
+${EXAMPLE_MASK_TEXT_REVEAL}
+\`\`\`
+
+### Circular reveal (expanding ellipse mask from center)
+\`\`\`json
+${EXAMPLE_MASK_CIRCLE_REVEAL}
+\`\`\`
+
+### Shape clipping with track matte (star-shaped alpha matte clips gradient)
+\`\`\`json
+${EXAMPLE_TRACK_MATTE_CLIP}
 \`\`\`
 
 ## Your Response Format
