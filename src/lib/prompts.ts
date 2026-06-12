@@ -242,6 +242,26 @@ The matte layer (the "stencil") sits directly ABOVE the content layer in the lay
 
 Layer order matters: in the "layers" array, the matte layer (td: 1) must come BEFORE the content layer (tt: N) since layers are rendered top-to-bottom (lower index = on top).
 The matte layer's shapes/content define the clipping region — animate its shapes or transform to create dynamic clipping effects.
+
+## Stroke Dashes ("d" property on "st" items)
+Add a "d" array to any stroke ("st") to create dashed lines:
+- Each entry: {"n": "d"|"g"|"o", "nm": "dash"|"gap"|"offset", "v": {"a": 0, "k": value}}
+  - "d" = dash length, "g" = gap length, "o" = offset
+- The offset ("o") is animatable — animate it for a marching ants effect.
+- Example: [{"n":"d","nm":"dash","v":{"a":0,"k":10}}, {"n":"g","nm":"gap","v":{"a":0,"k":5}}]
+
+## Line Caps ("lc") and Line Joins ("lj") on Strokes
+Control how stroke endpoints and corners render:
+- "lc" (line cap): 1 = butt (flat end), 2 = round, 3 = square (extends past endpoint)
+- "lj" (line join): 1 = miter (sharp corner), 2 = round, 3 = bevel
+- "ml" (miter limit): number, applies when lj: 1 — prevents overly long miter points
+These are static number properties on the "st" object (not animated).
+
+## Round Corners Modifier (ty: "rd")
+Rounds the corners of rectangles and polygons.
+- {"ty": "rd", "nm": "Round Corners", "r": {"a": 0, "k": radius}}
+- Place after rectangle/polystar shapes in a group's "it" array (before fill/stroke or after shapes, before "tr")
+- The "r" (radius) property is animatable — animate it to morph between sharp and rounded corners.
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -929,6 +949,63 @@ const EXAMPLE_GROUP_MOVEMENT = JSON.stringify({
   ]
 });
 
+const EXAMPLE_DASHED_CIRCLE = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Dashed Circle", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Dashed Circle Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [300, 300] } },
+        { ty: "st", nm: "Dashed Stroke", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 6 }, lc: 2, lj: 2, d: [
+          { n: "d", nm: "dash", v: { a: 0, k: 15 } },
+          { n: "g", nm: "gap", v: { a: 0, k: 10 } },
+          { n: "o", nm: "offset", v: { a: 1, k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ] } }
+        ] },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_ROUNDED_RECT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Rounded Rectangle", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Rounded Rect Group",
+      it: [
+        { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [240, 180] }, r: { a: 0, k: 0 } },
+        { ty: "rd", nm: "Round Corners", r: { a: 1, k: [
+          { t: 0, s: [0], e: [40], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 30, s: [40], e: [0], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 60, s: [0] }
+        ] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.95, 0.4, 0.3, 1] }, o: { a: 0, k: 100 } },
+        { ty: "st", nm: "Stroke", c: { a: 0, k: [0.75, 0.2, 0.15, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2, lj: 2 },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1102,6 +1179,16 @@ ${EXAMPLE_GROUP_MOVEMENT}
 ### Pendulum (pivot null with oscillating rotation, parented arm and bob)
 \`\`\`json
 ${EXAMPLE_PENDULUM}
+\`\`\`
+
+### Dashed circle with marching ants (stroke dashes + animated offset)
+\`\`\`json
+${EXAMPLE_DASHED_CIRCLE}
+\`\`\`
+
+### Rounded rectangle with animated corner radius (round corners modifier)
+\`\`\`json
+${EXAMPLE_ROUNDED_RECT}
 \`\`\`
 
 ## Your Response Format
