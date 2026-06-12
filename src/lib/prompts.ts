@@ -263,6 +263,37 @@ Rounds the corners of rectangles and polygons.
 - Place after rectangle/polystar shapes in a group's "it" array (before fill/stroke or after shapes, before "tr")
 - The "r" (radius) property is animatable — animate it to morph between sharp and rounded corners.
 
+## Precomp Layers (ty: 0) and Assets
+
+Precomps let you define a reusable composition in the top-level "assets" array and reference it from layers.
+
+### Top-level "assets" array
+Add an "assets" array at the root of the Lottie JSON (same level as "layers"):
+- Each precomp asset: {"id": "unique_id", "layers": [...], "fr": 30, "w": 512, "h": 512}
+- "id": unique string identifier referenced by precomp layers
+- "layers": array of layer objects (same format as top-level layers)
+- "fr"/"w"/"h": frame rate and dimensions (usually match the root)
+
+### Precomp Layer (ty: 0)
+A layer that renders an asset composition:
+- "ty": 0
+- "refId": string matching an asset's "id"
+- "w": width of the precomp
+- "h": height of the precomp
+- "ks": transform (position, scale, rotation, opacity, anchor point — same as other layers)
+- "ip"/"op": in/out points
+- "ind": layer index
+- "tm": time remapping — animated property that controls playback speed/direction of the precomp
+
+### When to use precomps
+- **Reusable elements**: Same shape group needed multiple times (e.g., multiple butterflies, repeated icons) — define once in assets, instantiate with different transforms
+- **Nested compositions**: A sub-scene contained within a larger scene (e.g., a clock face inside a room)
+- **Organization**: Break complex animations into logical groups
+
+### When NOT to use precomps
+- Simple animations with few layers — precomps add complexity for no benefit
+- Single-use compositions — just use regular layers
+
 ## Easing Presets
 
 Named easing curves for keyframe i (in-tangent) and o (out-tangent) values:
@@ -1099,6 +1130,70 @@ const EXAMPLE_EASING_SHOWCASE = JSON.stringify({
   ]
 });
 
+const EXAMPLE_PRECOMP_REUSE = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  assets: [{
+    id: "star_comp",
+    layers: [{
+      ty: 4, nm: "Star Shape", ind: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [64, 64] },
+        s: { a: 0, k: [100, 100] },
+        r: {
+          a: 1,
+          k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ]
+        },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [64, 64] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Star",
+        it: [
+          { ty: "sr", nm: "Star", sy: 1, p: { a: 0, k: [64, 64] }, or: { a: 0, k: 50 }, os: { a: 0, k: 0 }, ir: { a: 0, k: 25 }, is: { a: 0, k: 0 }, r: { a: 0, k: 0 }, pt: { a: 0, k: 5 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.8, 0, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }],
+    fr: 30, w: 128, h: 128
+  }],
+  layers: [
+    {
+      ty: 0, nm: "Star 1", refId: "star_comp", ind: 0, ip: 0, op: 90, w: 128, h: 128,
+      ks: {
+        p: { a: 0, k: [128, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [64, 64] }
+      }
+    },
+    {
+      ty: 0, nm: "Star 2", refId: "star_comp", ind: 1, ip: 0, op: 90, w: 128, h: 128,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [150, 150] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [64, 64] }
+      }
+    },
+    {
+      ty: 0, nm: "Star 3", refId: "star_comp", ind: 2, ip: 0, op: 90, w: 128, h: 128,
+      ks: {
+        p: { a: 0, k: [384, 256] },
+        s: { a: 0, k: [75, 75] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 80 },
+        a: { a: 0, k: [64, 64] }
+      }
+    }
+  ]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1206,6 +1301,7 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_DASHED_CIRCLE", title: "Dashed circle with marching ants (stroke dashes + animated offset)", categories: ["stroke"], json: EXAMPLE_DASHED_CIRCLE },
   { name: "EXAMPLE_ROUNDED_RECT", title: "Rounded rectangle with animated corner radius (round corners modifier)", categories: ["modifier", "stroke"], json: EXAMPLE_ROUNDED_RECT },
   { name: "EXAMPLE_EASING_SHOWCASE", title: "Easing comparison (4 circles with linear, ease-in-out, bounce, snappy)", categories: ["easing"], json: EXAMPLE_EASING_SHOWCASE },
+  { name: "EXAMPLE_PRECOMP_REUSE", title: "Precomp reuse (3 spinning stars from one asset definition)", categories: ["precomp", "multi", "rotation"], json: EXAMPLE_PRECOMP_REUSE },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1222,6 +1318,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   path: ["path", "bezier", "curve", "heart", "star", "polygon", "arrow", "custom shape", "crescent", "moon"],
   modifier: ["round corner", "repeater", "trim", "modifier"],
   multi: ["composition", "multi", "layer", "stagger", "sequence", "multiple", "scene"],
+  precomp: ["precomp", "reuse", "repeat", "multiple copies", "duplicate", "instance", "nested", "composition", "asset"],
   easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
 };
 
