@@ -186,6 +186,31 @@ To animate text character-by-character, animate the range selector's "s" (start)
 - Lottie players must have the font available; web-safe fonts ensure broadest compatibility
 - For the "fonts" top-level property, list fonts used: {"list": [{"fName": "Arial", "fFamily": "Arial", "fStyle": "Regular"}]}
 
+## Layer Parenting (parent / ind)
+Layers can be parented to other layers, inheriting the parent's transform (position, rotation, scale).
+- "ind": unique layer index (integer) — every layer must have one
+- "parent": the "ind" value of the parent layer — the child inherits the parent's transform
+Child layers' transforms become relative to the parent. If a parent moves, rotates, or scales, all children follow.
+
+## Null Layer (ty: 3)
+An invisible layer used purely as a parent/controller. It has no visual output but carries a full transform.
+- "ty": 3
+- "nm": name
+- "ind": layer index (used as the "parent" value for child layers)
+- "ip"/"op": in/out points
+- "ks": transform (position, rotation, scale, opacity, anchor point)
+- No "shapes" or visual content
+
+Common patterns:
+- **Orbiting**: Null at center with animated rotation; child shape layers offset from center orbit around it.
+- **Group movement**: Null with animated position; multiple child layers move together as a unit.
+- **Hierarchical chains**: Layer A parents to Null B, which parents to Null C — transforms cascade (e.g., pendulum arm + bob).
+
+Tips:
+- Set the null's anchor point to [0,0] and position to the desired pivot (e.g., [256,256] for canvas center).
+- Child layers' position is relative to the parent's anchor, so offset the child to control orbit radius.
+- Multiple layers can share the same parent for synchronized group behavior.
+
 ## Mask Shapes (masksProperties)
 Masks clip or reveal portions of a layer using animated paths. Any layer can have a "masksProperties" array.
 Each mask object:
@@ -751,6 +776,237 @@ const EXAMPLE_TRACK_MATTE_CLIP = JSON.stringify({
   ]
 });
 
+const EXAMPLE_ORBITING_DOTS = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [
+    {
+      ty: 3, nm: "Orbit Null", ind: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: {
+          a: 1,
+          k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ]
+        },
+        o: { a: 0, k: 0 },
+        a: { a: 0, k: [0, 0] }
+      }
+    },
+    {
+      ty: 4, nm: "Red Dot", ind: 1, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [120, 0] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Dot",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [40, 40] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.3, 0.3, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Green Dot", ind: 2, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [-60, 104] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Dot",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [40, 40] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.8, 0.4, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Blue Dot", ind: 3, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [-60, -104] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Dot",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [40, 40] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
+const EXAMPLE_GROUP_MOVEMENT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [
+    {
+      ty: 3, nm: "Group Null", ind: 0, ip: 0, op: 90,
+      ks: {
+        p: {
+          a: 1,
+          k: [
+            { t: 0, s: [100, 256], e: [412, 256], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+            { t: 45, s: [412, 256], e: [100, 256], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+            { t: 90, s: [100, 256] }
+          ]
+        },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 0 },
+        a: { a: 0, k: [0, 0] }
+      }
+    },
+    {
+      ty: 4, nm: "Square", ind: 1, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [0, -60] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Shape",
+        it: [
+          { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [50, 50] }, r: { a: 0, k: 6 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.4, 0.2, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Circle", ind: 2, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Shape",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [55, 55] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Triangle", ind: 3, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [0, 60] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Shape",
+        it: [
+          { ty: "sr", nm: "Triangle", sy: 2, p: { a: 0, k: [0, 0] }, or: { a: 0, k: 30 }, os: { a: 0, k: 0 }, r: { a: 0, k: 0 }, pt: { a: 0, k: 3 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.8, 0.4, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
+const EXAMPLE_PENDULUM = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [
+    {
+      ty: 3, nm: "Pivot Null", ind: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 80] },
+        s: { a: 0, k: [100, 100] },
+        r: {
+          a: 1,
+          k: [
+            { t: 0, s: [0], e: [45], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+            { t: 22, s: [45], e: [-45], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+            { t: 67, s: [-45], e: [0], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+            { t: 90, s: [0] }
+          ]
+        },
+        o: { a: 0, k: 0 },
+        a: { a: 0, k: [0, 0] }
+      }
+    },
+    {
+      ty: 4, nm: "Arm", ind: 1, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Rod",
+        it: [
+          { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 140] }, s: { a: 0, k: [6, 280] }, r: { a: 0, k: 3 } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.7, 0.7, 0.7, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Bob", ind: 2, parent: 0, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [0, 280] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Weight",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [60, 60] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.9, 0.3, 0.2, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Pivot Pin", ind: 3, ip: 0, op: 90,
+      ks: {
+        p: { a: 0, k: [256, 80] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Pin",
+        it: [
+          { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [16, 16] } },
+          { ty: "fl", nm: "Fill", c: { a: 0, k: [0.4, 0.4, 0.4, 1] }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
 export function buildSystemPrompt(currentAnimation: object | null): string {
   let prompt = `You are a Lottie animation expert. You create and modify Lottie JSON animations based on user descriptions.
 
@@ -831,6 +1087,21 @@ ${EXAMPLE_MASK_CIRCLE_REVEAL}
 ### Shape clipping with track matte (star-shaped alpha matte clips gradient)
 \`\`\`json
 ${EXAMPLE_TRACK_MATTE_CLIP}
+\`\`\`
+
+### Orbiting dots (null layer parent with rotating children)
+\`\`\`json
+${EXAMPLE_ORBITING_DOTS}
+\`\`\`
+
+### Group movement (shapes parented to a translating null)
+\`\`\`json
+${EXAMPLE_GROUP_MOVEMENT}
+\`\`\`
+
+### Pendulum (pivot null with oscillating rotation, parented arm and bob)
+\`\`\`json
+${EXAMPLE_PENDULUM}
 \`\`\`
 
 ## Your Response Format
