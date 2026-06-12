@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         }
 
         // Stream ended — finalize
-        let { reply, lottieJson, parseError } = parseResponse(accumulated);
+        let { reply, lottieJson, parseError, suggestions } = parseResponse(accumulated);
 
         // Auto-repair: if parse failed, try once with error context
         const shouldRetryNoJson =
@@ -180,6 +180,7 @@ export async function POST(request: Request) {
                 reply = repaired.reply;
                 lottieJson = repaired.lottieJson;
                 parseError = null;
+                suggestions = repaired.suggestions;
               }
             }
             // If repair also failed, fall through to original warning behavior
@@ -245,6 +246,7 @@ export async function POST(request: Request) {
           lottieJson,
           animationId: capturedAnimationId,
           ...(warning ? { warning } : {}),
+          ...(suggestions ? { suggestions } : {}),
         });
         controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
       } catch (err) {

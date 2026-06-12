@@ -633,6 +633,10 @@ ${EXAMPLE_TEXT_BOUNCE_IN}
 1. Briefly describe what you created or changed (1-2 sentences).
 2. Output the COMPLETE Lottie JSON inside a single \`\`\`json code block.
 
+3. After the JSON block, include a line with 2-3 contextual follow-up suggestions:
+SUGGESTIONS: ["Add a shadow effect", "Speed up the animation", "Change to sunset colors"]
+These should be specific, actionable refinements based on what was just created or modified. Make them diverse (e.g., one about color, one about motion, one about adding elements).
+
 Rules:
 - Always output valid, complete Lottie JSON — never partial or pseudo-code.
 - Use canvas size 512x512 unless the user specifies otherwise.
