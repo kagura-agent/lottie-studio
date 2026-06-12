@@ -12,6 +12,7 @@ interface LLMResponse {
   reply: string;
   lottieJson: object | null;
   parseError: ParseError;
+  suggestions: string[] | null;
 }
 
 export async function chatCompletion(messages: ChatMessage[]): Promise<LLMResponse> {
@@ -112,22 +113,39 @@ export async function chatCompletionRepairStream(
 export function parseResponse(content: string): LLMResponse {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
 
+  // Extract suggestions
+  let suggestions: string[] | null = null;
+  const suggestionsMatch = content.match(/^SUGGESTIONS:\s*(\[.*\])\s*$/m);
+  if (suggestionsMatch) {
+    try {
+      const parsed = JSON.parse(suggestionsMatch[1]);
+      if (Array.isArray(parsed) && parsed.every((s: unknown) => typeof s === "string")) {
+        suggestions = parsed;
+      }
+    } catch {
+      // Ignore malformed suggestions
+    }
+  }
+
+  // Strip the SUGGESTIONS line from content before building reply
+  const contentWithoutSuggestions = content.replace(/^SUGGESTIONS:\s*\[.*\]\s*$/m, "");
+
   if (!jsonMatch) {
-    return { reply: content.trim(), lottieJson: null, parseError: "no_json" };
+    return { reply: contentWithoutSuggestions.trim(), lottieJson: null, parseError: "no_json", suggestions: null };
   }
 
   const jsonStr = jsonMatch[1].trim();
-  const reply = content
+  const reply = contentWithoutSuggestions
     .replace(/```json\s*[\s\S]*?```/, "")
     .trim();
 
   try {
     const parsed = JSON.parse(jsonStr);
     if (!parsed.v || !parsed.layers) {
-      return { reply: content.trim(), lottieJson: null, parseError: "invalid_lottie" };
+      return { reply: contentWithoutSuggestions.trim(), lottieJson: null, parseError: "invalid_lottie", suggestions: null };
     }
-    return { reply: reply || "Here's the animation.", lottieJson: parsed, parseError: null };
+    return { reply: reply || "Here's the animation.", lottieJson: parsed, parseError: null, suggestions };
   } catch {
-    return { reply: content.trim(), lottieJson: null, parseError: "invalid_json" };
+    return { reply: contentWithoutSuggestions.trim(), lottieJson: null, parseError: "invalid_json", suggestions: null };
   }
 }

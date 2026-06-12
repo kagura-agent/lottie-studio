@@ -8,6 +8,7 @@ interface Message {
   content: string;
   warning?: string;
   isRepair?: boolean;
+  suggestions?: string[];
 }
 
 interface ChatPanelProps {
@@ -186,7 +187,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
         if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
         const data = trimmed.slice(6);
-        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string };
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[] };
         try {
           parsed = JSON.parse(data);
         } catch {
@@ -318,9 +319,10 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
           if (assistantMsgId && parsed.reply) {
             const msgId = assistantMsgId;
             const warningText = parsed.warning as string | undefined;
+            const suggestionsList = parsed.suggestions;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList } : m
               )
             );
           }
@@ -447,6 +449,16 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
     return shuffled.slice(0, 5);
   }, []);
 
+  // Find the last assistant message with suggestions (only show chips on the most recent one)
+  const lastSuggestionMsgId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].suggestions?.length) {
+        return messages[i].id;
+      }
+    }
+    return null;
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-full bg-zinc-900">
       {/* Messages area */}
@@ -521,6 +533,22 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
                   >
                     ×
                   </button>
+                </div>
+              </div>
+            )}
+            {msg.id === lastSuggestionMsgId && !isThinking && !isStreaming && msg.suggestions && (
+              <div className="flex justify-start mt-2 animate-[fadeIn_0.3s_ease-in]">
+                <div className="flex flex-wrap gap-2">
+                  {msg.suggestions.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => handleSend(chip)}
+                      className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800/60 border border-zinc-600 border-l-indigo-500 border-l-2 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors cursor-pointer"
+                    >
+                      <span className="mr-1 opacity-60">{"\u2192"}</span>
+                      {chip}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
