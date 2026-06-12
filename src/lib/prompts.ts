@@ -12,6 +12,7 @@ A Lottie animation is a JSON object with these top-level properties:
 
 ## Layer Types
 - Type 4: Shape layer (most common — contains shapes, fills, strokes, transforms)
+- Type 5: Text layer (contains text document data and optional text animators)
 - Type 0: Precomp layer (references another composition)
 - Type 1: Solid layer
 - Type 2: Image layer
@@ -96,48 +97,58 @@ Fills shapes with a linear or radial gradient.
 - "o": opacity — animated, 0-100
 
 ## Text Layer (ty: 5)
-A text layer displays text content. It has ty: 5 and a "t" property containing text data.
-
-Text layer structure:
+Displays and animates text.
 - "ty": 5
 - "nm": layer name
 - "ind": layer index
-- "ip": in-point, "op": out-point
-- "ks": standard transform (position, scale, rotation, opacity) — animate these for movement/effects
-- "t": text data object (see below)
+- "ip"/"op": in/out points
+- "ks": transform (same as other layers)
+- "t": text data object containing "d" (document) and optional "a" (animators)
 
-### Text Data ("t" property)
-- "d": animated text document
-  - "k": array of text document keyframes, each with:
-    - "t": time (frame number)
-    - "s": text document object:
-      - "f": font family name (must match fName in fonts list)
-      - "fc": fill color [r, g, b, a] (0-1 range)
-      - "sc": stroke color [r, g, b, a] (optional)
-      - "sw": stroke width (optional)
-      - "s": font size (number)
-      - "t": text content string (use \r for newlines)
-      - "j": justify — 0 = left, 1 = right, 2 = center
-      - "lh": line height (optional)
-      - "tr": tracking / letter spacing (optional)
-      - "ls": baseline shift (optional)
-      - "sz": text box size [width, height] (optional, for wrapping)
-      - "ps": text box position [x, y] (optional)
-- "a": text animators/ranges array (optional, for per-character effects — advanced)
-- "m": alignment options (optional)
+### Text Document ("t.d")
+The "d" property holds keyframed text documents:
+- "k": array of keyframes, each with "s" (document state) and "t" (time)
 
-### Font Registration (REQUIRED)
-Fonts must be registered at the animation root level:
-"fonts": { "list": [{ "fFamily": "Arial", "fName": "Arial", "fStyle": "Regular" }] }
+Document state ("s") properties:
+- "s": font size (number, e.g. 48)
+- "f": font family (string, e.g. "Arial")
+- "t": text content (string, supports \\r for line breaks)
+- "fc": fill color [r, g, b] (0-1 range, no alpha)
+- "sc": stroke color [r, g, b] (0-1 range)
+- "sw": stroke width (number)
+- "lh": line height (number, in pixels)
+- "j": justification (0 = left, 1 = right, 2 = center)
+- "sz": text box size [width, height] — constrains text area
+- "ps": text box position [x, y] — offset within layer
+- "ls": line shift / tracking (number)
 
-Use web-safe fonts that don't need external loading:
-- Arial, Helvetica, Georgia, Times New Roman, Courier New, monospace
+### Text Animators ("t.a")
+Array of animator objects that apply transform-based animation to text characters.
+Each animator has:
+- "a": animated properties object — can include:
+  - "o": opacity {a: 0/1, k: value}
+  - "p": position {a: 0/1, k: [x, y]}
+  - "s": scale {a: 0/1, k: [sx, sy]}
+  - "r": rotation {a: 0/1, k: degrees}
+  - "t": tracking (letter spacing) {a: 0/1, k: value}
+- "s": range selector object:
+  - "t": type (0 = expressible, 1 = per character)
+  - "b": based on (1 = characters, 2 = characters excl. spaces, 3 = words, 4 = lines)
+  - "s": start {a: 0/1, k: value} (0-100)
+  - "e": end {a: 0/1, k: value} (0-100)
+  - "sh": shape (1 = square, 2 = ramp up, 3 = ramp down, 5 = round, 6 = smooth)
+  - "o": offset {a: 0/1, k: value}
+  - "r": randomize (0 or 1)
+  - "ne": ease high {a: 0, k: value}
+  - "xe": ease low {a: 0, k: value}
 
-### Important Notes
-- Text content changes are discrete — keyframes switch text instantly, no interpolation between text states
-- Animate text movement/appearance using the standard "ks" transform (position, scale, rotation, opacity)
-- Each font used must have a corresponding entry in the root "fonts.list" array
-- The "f" value in the text document must match an "fName" in fonts.list
+To animate text character-by-character, animate the range selector's "s" (start) or "e" (end) from 0→100 over time, combined with a property offset (e.g. opacity 0 = characters start invisible, revealed as range sweeps).
+
+### Font Limitations
+- Use web-safe fonts: "Arial", "Helvetica", "Times New Roman", "Courier New", "Georgia", "Verdana"
+- Default to "Arial" if no font specified
+- Lottie players must have the font available; web-safe fonts ensure broadest compatibility
+- For the "fonts" top-level property, list fonts used: {"list": [{"fName": "Arial", "fFamily": "Arial", "fStyle": "Regular"}]}
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -428,11 +439,11 @@ const EXAMPLE_COLOR_TRANSITION = JSON.stringify({
   }]
 });
 
-const EXAMPLE_STATIC_TEXT = JSON.stringify({
+const EXAMPLE_TEXT_STATIC = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
-  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
-    ty: 5, nm: "Hello Text", ind: 0, ip: 0, op: 60,
+    ty: 5, nm: "Hello World", ind: 0, ip: 0, op: 60,
     ks: {
       p: { a: 0, k: [256, 256] },
       s: { a: 0, k: [100, 100] },
@@ -441,67 +452,81 @@ const EXAMPLE_STATIC_TEXT = JSON.stringify({
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ t: 0, s: { f: "Arial", fc: [0, 0, 0, 1], s: 48, t: "Hello World", j: 2, lh: 60 } }] },
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Hello World", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
       a: [],
-      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
 
-const EXAMPLE_FADE_IN_TEXT = JSON.stringify({
+const EXAMPLE_TEXT_TYPEWRITER = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
-  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
-    ty: 5, nm: "Fade In Text", ind: 0, ip: 0, op: 60,
+    ty: 5, nm: "Typewriter Text", ind: 0, ip: 0, op: 60,
     ks: {
       p: { a: 0, k: [256, 256] },
       s: { a: 0, k: [100, 100] },
       r: { a: 0, k: 0 },
-      o: {
-        a: 1,
-        k: [
-          { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-          { t: 30, s: [100] }
-        ]
-      },
+      o: { a: 0, k: 100 },
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ t: 0, s: { f: "Arial", fc: [0.2, 0.6, 1, 1], s: 42, t: "Fade In", j: 2, lh: 52 } }] },
-      a: [],
-      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Typewriter Effect", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [450, 100], ps: [-225, -50] }, t: 0 }] },
+      a: [{
+        a: { o: { a: 0, k: 0 } },
+        s: {
+          r: 1,
+          b: 1,
+          ne: { a: 0, k: 0 },
+          xe: { a: 0, k: 0 },
+          o: {
+            a: 1,
+            k: [
+              { t: 0, s: [0], e: [100], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+              { t: 50, s: [100] }
+            ]
+          },
+          a: { a: 0, k: 100 }
+        }
+      }],
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
 
-const EXAMPLE_SLIDE_UP_TEXT = JSON.stringify({
+const EXAMPLE_TEXT_BOUNCE_IN = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
-  fonts: { list: [{ fFamily: "Arial", fName: "Arial", fStyle: "Regular" }] },
+  fonts: { list: [{ fName: "Arial", fFamily: "Arial", fStyle: "Regular" }] },
   layers: [{
-    ty: 5, nm: "Slide Up Text", ind: 0, ip: 0, op: 60,
+    ty: 5, nm: "Bounce In Text", ind: 0, ip: 0, op: 60,
     ks: {
-      p: {
-        a: 1,
-        k: [
-          { t: 0, s: [256, 400], e: [256, 256], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-          { t: 30, s: [256, 256] }
-        ]
-      },
+      p: { a: 0, k: [256, 256] },
       s: { a: 0, k: [100, 100] },
       r: { a: 0, k: 0 },
-      o: {
-        a: 1,
-        k: [
-          { t: 0, s: [0], e: [100], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
-          { t: 20, s: [100] }
-        ]
-      },
+      o: { a: 0, k: 100 },
       a: { a: 0, k: [0, 0] }
     },
     t: {
-      d: { k: [{ t: 0, s: { f: "Arial", fc: [0.2, 0.8, 0.4, 1], s: 36, t: "Slide Up", j: 2, lh: 46 } }] },
-      a: [],
-      m: { a: { a: 0, k: [0, 0] }, g: 0 }
+      d: { k: [{ s: { s: 48, f: "Arial", t: "Bounce In!", fc: [1, 1, 1], j: 2, lh: 57.6, sz: [400, 100], ps: [-200, -50] }, t: 0 }] },
+      a: [{
+        a: { s: { a: 0, k: [0, 0] } },
+        s: {
+          r: 1,
+          b: 1,
+          ne: { a: 0, k: 0 },
+          xe: { a: 0, k: 6 },
+          o: {
+            a: 1,
+            k: [
+              { t: 0, s: [0], e: [100], i: { x: [0.2], y: [1.5] }, o: { x: [0.8], y: [0] } },
+              { t: 45, s: [100] }
+            ]
+          },
+          a: { a: 0, k: 100 }
+        }
+      }],
+      m: { g: 1, a: { a: 0, k: [0, 0] } }
     }
   }]
 });
@@ -588,19 +613,19 @@ ${EXAMPLE_COLOR_TRANSITION}
 ${EXAMPLE_PATH_ANIMATION}
 \`\`\`
 
-### Static centered text (text layer, type 5)
+### Static text display
 \`\`\`json
-${EXAMPLE_STATIC_TEXT}
+${EXAMPLE_TEXT_STATIC}
 \`\`\`
 
-### Fade-in text (text layer with opacity animation)
+### Typewriter effect (character-by-character)
 \`\`\`json
-${EXAMPLE_FADE_IN_TEXT}
+${EXAMPLE_TEXT_TYPEWRITER}
 \`\`\`
 
-### Slide-up text (text layer with position + opacity animation)
+### Bounce-in text (per-character scale)
 \`\`\`json
-${EXAMPLE_SLIDE_UP_TEXT}
+${EXAMPLE_TEXT_BOUNCE_IN}
 \`\`\`
 
 ## Your Response Format
