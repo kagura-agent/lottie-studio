@@ -262,6 +262,33 @@ Rounds the corners of rectangles and polygons.
 - {"ty": "rd", "nm": "Round Corners", "r": {"a": 0, "k": radius}}
 - Place after rectangle/polystar shapes in a group's "it" array (before fill/stroke or after shapes, before "tr")
 - The "r" (radius) property is animatable — animate it to morph between sharp and rounded corners.
+
+## Easing Presets
+
+Named easing curves for keyframe i (in-tangent) and o (out-tangent) values:
+
+| Preset | i (in-tangent) | o (out-tangent) | Feel |
+|---|---|---|---|
+| linear | {x:[1],y:[1]} | {x:[0],y:[0]} | Constant speed, mechanical |
+| ease-in-out | {x:[0.42],y:[1]} | {x:[0.58],y:[0]} | Smooth start and stop |
+| ease-in | {x:[0.42],y:[0]} | {x:[1],y:[1]} | Slow start, fast end |
+| ease-out | {x:[0],y:[0]} | {x:[0.58],y:[1]} | Fast start, slow stop |
+| bounce | {x:[0.34],y:[1.56]} | {x:[0.64],y:[1]} | Overshoots target then settles |
+| snappy | {x:[0.1],y:[1]} | {x:[0.9],y:[0]} | Fast start, sharp stop |
+| gentle | {x:[0.25],y:[1]} | {x:[0.75],y:[0]} | Very slow, soft curve |
+
+**Elastic** (multiple overshoots): Cannot be done with a single keyframe pair. Simulate with 3-4 keyframes that oscillate past the target with decreasing amplitude (e.g., target 100: 100→120→95→102→100).
+
+### Keyword Mapping
+When users describe timing with natural language, map to these presets:
+- "bouncy", "springy" → bounce
+- "smooth", "flowing" → ease-in-out
+- "sharp", "crisp", "snappy" → snappy
+- "soft", "gentle", "slow" → gentle
+- "linear", "constant", "even" → linear
+- "accelerate", "speed up" → ease-in
+- "decelerate", "slow down" → ease-out
+- "elastic", "rubbery", "jelly" → elastic (multi-keyframe)
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -1006,6 +1033,72 @@ const EXAMPLE_ROUNDED_RECT = JSON.stringify({
   }]
 });
 
+const EXAMPLE_EASING_SHOWCASE = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [
+    {
+      ty: 4, nm: "Linear", ind: 0, ip: 0, op: 60,
+      ks: {
+        p: { a: 1, k: [
+          { t: 0, s: [60, 100], e: [452, 100], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+          { t: 60, s: [452, 100] }
+        ] },
+        s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{ ty: "gr", nm: "G", it: [
+        { ty: "el", nm: "E", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [50, 50] } },
+        { ty: "fl", nm: "F", c: { a: 0, k: [0.4, 0.7, 1, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ] }]
+    },
+    {
+      ty: 4, nm: "Ease-in-out", ind: 1, ip: 0, op: 60,
+      ks: {
+        p: { a: 1, k: [
+          { t: 0, s: [60, 230], e: [452, 230], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [452, 230] }
+        ] },
+        s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{ ty: "gr", nm: "G", it: [
+        { ty: "el", nm: "E", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [50, 50] } },
+        { ty: "fl", nm: "F", c: { a: 0, k: [0.2, 0.8, 0.4, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ] }]
+    },
+    {
+      ty: 4, nm: "Bounce", ind: 2, ip: 0, op: 60,
+      ks: {
+        p: { a: 1, k: [
+          { t: 0, s: [60, 360], e: [452, 360], i: { x: [0.34], y: [1.56] }, o: { x: [0.64], y: [1] } },
+          { t: 60, s: [452, 360] }
+        ] },
+        s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{ ty: "gr", nm: "G", it: [
+        { ty: "el", nm: "E", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [50, 50] } },
+        { ty: "fl", nm: "F", c: { a: 0, k: [1, 0.4, 0.2, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ] }]
+    },
+    {
+      ty: 4, nm: "Snappy", ind: 3, ip: 0, op: 60,
+      ks: {
+        p: { a: 1, k: [
+          { t: 0, s: [60, 490], e: [452, 490], i: { x: [0.1], y: [1] }, o: { x: [0.9], y: [0] } },
+          { t: 60, s: [452, 490] }
+        ] },
+        s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{ ty: "gr", nm: "G", it: [
+        { ty: "el", nm: "E", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [50, 50] } },
+        { ty: "fl", nm: "F", c: { a: 0, k: [0.9, 0.2, 0.6, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ] }]
+    }
+  ]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1112,6 +1205,7 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_PENDULUM", title: "Pendulum (pivot null with oscillating rotation, parented arm and bob)", categories: ["parent", "rotation"], json: EXAMPLE_PENDULUM },
   { name: "EXAMPLE_DASHED_CIRCLE", title: "Dashed circle with marching ants (stroke dashes + animated offset)", categories: ["stroke"], json: EXAMPLE_DASHED_CIRCLE },
   { name: "EXAMPLE_ROUNDED_RECT", title: "Rounded rectangle with animated corner radius (round corners modifier)", categories: ["modifier", "stroke"], json: EXAMPLE_ROUNDED_RECT },
+  { name: "EXAMPLE_EASING_SHOWCASE", title: "Easing comparison (4 circles with linear, ease-in-out, bounce, snappy)", categories: ["easing"], json: EXAMPLE_EASING_SHOWCASE },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1128,6 +1222,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   path: ["path", "bezier", "curve", "heart", "star", "polygon", "arrow", "custom shape", "crescent", "moon"],
   modifier: ["round corner", "repeater", "trim", "modifier"],
   multi: ["composition", "multi", "layer", "stagger", "sequence", "multiple", "scene"],
+  easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
 };
 
 export function selectExamples(userMessage: string, maxExamples: number = 5): ExampleEntry[] {
