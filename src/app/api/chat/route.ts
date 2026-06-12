@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   ).all(animationId) as MessageRow[];
 
   const llmMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: buildSystemPrompt(currentAnimation) },
+    { role: "system", content: buildSystemPrompt(currentAnimation, message) },
     ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user", content: message },
   ];

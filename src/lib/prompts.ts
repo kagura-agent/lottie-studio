@@ -242,6 +242,26 @@ The matte layer (the "stencil") sits directly ABOVE the content layer in the lay
 
 Layer order matters: in the "layers" array, the matte layer (td: 1) must come BEFORE the content layer (tt: N) since layers are rendered top-to-bottom (lower index = on top).
 The matte layer's shapes/content define the clipping region — animate its shapes or transform to create dynamic clipping effects.
+
+## Stroke Dashes ("d" property on "st" items)
+Add a "d" array to any stroke ("st") to create dashed lines:
+- Each entry: {"n": "d"|"g"|"o", "nm": "dash"|"gap"|"offset", "v": {"a": 0, "k": value}}
+  - "d" = dash length, "g" = gap length, "o" = offset
+- The offset ("o") is animatable — animate it for a marching ants effect.
+- Example: [{"n":"d","nm":"dash","v":{"a":0,"k":10}}, {"n":"g","nm":"gap","v":{"a":0,"k":5}}]
+
+## Line Caps ("lc") and Line Joins ("lj") on Strokes
+Control how stroke endpoints and corners render:
+- "lc" (line cap): 1 = butt (flat end), 2 = round, 3 = square (extends past endpoint)
+- "lj" (line join): 1 = miter (sharp corner), 2 = round, 3 = bevel
+- "ml" (miter limit): number, applies when lj: 1 — prevents overly long miter points
+These are static number properties on the "st" object (not animated).
+
+## Round Corners Modifier (ty: "rd")
+Rounds the corners of rectangles and polygons.
+- {"ty": "rd", "nm": "Round Corners", "r": {"a": 0, "k": radius}}
+- Place after rectangle/polystar shapes in a group's "it" array (before fill/stroke or after shapes, before "tr")
+- The "r" (radius) property is animatable — animate it to morph between sharp and rounded corners.
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -929,6 +949,63 @@ const EXAMPLE_GROUP_MOVEMENT = JSON.stringify({
   ]
 });
 
+const EXAMPLE_DASHED_CIRCLE = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Dashed Circle", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Dashed Circle Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [300, 300] } },
+        { ty: "st", nm: "Dashed Stroke", c: { a: 0, k: [0.2, 0.6, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 6 }, lc: 2, lj: 2, d: [
+          { n: "d", nm: "dash", v: { a: 0, k: 15 } },
+          { n: "g", nm: "gap", v: { a: 0, k: 10 } },
+          { n: "o", nm: "offset", v: { a: 1, k: [
+            { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+            { t: 90, s: [360] }
+          ] } }
+        ] },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_ROUNDED_RECT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Rounded Rectangle", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Rounded Rect Group",
+      it: [
+        { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [240, 180] }, r: { a: 0, k: 0 } },
+        { ty: "rd", nm: "Round Corners", r: { a: 1, k: [
+          { t: 0, s: [0], e: [40], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 30, s: [40], e: [0], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+          { t: 60, s: [0] }
+        ] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.95, 0.4, 0.3, 1] }, o: { a: 0, k: 100 } },
+        { ty: "st", nm: "Stroke", c: { a: 0, k: [0.75, 0.2, 0.15, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2, lj: 2 },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1007,102 +1084,129 @@ const EXAMPLE_PENDULUM = JSON.stringify({
   ]
 });
 
-export function buildSystemPrompt(currentAnimation: object | null): string {
+interface ExampleEntry {
+  name: string;
+  title: string;
+  categories: string[];
+  json: string;
+}
+
+const EXAMPLE_REGISTRY: ExampleEntry[] = [
+  { name: "EXAMPLE_CIRCLE", title: "Blue circle (static)", categories: ["basic"], json: EXAMPLE_CIRCLE },
+  { name: "EXAMPLE_BOUNCING_BALL", title: "Red bouncing ball (animated position)", categories: ["basic", "motion", "scale"], json: EXAMPLE_BOUNCING_BALL },
+  { name: "EXAMPLE_SPINNING_SQUARE", title: "Green spinning square (animated rotation)", categories: ["basic", "rotation"], json: EXAMPLE_SPINNING_SQUARE },
+  { name: "EXAMPLE_FADE_IN_OUT", title: "Fade in/out (animated opacity)", categories: ["opacity"], json: EXAMPLE_FADE_IN_OUT },
+  { name: "EXAMPLE_SCALE_PULSE", title: "Scale pulse / heartbeat (animated scale with overshoot easing)", categories: ["scale"], json: EXAMPLE_SCALE_PULSE },
+  { name: "EXAMPLE_LOADING_SPINNER", title: "Loading spinner (rotation + trim paths)", categories: ["rotation", "stroke", "modifier"], json: EXAMPLE_LOADING_SPINNER },
+  { name: "EXAMPLE_MULTI_LAYER", title: "Multi-layer composition (staggered timing, 3 elements)", categories: ["multi"], json: EXAMPLE_MULTI_LAYER },
+  { name: "EXAMPLE_COLOR_TRANSITION", title: "Color transition (animated fill color)", categories: ["color"], json: EXAMPLE_COLOR_TRANSITION },
+  { name: "EXAMPLE_PATH_ANIMATION", title: "Path animation (bezier curve movement with tangents)", categories: ["motion", "path"], json: EXAMPLE_PATH_ANIMATION },
+  { name: "EXAMPLE_TEXT_STATIC", title: "Static text display", categories: ["text"], json: EXAMPLE_TEXT_STATIC },
+  { name: "EXAMPLE_TEXT_TYPEWRITER", title: "Typewriter effect (character-by-character)", categories: ["text"], json: EXAMPLE_TEXT_TYPEWRITER },
+  { name: "EXAMPLE_TEXT_BOUNCE_IN", title: "Bounce-in text (per-character scale)", categories: ["text", "scale"], json: EXAMPLE_TEXT_BOUNCE_IN },
+  { name: "EXAMPLE_MASK_TEXT_REVEAL", title: "Text reveal wipe (animated mask expands left to right)", categories: ["mask", "text"], json: EXAMPLE_MASK_TEXT_REVEAL },
+  { name: "EXAMPLE_MASK_CIRCLE_REVEAL", title: "Circular reveal (expanding ellipse mask from center)", categories: ["mask"], json: EXAMPLE_MASK_CIRCLE_REVEAL },
+  { name: "EXAMPLE_TRACK_MATTE_CLIP", title: "Shape clipping with track matte (star-shaped alpha matte clips gradient)", categories: ["mask", "color", "path"], json: EXAMPLE_TRACK_MATTE_CLIP },
+  { name: "EXAMPLE_ORBITING_DOTS", title: "Orbiting dots (null layer parent with rotating children)", categories: ["parent", "rotation"], json: EXAMPLE_ORBITING_DOTS },
+  { name: "EXAMPLE_GROUP_MOVEMENT", title: "Group movement (shapes parented to a translating null)", categories: ["parent", "motion", "multi"], json: EXAMPLE_GROUP_MOVEMENT },
+  { name: "EXAMPLE_PENDULUM", title: "Pendulum (pivot null with oscillating rotation, parented arm and bob)", categories: ["parent", "rotation"], json: EXAMPLE_PENDULUM },
+  { name: "EXAMPLE_DASHED_CIRCLE", title: "Dashed circle with marching ants (stroke dashes + animated offset)", categories: ["stroke"], json: EXAMPLE_DASHED_CIRCLE },
+  { name: "EXAMPLE_ROUNDED_RECT", title: "Rounded rectangle with animated corner radius (round corners modifier)", categories: ["modifier", "stroke"], json: EXAMPLE_ROUNDED_RECT },
+];
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  basic: [],
+  motion: ["bounce", "move", "slide", "translate", "position", "path", "orbit", "pendulum", "float", "sway"],
+  rotation: ["spin", "rotate", "turn", "twist", "orbit", "pendulum"],
+  text: ["text", "word", "letter", "character", "type", "typewriter", "font", "title", "heading", "label", "write"],
+  color: ["color", "gradient", "rainbow", "hue", "transition", "shift", "fade"],
+  opacity: ["fade", "opacity", "appear", "disappear", "ghost", "transparent", "invisible", "reveal"],
+  scale: ["scale", "pulse", "heartbeat", "grow", "shrink", "zoom", "pop", "bounce"],
+  stroke: ["stroke", "dash", "dotted", "line", "border", "outline", "draw", "marching"],
+  mask: ["mask", "clip", "reveal", "wipe", "matte", "stencil"],
+  parent: ["orbit", "group", "parent", "follow", "chain", "hierarchy", "pendulum", "solar"],
+  path: ["path", "bezier", "curve", "heart", "star", "polygon", "arrow", "custom shape", "crescent", "moon"],
+  modifier: ["round corner", "repeater", "trim", "modifier"],
+  multi: ["composition", "multi", "layer", "stagger", "sequence", "multiple", "scene"],
+};
+
+export function selectExamples(userMessage: string, maxExamples: number = 5): ExampleEntry[] {
+  const lower = userMessage.toLowerCase();
+
+  // Find which categories match the user message
+  const matchedCategories = new Set<string>();
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (category === "basic") continue;
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        matchedCategories.add(category);
+        break;
+      }
+    }
+  }
+
+  // Always start with 1 basic example (the circle)
+  const basicExample = EXAMPLE_REGISTRY.find(e => e.name === "EXAMPLE_CIRCLE")!;
+  const selected: ExampleEntry[] = [basicExample];
+  const usedNames = new Set<string>([basicExample.name]);
+
+  if (matchedCategories.size === 0) {
+    // No keyword matches — return a diverse default set
+    const defaults = ["EXAMPLE_BOUNCING_BALL", "EXAMPLE_SPINNING_SQUARE", "EXAMPLE_FADE_IN_OUT", "EXAMPLE_COLOR_TRANSITION"];
+    for (const name of defaults) {
+      const entry = EXAMPLE_REGISTRY.find(e => e.name === name);
+      if (entry) {
+        selected.push(entry);
+        usedNames.add(name);
+      }
+    }
+    return selected;
+  }
+
+  // Score each non-basic example by how many matched categories it belongs to
+  const scored = EXAMPLE_REGISTRY
+    .filter(e => !usedNames.has(e.name))
+    .map(e => ({
+      entry: e,
+      score: e.categories.filter(c => matchedCategories.has(c)).length,
+    }))
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const remaining = maxExamples - 1;
+  for (const { entry } of scored) {
+    if (selected.length >= maxExamples) break;
+    selected.push(entry);
+    usedNames.add(entry.name);
+  }
+
+  // If we still have room, fill with diverse defaults
+  if (selected.length < maxExamples) {
+    const fillers = EXAMPLE_REGISTRY.filter(e => !usedNames.has(e.name));
+    for (const filler of fillers) {
+      if (selected.length >= maxExamples) break;
+      selected.push(filler);
+    }
+  }
+
+  return selected;
+}
+
+export function buildSystemPrompt(currentAnimation: object | null, userMessage?: string): string {
+  const examples = userMessage
+    ? selectExamples(userMessage)
+    : EXAMPLE_REGISTRY.slice(0, 5);
+
+  const exampleBlocks = examples
+    .map(e => `### ${e.title}\n\`\`\`json\n${e.json}\n\`\`\``)
+    .join("\n\n");
   let prompt = `You are a Lottie animation expert. You create and modify Lottie JSON animations based on user descriptions.
 
 ${LOTTIE_SPEC}
 
 ## Example Animations
 
-### Blue circle (static)
-\`\`\`json
-${EXAMPLE_CIRCLE}
-\`\`\`
-
-### Red bouncing ball (animated position)
-\`\`\`json
-${EXAMPLE_BOUNCING_BALL}
-\`\`\`
-
-### Green spinning square (animated rotation)
-\`\`\`json
-${EXAMPLE_SPINNING_SQUARE}
-\`\`\`
-
-### Fade in/out (animated opacity)
-\`\`\`json
-${EXAMPLE_FADE_IN_OUT}
-\`\`\`
-
-### Scale pulse / heartbeat (animated scale with overshoot easing)
-\`\`\`json
-${EXAMPLE_SCALE_PULSE}
-\`\`\`
-
-### Loading spinner (rotation + trim paths)
-\`\`\`json
-${EXAMPLE_LOADING_SPINNER}
-\`\`\`
-
-### Multi-layer composition (staggered timing, 3 elements)
-\`\`\`json
-${EXAMPLE_MULTI_LAYER}
-\`\`\`
-
-### Color transition (animated fill color)
-\`\`\`json
-${EXAMPLE_COLOR_TRANSITION}
-\`\`\`
-
-### Path animation (bezier curve movement with tangents)
-\`\`\`json
-${EXAMPLE_PATH_ANIMATION}
-\`\`\`
-
-### Static text display
-\`\`\`json
-${EXAMPLE_TEXT_STATIC}
-\`\`\`
-
-### Typewriter effect (character-by-character)
-\`\`\`json
-${EXAMPLE_TEXT_TYPEWRITER}
-\`\`\`
-
-### Bounce-in text (per-character scale)
-\`\`\`json
-${EXAMPLE_TEXT_BOUNCE_IN}
-\`\`\`
-
-### Text reveal wipe (animated mask expands left to right)
-\`\`\`json
-${EXAMPLE_MASK_TEXT_REVEAL}
-\`\`\`
-
-### Circular reveal (expanding ellipse mask from center)
-\`\`\`json
-${EXAMPLE_MASK_CIRCLE_REVEAL}
-\`\`\`
-
-### Shape clipping with track matte (star-shaped alpha matte clips gradient)
-\`\`\`json
-${EXAMPLE_TRACK_MATTE_CLIP}
-\`\`\`
-
-### Orbiting dots (null layer parent with rotating children)
-\`\`\`json
-${EXAMPLE_ORBITING_DOTS}
-\`\`\`
-
-### Group movement (shapes parented to a translating null)
-\`\`\`json
-${EXAMPLE_GROUP_MOVEMENT}
-\`\`\`
-
-### Pendulum (pivot null with oscillating rotation, parented arm and bob)
-\`\`\`json
-${EXAMPLE_PENDULUM}
-\`\`\`
+${exampleBlocks}
 
 ## Your Response Format
 
