@@ -34,7 +34,8 @@ Each shape item has a "ty" field:
 - "gr": Group — contains sub-items in "it" array
 - "rc": Rectangle — has "s" (size) and "p" (position)
 - "el": Ellipse — has "s" (size) and "p" (position)
-- "sh": Path — has "ks" with vertices, in/out tangents
+- "sh": Path — has "ks" with vertices, in/out tangents (see Path Shapes section)
+- "sr": Polystar — parametric stars/polygons (prefer over manual paths for these)
 - "fl": Fill — has "c" (color RGBA 0-1) and "o" (opacity)
 - "st": Stroke — has "c" (color), "o" (opacity), "w" (width)
 - "tr": Transform — position, scale, rotation, opacity for the group
@@ -95,6 +96,41 @@ Fills shapes with a linear or radial gradient.
 - "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
   Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
 - "o": opacity — animated, 0-100
+
+## Path Shapes (ty: "sh")
+Custom shapes using bezier paths. The "ks" property contains path data:
+{"a": 0, "k": {"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}}
+- "v": vertices (anchor points)
+- "i": in-tangents (relative to each vertex, for curve arriving at vertex)
+- "o": out-tangents (relative to each vertex, for curve leaving vertex)
+- "c": true = closed path, false = open path
+- Straight segments: tangents are [0,0]
+- Circular arcs: tangent length ≈ 0.5523 × radius (kappa constant)
+
+## Polystar Shape (ty: "sr")
+Parametric stars and regular polygons. Simpler than manual path vertices.
+- "sy": 1 = star, 2 = polygon
+- "pt": number of points (animated property)
+- "or": outer radius (animated property)
+- "os": outer roundness 0-100 (animated property)
+- "ir": inner radius — star only (animated property)
+- "is": inner roundness 0-100 — star only (animated property)
+- "r": rotation in degrees (animated property)
+- "p": position [x,y] (animated property)
+Polystar must be inside a group ("gr") with fill/stroke.
+Prefer polystar ("sr") over manual path vertices for stars and regular polygons.
+
+### Ready-made Path Data
+Heart (512×512 canvas, centered at 256,256):
+{"v":[[256,450],[256,180],[80,218],[80,370]],"i":[[97,0],[0,0],[0,90],[0,0]],"o":[[−97,0],[−120,0],[0,0],[0,0]],"c":true}
+Note: a heart needs two mirrored cubic arcs — use two path groups or a single path with ~8 vertices:
+{"v":[[256,416],[140,225],[186,144],[256,210],[326,144],[372,225],[256,416]],"i":[[40,30],[0,50],[-30,0],[0,-30],[30,0],[0,0],[-40,30]],"o":[[-40,30],[0,0],[30,0],[0,-30],[-30,0],[0,50],[40,30]],"c":true}
+
+Arrow/chevron pointing right (centered, 200×200):
+{"v":[[186,156],[306,256],[186,356]],"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"c":false}
+
+Crescent moon (two circular arcs, 512×512):
+{"v":[[300,96],[300,416],[220,416],[220,96]],"i":[[−113,0],[0,113],[−75,0],[0,−75]],"o":[[0,−113],[113,0],[0,75],[75,0]],"c":true}
 
 ## Text Layer (ty: 5)
 Displays and animates text.
