@@ -1194,6 +1194,45 @@ const EXAMPLE_PRECOMP_REUSE = JSON.stringify({
   ]
 });
 
+const EXAMPLE_REPEATER_RADIAL = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Radial Ring", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 1, k: [
+        { t: 0, s: [0], e: [360], i: { x: [0.42], y: [0] }, o: { x: [0.58], y: [1] } },
+        { t: 90, s: [360] }
+      ] },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Circle Group",
+      it: [
+        { ty: "el", nm: "Circle", p: { a: 0, k: [0, -120] }, s: { a: 0, k: [50, 50] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0, 0.75, 0.75, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    },
+    {
+      ty: "rp", nm: "Repeater",
+      c: { a: 0, k: 8 },
+      o: { a: 0, k: 0 },
+      tr: {
+        p: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 45 },
+        so: { a: 0, k: 100 },
+        eo: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      m: 1
+    }]
+  }]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1302,6 +1341,7 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_ROUNDED_RECT", title: "Rounded rectangle with animated corner radius (round corners modifier)", categories: ["modifier", "stroke"], json: EXAMPLE_ROUNDED_RECT },
   { name: "EXAMPLE_EASING_SHOWCASE", title: "Easing comparison (4 circles with linear, ease-in-out, bounce, snappy)", categories: ["easing"], json: EXAMPLE_EASING_SHOWCASE },
   { name: "EXAMPLE_PRECOMP_REUSE", title: "Precomp reuse (3 spinning stars from one asset definition)", categories: ["precomp", "multi", "rotation"], json: EXAMPLE_PRECOMP_REUSE },
+  { name: "EXAMPLE_REPEATER_RADIAL", title: "Radial pattern with repeater (8 circles in a ring using shape repeater modifier)", categories: ["modifier", "multi"], json: EXAMPLE_REPEATER_RADIAL },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
