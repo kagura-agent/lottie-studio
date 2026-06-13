@@ -126,7 +126,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       const data = await res.json();
       if (!currentAnimationId && data.animationId) {
         setCurrentAnimationId(data.animationId);
-        onAnimationCreated?.(data.animationId);
+        onAnimationCreated?.(data.animationId, data.lottieJson as object | undefined);
       }
       if (existingAssistantMsgId) {
         const msgId = existingAssistantMsgId;
@@ -317,7 +317,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
           setIsRepairing(false);
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
-            onAnimationCreated?.(parsed.animationId);
+            onAnimationCreated?.(parsed.animationId, parsed.lottieJson as object | undefined);
           }
           if (assistantMsgId && parsed.reply) {
             const msgId = assistantMsgId;
