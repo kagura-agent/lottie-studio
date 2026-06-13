@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 
-export function useAnimationSocket(animationId: string, onUpdated: () => void) {
+export function useAnimationSocket(animationId: string | null, onUpdated: () => void) {
   const onUpdatedRef = useRef(onUpdated);
   onUpdatedRef.current = onUpdated;
 
@@ -9,7 +9,7 @@ export function useAnimationSocket(animationId: string, onUpdated: () => void) {
   const unmountedRef = useRef(false);
 
   const connect = useCallback(() => {
-    if (unmountedRef.current) return;
+    if (unmountedRef.current || !animationId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const url = `${protocol}//${window.location.host}/ws?animationId=${encodeURIComponent(animationId)}`;
@@ -40,6 +40,7 @@ export function useAnimationSocket(animationId: string, onUpdated: () => void) {
   }, [animationId]);
 
   useEffect(() => {
+    if (!animationId) return;
     unmountedRef.current = false;
     connect();
 

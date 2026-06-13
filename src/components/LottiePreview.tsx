@@ -13,6 +13,7 @@ interface LottiePreviewProps {
   onFrameChange?: (currentFrame: number, totalFrames: number) => void;
   seekToFrame?: number;
   background?: CanvasBackground;
+  placeholder?: boolean;
 }
 
 function getBackgroundStyle(bg: CanvasBackground = "checkered"): { className: string; style?: React.CSSProperties } {
@@ -39,6 +40,7 @@ export default function LottiePreview({
   onFrameChange,
   seekToFrame,
   background = "checkered",
+  placeholder = false,
 }: LottiePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
@@ -171,6 +173,19 @@ export default function LottiePreview({
     >
       {animationData ? (
         <div ref={containerRef} className="w-full h-full max-w-[500px] max-h-[500px]" />
+      ) : placeholder ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+          <svg
+            className="w-16 h-16 text-zinc-600 animate-pulse"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          <p className="text-zinc-500 text-sm font-medium">Describe your animation to begin</p>
+        </div>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-red-950/50 rounded-lg">
           <span className="text-red-400 text-sm font-mono">Invalid JSON</span>

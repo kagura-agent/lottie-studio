@@ -15,25 +15,26 @@ import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import VersionHistory from "./VersionHistory";
 
 interface EditorPageProps {
-  id: string;
+  id: string | null;
   initialName: string;
-  initialData: object;
+  initialData: object | null;
 }
 
 export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
   const router = useRouter();
-  const [jsonText, setJsonText] = useState(() => JSON.stringify(initialData, null, 2));
+  const [currentId, setCurrentId] = useState<string | null>(id);
+  const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
   const [animationData, setAnimationData] = useState<object | null>(initialData);
-  const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData);
+  const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData ?? {});
   const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [loopConfig, setLoopConfig] = useState<LoopConfig>(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && currentId) {
       try {
-        const stored = localStorage.getItem(`lottie-loop-${id}`);
+        const stored = localStorage.getItem(`lottie-loop-${currentId}`);
         if (stored) return JSON.parse(stored) as LoopConfig;
       } catch { /* ignore */ }
     }
@@ -53,18 +54,20 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem(`lottie-bg-${id}`) as CanvasBackground) || "checkered";
+    if (typeof window !== "undefined" && currentId) {
+      return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
     }
     return "checkered";
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const isNewMode = currentId === null;
+
   const handleBgChange = useCallback((bg: CanvasBackground) => {
     setCanvasBg(bg);
-    localStorage.setItem(`lottie-bg-${id}`, bg);
-  }, [id]);
+    if (currentId) localStorage.setItem(`lottie-bg-${currentId}`, bg);
+  }, [currentId]);
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -79,8 +82,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   }, [mobileMenuOpen]);
 
   const handleExternalUpdate = useCallback(async () => {
+    if (!currentId) return;
     try {
-      const res = await fetch(`/api/animations/${id}`);
+      const res = await fetch(`/api/animations/${currentId}`);
       if (!res.ok) return;
       const result = await res.json();
       if (result.data) {
@@ -93,9 +97,21 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     } catch {
       // ignore fetch errors
     }
-  }, [id, pushState]);
+  }, [currentId, pushState]);
 
-  useAnimationSocket(id, handleExternalUpdate);
+  useAnimationSocket(currentId, handleExternalUpdate);
+
+  // Callback for ChatPanel when a new animation is created (blank-canvas flow)
+  const handleAnimationCreated = useCallback((newId: string, newData?: object) => {
+    setCurrentId(newId);
+    if (newData) {
+      const text = JSON.stringify(newData, null, 2);
+      setJsonText(text);
+      setAnimationData(newData);
+      pushState(newData);
+    }
+    router.replace(`/editor/${newId}`);
+  }, [router, pushState]);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -169,8 +185,10 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   }, [handleUndo, handleRedo, currentFrame, totalFrames, speed]);
 
   useEffect(() => {
-    localStorage.setItem(`lottie-loop-${id}`, JSON.stringify(loopConfig));
-  }, [id, loopConfig]);
+    if (currentId) {
+      localStorage.setItem(`lottie-loop-${currentId}`, JSON.stringify(loopConfig));
+    }
+  }, [currentId, loopConfig]);
 
   const handleJsonChange = useCallback((value: string) => {
     setJsonText(value);
@@ -261,11 +279,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   };
 
   const handleSave = async () => {
+    if (!currentId) return;
     setSaving(true);
     setSaveStatus("idle");
     try {
       const parsed = JSON.parse(jsonText);
-      const res = await fetch(`/api/animations/${id}`, {
+      const res = await fetch(`/api/animations/${currentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, data: parsed }),
@@ -357,17 +376,19 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
         </button>
         <button
           onClick={() => {
-            navigator.clipboard.writeText(`${window.location.origin}/share/${id}`);
+            if (!currentId) return;
+            navigator.clipboard.writeText(`${window.location.origin}/share/${currentId}`);
             setShareStatus("copied");
             setTimeout(() => setShareStatus("idle"), 2000);
           }}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors"
+          disabled={isNewMode}
+          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {shareStatus === "copied" ? "Copied!" : "Share"}
         </button>
         <button
           onClick={handleSave}
-          disabled={saving || animationData === null}
+          disabled={saving || animationData === null || isNewMode}
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {saving ? "..." : "Save"}
@@ -411,12 +432,14 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               </button>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/share/${id}`);
+                  if (!currentId) return;
+                  navigator.clipboard.writeText(`${window.location.origin}/share/${currentId}`);
                   setShareStatus("copied");
                   setTimeout(() => setShareStatus("idle"), 2000);
                   setMobileMenuOpen(false);
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700"
+                disabled={isNewMode}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {shareStatus === "copied" ? "✓ Link Copied" : "Copy Share Link"}
               </button>
@@ -474,6 +497,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               onFrameChange={handleFrameChange}
               seekToFrame={seekFrame}
               background={canvasBg}
+              placeholder={isNewMode && animationData === null}
             />
           </div>
           <div className="flex items-center border-t border-zinc-800">
@@ -572,7 +596,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ChatPanel animationId={id} insertText={insertText} />
+              <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} />
             ) : rightPanel === "layers" ? (
               <LayerPanel
                 animationData={animationData}
@@ -585,11 +609,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
         </div>
       </div>
-      <VersionHistory
-        animationId={id}
-        open={versionPanelOpen}
-        onClose={() => setVersionPanelOpen(false)}
-      />
+      {currentId && (
+        <VersionHistory
+          animationId={currentId}
+          open={versionPanelOpen}
+          onClose={() => setVersionPanelOpen(false)}
+        />
+      )}
     </div>
   );
 }
