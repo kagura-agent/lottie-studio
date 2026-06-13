@@ -263,6 +263,22 @@ Rounds the corners of rectangles and polygons.
 - Place after rectangle/polystar shapes in a group's "it" array (before fill/stroke or after shapes, before "tr")
 - The "r" (radius) property is animatable — animate it to morph between sharp and rounded corners.
 
+## Merge Paths Modifier (ty: "mm")
+Combines multiple shapes in a group using boolean operations (union, subtract, intersect, etc.).
+- {"ty": "mm", "nm": "Merge Paths", "mm": mode}
+- "mm" (mode): integer selecting the boolean operation:
+  - 1 = Merge (union/add — combine all shapes into one outline)
+  - 2 = Add (same visual as merge in most renderers)
+  - 3 = Subtract (cut subsequent shapes from the first shape)
+  - 4 = Intersect (keep only overlapping areas)
+  - 5 = Exclude Intersection (XOR — keep only non-overlapping areas)
+- The modifier affects all shape items in the same group's "it" array.
+- Place the merge paths modifier AFTER the shapes it should operate on (at the end of the "it" array, before fill/stroke and "tr").
+- Common patterns:
+  - Donut/ring: outer ellipse + smaller inner ellipse + merge paths mode 3 (subtract)
+  - Crescent moon: two overlapping ellipses + merge paths mode 3 (subtract)
+  - Venn overlap: two ellipses + merge paths mode 4 (intersect)
+
 ## Precomp Layers (ty: 0) and Assets
 
 Precomps let you define a reusable composition in the top-level "assets" array and reference it from layers.
@@ -1415,6 +1431,67 @@ const EXAMPLE_PENDULUM = JSON.stringify({
   ]
 });
 
+const EXAMPLE_MERGE_SUBTRACT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Donut Ring", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: {
+        a: 1,
+        k: [
+          { t: 0, s: [0], e: [360], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+          { t: 60, s: [360] }
+        ]
+      },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Donut Group",
+      it: [
+        { ty: "el", nm: "Outer Circle", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] } },
+        { ty: "el", nm: "Inner Circle", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] } },
+        { ty: "mm", nm: "Merge Paths", mm: 3 },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.8, 0.6, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_MERGE_INTERSECT = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Crescent Moon", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: {
+        a: 1,
+        k: [
+          { t: 0, s: [-5], e: [5], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 30, s: [5], e: [-5], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [-5] }
+        ]
+      },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Crescent Group",
+      it: [
+        { ty: "el", nm: "Main Circle", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [180, 180] } },
+        { ty: "el", nm: "Cutout Circle", p: { a: 0, k: [50, 0] }, s: { a: 0, k: [180, 180] } },
+        { ty: "mm", nm: "Merge Paths", mm: 3 },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.85, 0.2, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
 interface ExampleEntry {
   name: string;
   title: string;
@@ -1448,6 +1525,8 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_REPEATER_RADIAL", title: "Radial pattern with repeater (8 circles in a ring using shape repeater modifier)", categories: ["modifier", "multi"], json: EXAMPLE_REPEATER_RADIAL },
   { name: "EXAMPLE_DROP_SHADOW", title: "Drop shadow on a rounded rectangle (animated shadow distance)", categories: ["effect"], json: EXAMPLE_DROP_SHADOW },
   { name: "EXAMPLE_GAUSSIAN_BLUR", title: "Gaussian blur on a circle (animated blurriness)", categories: ["effect"], json: EXAMPLE_GAUSSIAN_BLUR },
+  { name: "EXAMPLE_MERGE_SUBTRACT", title: "Donut ring (merge paths subtract — inner circle cut from outer)", categories: ["modifier"], json: EXAMPLE_MERGE_SUBTRACT },
+  { name: "EXAMPLE_MERGE_INTERSECT", title: "Crescent moon (merge paths subtract — offset circle cuts into main circle)", categories: ["modifier"], json: EXAMPLE_MERGE_INTERSECT },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1462,7 +1541,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   mask: ["mask", "clip", "reveal", "wipe", "matte", "stencil"],
   parent: ["orbit", "group", "parent", "follow", "chain", "hierarchy", "pendulum", "solar"],
   path: ["path", "bezier", "curve", "heart", "star", "polygon", "arrow", "custom shape", "crescent", "moon"],
-  modifier: ["round corner", "repeater", "trim", "modifier"],
+  modifier: ["round corner", "repeater", "trim", "modifier", "merge", "combine", "subtract", "intersect", "boolean", "cut out", "cutout", "donut", "ring", "crescent", "punch", "hole"],
   multi: ["composition", "multi", "layer", "stagger", "sequence", "multiple", "scene"],
   precomp: ["precomp", "reuse", "repeat", "multiple copies", "duplicate", "instance", "nested", "composition", "asset"],
   easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
