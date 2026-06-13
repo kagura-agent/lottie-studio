@@ -97,6 +97,20 @@ Fills shapes with a linear or radial gradient.
   Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
 - "o": opacity — animated, 0-100
 
+## Gradient Strokes (ty: "gs")
+Strokes shapes with a linear or radial gradient. Combines gradient properties with stroke properties.
+- "t": gradient type — 1 = linear, 2 = radial
+- "s": start point — animated [x, y] (relative to layer, same as gf)
+- "e": end point — animated [x, y]
+- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
+  Same format as gradient fill. For a rainbow: 6+ stops evenly spaced across hue wheel.
+- "o": opacity — animated, 0-100
+- "w": stroke width — animated property
+- "lc": line cap — 1 = butt, 2 = round, 3 = square
+- "lj": line join — 1 = miter, 2 = round, 3 = bevel
+- "d": dash array — same format as regular strokes [{"n": "d", "v": {"a":0,"k":10}}, {"n": "g", "v": {"a":0,"k":5}}]
+Use gradient stroke when the outline itself should show a gradient. For a gradient-filled shape with a solid border, use gradient fill (gf) + regular stroke (st) instead.
+
 ## Path Shapes (ty: "sh")
 Custom shapes using bezier paths. The "ks" property contains path data:
 {"a": 0, "k": {"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}}
@@ -1492,6 +1506,38 @@ const EXAMPLE_MERGE_INTERSECT = JSON.stringify({
   }]
 });
 
+const EXAMPLE_GRADIENT_STROKE_RING = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Rainbow Ring", ind: 0, ip: 0, op: 90,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Ring Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [300, 300] } },
+        { ty: "gs", nm: "Gradient Stroke", t: 1,
+          s: { a: 0, k: [-150, 0] }, e: { a: 0, k: [150, 0] },
+          g: { p: 6, k: { a: 0, k: [0, 1, 0, 0, 0.2, 1, 1, 0, 0.4, 0, 1, 0, 0.6, 0, 1, 1, 0.8, 0, 0, 1, 1, 0.8, 0, 1] } },
+          o: { a: 0, k: 100 }, w: { a: 0, k: 8 }, lc: 2, lj: 2 },
+        { ty: "tm", nm: "Trim",
+          s: { a: 0, k: 0 },
+          e: { a: 1, k: [
+            { t: 0, s: [0], e: [75], i: { x: [0.33], y: [1] }, o: { x: [0.67], y: [0] } },
+            { t: 90, s: [75] }
+          ] },
+          o: { a: 0, k: 0 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
 interface ExampleEntry {
   name: string;
   title: string;
@@ -1527,6 +1573,7 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_GAUSSIAN_BLUR", title: "Gaussian blur on a circle (animated blurriness)", categories: ["effect"], json: EXAMPLE_GAUSSIAN_BLUR },
   { name: "EXAMPLE_MERGE_SUBTRACT", title: "Donut ring (merge paths subtract — inner circle cut from outer)", categories: ["modifier"], json: EXAMPLE_MERGE_SUBTRACT },
   { name: "EXAMPLE_MERGE_INTERSECT", title: "Crescent moon (merge paths subtract — offset circle cuts into main circle)", categories: ["modifier"], json: EXAMPLE_MERGE_INTERSECT },
+  { name: "EXAMPLE_GRADIENT_STROKE_RING", title: "Rainbow progress ring (gradient stroke with trim paths)", categories: ["stroke", "gradient", "color", "modifier"], json: EXAMPLE_GRADIENT_STROKE_RING },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1534,10 +1581,10 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   motion: ["bounce", "move", "slide", "translate", "position", "path", "orbit", "pendulum", "float", "sway"],
   rotation: ["spin", "rotate", "turn", "twist", "orbit", "pendulum"],
   text: ["text", "word", "letter", "character", "type", "typewriter", "font", "title", "heading", "label", "write"],
-  color: ["color", "gradient", "rainbow", "hue", "transition", "shift", "fade"],
+  color: ["color", "gradient", "rainbow", "hue", "transition", "shift", "fade", "gradient stroke", "gradient border", "gradient outline", "neon"],
   opacity: ["fade", "opacity", "appear", "disappear", "ghost", "transparent", "invisible", "reveal"],
   scale: ["scale", "pulse", "heartbeat", "grow", "shrink", "zoom", "pop", "bounce"],
-  stroke: ["stroke", "dash", "dotted", "line", "border", "outline", "draw", "marching"],
+  stroke: ["stroke", "dash", "dotted", "line", "border", "outline", "draw", "marching", "gradient stroke", "gradient border", "gradient outline", "neon stroke", "gradient ring", "rainbow border", "rainbow outline"],
   mask: ["mask", "clip", "reveal", "wipe", "matte", "stencil"],
   parent: ["orbit", "group", "parent", "follow", "chain", "hierarchy", "pendulum", "solar"],
   path: ["path", "bezier", "curve", "heart", "star", "polygon", "arrow", "custom shape", "crescent", "moon"],
@@ -1546,6 +1593,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   precomp: ["precomp", "reuse", "repeat", "multiple copies", "duplicate", "instance", "nested", "composition", "asset"],
   easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
   effect: ["shadow", "blur", "glow", "effect", "blurry", "sharp", "soft", "drop shadow", "gaussian", "neon"],
+  gradient: ["gradient", "rainbow", "gradient fill", "gradient stroke", "linear gradient", "radial gradient", "color stops"],
 };
 
 export function selectExamples(userMessage: string, maxExamples: number = 5): ExampleEntry[] {
