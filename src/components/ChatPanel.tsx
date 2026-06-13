@@ -14,9 +14,10 @@ interface Message {
 interface ChatPanelProps {
   animationId?: string;
   insertText?: string;
+  onAnimationCreated?: (id: string, data?: object) => void;
 }
 
-export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -125,6 +126,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
       const data = await res.json();
       if (!currentAnimationId && data.animationId) {
         setCurrentAnimationId(data.animationId);
+        onAnimationCreated?.(data.animationId);
       }
       if (existingAssistantMsgId) {
         const msgId = existingAssistantMsgId;
@@ -315,6 +317,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
           setIsRepairing(false);
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
+            onAnimationCreated?.(parsed.animationId);
           }
           if (assistantMsgId && parsed.reply) {
             const msgId = assistantMsgId;
@@ -331,7 +334,7 @@ export default function ChatPanel({ animationId, insertText }: ChatPanelProps) {
         }
       }
     }
-  }, [currentAnimationId]);
+  }, [currentAnimationId, onAnimationCreated]);
 
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();
