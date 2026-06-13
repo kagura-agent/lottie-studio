@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
 import type { LoopConfig } from "@/types/loopConfig";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
@@ -21,7 +20,6 @@ interface EditorPageProps {
 }
 
 export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
-  const router = useRouter();
   const [currentId, setCurrentId] = useState<string | null>(id);
   const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
   const [animationData, setAnimationData] = useState<object | null>(initialData);
@@ -102,16 +100,32 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   useAnimationSocket(currentId, handleExternalUpdate);
 
   // Callback for ChatPanel when a new animation is created (blank-canvas flow)
-  const handleAnimationCreated = useCallback((newId: string, newData?: object) => {
+  const handleAnimationCreated = useCallback(async (newId: string, newData?: object) => {
     setCurrentId(newId);
     if (newData) {
       const text = JSON.stringify(newData, null, 2);
       setJsonText(text);
       setAnimationData(newData);
       pushState(newData);
+    } else {
+      // Fetch animation data if not provided inline
+      try {
+        const res = await fetch(`/api/animations/${newId}`);
+        if (res.ok) {
+          const result = await res.json();
+          if (result.data) {
+            setJsonText(JSON.stringify(result.data, null, 2));
+            setAnimationData(result.data);
+            pushState(result.data);
+          }
+          if (result.name) setName(result.name);
+        }
+      } catch {
+        // ignore fetch errors
+      }
     }
-    router.replace(`/editor/${newId}`);
-  }, [router, pushState]);
+    window.history.replaceState(null, '', `/editor/${newId}`);
+  }, [pushState]);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -355,7 +369,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
         {/* Desktop action buttons */}
         <button
           onClick={handleExport}
-          disabled={animationData === null}
+          disabled={animationData === null || isNewMode}
           className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Export
@@ -411,7 +425,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1">
               <button
                 onClick={() => { handleExport(); setMobileMenuOpen(false); }}
-                disabled={animationData === null}
+                disabled={animationData === null || isNewMode}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Export JSON
@@ -581,8 +595,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             <div className="flex-1" />
             <button
               onClick={() => setVersionPanelOpen((v) => !v)}
+              disabled={isNewMode}
               title="Version History"
-              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 versionPanelOpen
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
