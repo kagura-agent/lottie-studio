@@ -320,6 +320,40 @@ When users describe timing with natural language, map to these presets:
 - "accelerate", "speed up" → ease-in
 - "decelerate", "slow down" → ease-out
 - "elastic", "rubbery", "jelly" → elastic (multi-keyframe)
+
+## Layer Effects
+
+Effects are applied at the layer level using the "ef" array (same level as "ks", "shapes", etc.).
+Each effect object has:
+- "ty": effect type number
+- "nm": effect name
+- "np": number of parameters (including the effect itself)
+- "ix": effect index
+- "en": enabled (1 = on, 0 = off)
+- "ef": array of effect parameters
+
+Each effect parameter:
+- {"ty": 2, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for color params (ty: 2, value is [r,g,b,a] 0-1)
+- {"ty": 0, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for scalar params (ty: 0)
+
+Parameters can be animated (a: 1 with keyframes) just like other Lottie properties.
+
+### Drop Shadow (ty: 25)
+Parameters (in order):
+0. Shadow Color — ty: 2, color [r, g, b, a] (0-1)
+1. Opacity — ty: 0, range 0-255
+2. Direction — ty: 0, angle in degrees (0-360)
+3. Distance — ty: 0, pixels
+4. Softness — ty: 0, blur size in pixels
+
+### Gaussian Blur (ty: 29)
+Parameters (in order):
+0. Blurriness — ty: 0, blur amount in pixels
+1. Dimensions — ty: 0, direction (1 = horizontal+vertical, 2 = horizontal only, 3 = vertical only)
+2. Repeat Edge Pixels — ty: 0, (0 = off, 1 = on)
+
+Effects go on the LAYER object, not inside shape groups. Example:
+{"ty": 4, "nm": "Shape", "ks": {...}, "shapes": [...], "ef": [{...effect...}]}
 `;
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -1233,6 +1267,76 @@ const EXAMPLE_REPEATER_RADIAL = JSON.stringify({
   }]
 });
 
+const EXAMPLE_DROP_SHADOW = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Shadow Box", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Rounded Rect Group",
+      it: [
+        { ty: "rc", nm: "Rect", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [200, 200] }, r: { a: 0, k: 20 } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [0.2, 0.5, 0.9, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }],
+    ef: [{
+      ty: 25, nm: "Drop Shadow", np: 6, ix: 0, en: 1,
+      ef: [
+        { ty: 2, nm: "Shadow Color", ix: 1, v: { a: 0, k: [0, 0, 0, 1] } },
+        { ty: 0, nm: "Opacity", ix: 2, v: { a: 0, k: 180 } },
+        { ty: 0, nm: "Direction", ix: 3, v: { a: 0, k: 135 } },
+        { ty: 0, nm: "Distance", ix: 4, v: { a: 1, k: [
+          { t: 0, s: [5], e: [25], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 30, s: [25], e: [5], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [5] }
+        ] } },
+        { ty: 0, nm: "Softness", ix: 5, v: { a: 0, k: 20 } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_GAUSSIAN_BLUR = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Blurry Circle", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Circle Group",
+      it: [
+        { ty: "el", nm: "Ellipse", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [180, 180] } },
+        { ty: "fl", nm: "Fill", c: { a: 0, k: [1, 0.5, 0.1, 1] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }],
+    ef: [{
+      ty: 29, nm: "Gaussian Blur", np: 4, ix: 0, en: 1,
+      ef: [
+        { ty: 0, nm: "Blurriness", ix: 1, v: { a: 1, k: [
+          { t: 0, s: [0], e: [20], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 30, s: [20], e: [0], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [0] }
+        ] } },
+        { ty: 0, nm: "Dimensions", ix: 2, v: { a: 0, k: 1 } },
+        { ty: 0, nm: "Repeat Edge Pixels", ix: 3, v: { a: 0, k: 1 } }
+      ]
+    }]
+  }]
+});
+
 const EXAMPLE_PENDULUM = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 90, w: 512, h: 512,
   layers: [
@@ -1342,6 +1446,8 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_EASING_SHOWCASE", title: "Easing comparison (4 circles with linear, ease-in-out, bounce, snappy)", categories: ["easing"], json: EXAMPLE_EASING_SHOWCASE },
   { name: "EXAMPLE_PRECOMP_REUSE", title: "Precomp reuse (3 spinning stars from one asset definition)", categories: ["precomp", "multi", "rotation"], json: EXAMPLE_PRECOMP_REUSE },
   { name: "EXAMPLE_REPEATER_RADIAL", title: "Radial pattern with repeater (8 circles in a ring using shape repeater modifier)", categories: ["modifier", "multi"], json: EXAMPLE_REPEATER_RADIAL },
+  { name: "EXAMPLE_DROP_SHADOW", title: "Drop shadow on a rounded rectangle (animated shadow distance)", categories: ["effect"], json: EXAMPLE_DROP_SHADOW },
+  { name: "EXAMPLE_GAUSSIAN_BLUR", title: "Gaussian blur on a circle (animated blurriness)", categories: ["effect"], json: EXAMPLE_GAUSSIAN_BLUR },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1360,6 +1466,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   multi: ["composition", "multi", "layer", "stagger", "sequence", "multiple", "scene"],
   precomp: ["precomp", "reuse", "repeat", "multiple copies", "duplicate", "instance", "nested", "composition", "asset"],
   easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
+  effect: ["shadow", "blur", "glow", "effect", "blurry", "sharp", "soft", "drop shadow", "gaussian", "neon"],
 };
 
 export function selectExamples(userMessage: string, maxExamples: number = 5): ExampleEntry[] {
