@@ -28,7 +28,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -94,6 +94,14 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     vv.addEventListener("resize", onResize);
     return () => vv.removeEventListener("resize", onResize);
   }, []);
+
+  // Auto-resize textarea to fit content (max ~5 rows)
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }, [input]);
 
   // Append text from layer panel selection
   useEffect(() => {
@@ -598,16 +606,16 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       {/* Input area */}
       <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900">
         <div className="flex gap-2">
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Describe your animation..."
             disabled={isThinking || isStreaming}
             enterKeyHint="send"
-            className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50"
+            className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50 resize-none overflow-y-auto"
           />
           {isThinking || isStreaming ? (
             <button
