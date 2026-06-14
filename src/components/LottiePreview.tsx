@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import type { CanvasBackground } from "./BackgroundPicker";
 import type { LoopConfig } from "@/types/loopConfig";
@@ -14,6 +14,15 @@ interface LottiePreviewProps {
   seekToFrame?: number;
   background?: CanvasBackground;
   placeholder?: boolean;
+}
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 5;
+const ZOOM_STEP = 0.1;
+const BUTTON_ZOOM_STEP = 0.25;
+
+function clampZoom(z: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 }
 
 function getBackgroundStyle(bg: CanvasBackground = "checkered"): { className: string; style?: React.CSSProperties } {
@@ -51,6 +60,202 @@ export default function LottiePreview({
   const directionRef = useRef<1 | -1>(1);
   const loopCountRef = useRef(0);
 
+  // Zoom & pan state
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [useTransition, setUseTransition] = useState(false);
+
+  const areaRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+  // Refs for latest state in event handlers
+  const scaleRef = useRef(scale);
+  const translateRef = useRef(translate);
+  scaleRef.current = scale;
+  translateRef.current = translate;
+
+  // Pinch tracking
+  const lastPinchDistRef = useRef<number | null>(null);
+
+  const resetView = useCallback(() => {
+    setUseTransition(true);
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+  }, []);
+
+  const zoomTo = useCallback((newScale: number, animated = true) => {
+    setUseTransition(animated);
+    setScale(clampZoom(newScale));
+  }, []);
+
+  // --- Wheel zoom (Ctrl/Cmd + scroll) ---
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only zoom when ctrl/meta is held (standard pinch-to-zoom also fires with ctrlKey=true)
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+
+      const rect = area.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      const oldScale = scaleRef.current;
+      const delta = -e.deltaY * ZOOM_STEP * 0.01;
+      const newScale = clampZoom(oldScale * (1 + delta));
+      const ratio = newScale / oldScale;
+
+      const oldTx = translateRef.current.x;
+      const oldTy = translateRef.current.y;
+
+      // Zoom toward cursor: adjust translate so the point under cursor stays fixed
+      const newTx = cursorX - ratio * (cursorX - oldTx);
+      const newTy = cursorY - ratio * (cursorY - oldTy);
+
+      setUseTransition(false);
+      setScale(newScale);
+      setTranslate({ x: newTx, y: newTy });
+    };
+
+    area.addEventListener("wheel", handleWheel, { passive: false });
+    return () => area.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // --- Touch pinch zoom ---
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+
+    const getTouchDist = (touches: TouchList) => {
+      if (touches.length < 2) return null;
+      const dx = touches[1].clientX - touches[0].clientX;
+      const dy = touches[1].clientY - touches[0].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const getTouchCenter = (touches: TouchList, rect: DOMRect) => {
+      const cx = (touches[0].clientX + touches[1].clientX) / 2 - rect.left;
+      const cy = (touches[0].clientY + touches[1].clientY) / 2 - rect.top;
+      return { x: cx, y: cy };
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        lastPinchDistRef.current = getTouchDist(e.touches);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dist = getTouchDist(e.touches);
+        const lastDist = lastPinchDistRef.current;
+        if (dist !== null && lastDist !== null) {
+          e.preventDefault();
+          const rect = area.getBoundingClientRect();
+          const center = getTouchCenter(e.touches, rect);
+
+          const oldScale = scaleRef.current;
+          const ratio = dist / lastDist;
+          const newScale = clampZoom(oldScale * ratio);
+          const actualRatio = newScale / oldScale;
+
+          const oldTx = translateRef.current.x;
+          const oldTy = translateRef.current.y;
+          const newTx = center.x - actualRatio * (center.x - oldTx);
+          const newTy = center.y - actualRatio * (center.y - oldTy);
+
+          setUseTransition(false);
+          setScale(newScale);
+          setTranslate({ x: newTx, y: newTy });
+        }
+        lastPinchDistRef.current = dist;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      lastPinchDistRef.current = null;
+    };
+
+    area.addEventListener("touchstart", handleTouchStart, { passive: true });
+    area.addEventListener("touchmove", handleTouchMove, { passive: false });
+    area.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      area.removeEventListener("touchstart", handleTouchStart);
+      area.removeEventListener("touchmove", handleTouchMove);
+      area.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
+  // --- Drag to pan ---
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // Only left button, and only when zoomed
+    if (e.button !== 0) return;
+    if (scaleRef.current <= 1 && translateRef.current.x === 0 && translateRef.current.y === 0) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      tx: translateRef.current.x,
+      ty: translateRef.current.y,
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setUseTransition(false);
+    setTranslate({
+      x: dragStartRef.current.tx + dx,
+      y: dragStartRef.current.ty + dy,
+    });
+  }, [isDragging]);
+
+  const handlePointerUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // --- Keyboard shortcuts ---
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isHovered) return;
+      // Don't capture if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        setUseTransition(true);
+        setScale((s) => clampZoom(s + BUTTON_ZOOM_STEP));
+      } else if (e.key === "-") {
+        e.preventDefault();
+        setUseTransition(true);
+        setScale((s) => clampZoom(s - BUTTON_ZOOM_STEP));
+      } else if (e.key === "0") {
+        e.preventDefault();
+        setUseTransition(true);
+        setScale(1);
+        setTranslate({ x: 0, y: 0 });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isHovered]);
+
+  // --- Double-click to reset ---
+  const handleDoubleClick = useCallback(() => {
+    resetView();
+  }, [resetView]);
+
+  // --- Lottie animation lifecycle (unchanged) ---
   const destroyAnim = useCallback(() => {
     if (animRef.current) {
       animRef.current.destroy();
@@ -166,13 +371,35 @@ export default function LottiePreview({
 
   const bgProps = getBackgroundStyle(background);
 
+  const isZoomed = scale !== 1 || translate.x !== 0 || translate.y !== 0;
+  const cursorStyle = isDragging ? "cursor-grabbing" : isZoomed ? "cursor-grab" : "";
+  const zoomPercent = Math.round(scale * 100);
+
   return (
     <div
-      className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden ${bgProps.className}`}
+      ref={areaRef}
+      className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden ${bgProps.className} ${cursorStyle}`}
       style={bgProps.style}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
     >
       {animationData ? (
-        <div ref={containerRef} className="w-full h-full max-w-[500px] max-h-[500px]" />
+        <div
+          className="w-full h-full max-w-[500px] max-h-[500px]"
+          style={{
+            transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+            transformOrigin: "0 0",
+            transition: useTransition ? "transform 0.2s ease-out" : "none",
+            willChange: "transform",
+          }}
+        >
+          <div ref={containerRef} className="w-full h-full" />
+        </div>
       ) : placeholder ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
           <svg
@@ -189,6 +416,49 @@ export default function LottiePreview({
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-red-950/50 rounded-lg">
           <span className="text-red-400 text-sm font-mono">Invalid JSON</span>
+        </div>
+      )}
+
+      {/* Floating zoom controls */}
+      {animationData && (
+        <div
+          className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-zinc-800/80 backdrop-blur-sm px-1.5 py-1 shadow-lg border border-zinc-700/50"
+          onPointerDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            title="Zoom out (−)"
+            className="flex items-center justify-center w-6 h-6 rounded text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled={scale <= MIN_ZOOM}
+            onClick={() => zoomTo(scale - BUTTON_ZOOM_STEP)}
+          >
+            −
+          </button>
+          <span
+            className="text-zinc-400 text-xs font-mono min-w-[3rem] text-center select-none"
+            title="Current zoom level"
+          >
+            {zoomPercent}%
+          </span>
+          <button
+            type="button"
+            title="Zoom in (+)"
+            className="flex items-center justify-center w-6 h-6 rounded text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled={scale >= MAX_ZOOM}
+            onClick={() => zoomTo(scale + BUTTON_ZOOM_STEP)}
+          >
+            +
+          </button>
+          <div className="w-px h-4 bg-zinc-600 mx-0.5" />
+          <button
+            type="button"
+            title="Fit to view (0)"
+            className="flex items-center justify-center h-6 px-1.5 rounded text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors text-[10px] font-medium uppercase tracking-wide"
+            onClick={resetView}
+          >
+            Fit
+          </button>
         </div>
       )}
     </div>
