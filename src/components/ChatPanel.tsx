@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import MarkdownMessage from "./MarkdownMessage";
 
 interface Message {
   id: string;
@@ -513,7 +514,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                       <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
                     </span>
                   ) : msg.isRepair ? (
-                    <span className="text-amber-300">{msg.content}</span>
+                    <span className="text-amber-300"><MarkdownMessage content={msg.content} /></span>
+                  ) : msg.role === "assistant" ? (
+                    <MarkdownMessage content={msg.content} />
                   ) : (
                     msg.content
                   )}
