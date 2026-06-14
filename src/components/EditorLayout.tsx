@@ -19,6 +19,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
 import FullscreenPreview from "./FullscreenPreview";
+import EmbedDialog from "./EmbedDialog";
 
 interface EditorPageProps {
   id: string | null;
@@ -62,6 +63,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined" && currentId) {
       return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
@@ -428,6 +430,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           isDuplicating={duplicating}
         />
         <button
+          onClick={() => setEmbedOpen(true)}
+          disabled={isNewMode}
+          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Embed
+        </button>
+        <button
           onClick={handleSave}
           disabled={saving || animationData === null || isNewMode}
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
@@ -477,6 +486,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {videoExporting ? `Export Video (${Math.round(videoProgress * 100)}%)` : "Export Video"}
+              </button>
+              <button
+                onClick={() => { setEmbedOpen(true); setMobileMenuOpen(false); }}
+                disabled={isNewMode}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Embed
               </button>
               <button
                 onClick={() => {
@@ -726,6 +742,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onSpeedChange={setSpeed}
           onSeek={handleSeek}
           onClose={() => setFullscreenOpen(false)}
+        />
+      )}
+      {currentId && (
+        <EmbedDialog
+          animationId={currentId}
+          open={embedOpen}
+          onClose={() => setEmbedOpen(false)}
         />
       )}
     </div>
