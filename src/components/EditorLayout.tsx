@@ -9,6 +9,7 @@ import ChatPanel from "./ChatPanel";
 import LayerPanel from "./LayerPanel";
 import Controls from "./Controls";
 import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
+import ExportDropdown from "./ExportDropdown";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import VersionHistory from "./VersionHistory";
@@ -378,47 +379,20 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onChange={(e) => setName(e.target.value)}
           className="bg-transparent border-b border-zinc-700 text-zinc-100 text-base md:text-lg font-semibold px-1 py-0.5 focus:outline-none focus:border-zinc-400 transition-colors flex-1 min-w-0"
         />
-        {/* Desktop action buttons */}
-        <button
-          onClick={handleExport}
-          disabled={animationData === null || isNewMode}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Export
-        </button>
-        <button
-          onClick={handleExportGif}
-          disabled={animationData === null || gifExporting}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {gifExporting ? `GIF ${Math.round(gifProgress * 100)}%` : "Export GIF"}
-        </button>
-        <button
-          onClick={handleExportDotLottie}
-          disabled={animationData === null}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Export .lottie
-        </button>
-        <button
-          onClick={handleExportVideo}
-          disabled={animationData === null || videoExporting}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {videoExporting ? `Video ${Math.round(videoProgress * 100)}%` : "Export Video"}
-        </button>
-        <button
-          onClick={() => {
-            if (!currentId) return;
-            navigator.clipboard.writeText(`${window.location.origin}/share/${currentId}`);
-            setShareStatus("copied");
-            setTimeout(() => setShareStatus("idle"), 2000);
-          }}
-          disabled={isNewMode}
-          className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {shareStatus === "copied" ? "Copied!" : "Share"}
-        </button>
+        {/* Desktop export dropdown */}
+        <ExportDropdown
+          animationData={animationData}
+          isNewMode={isNewMode}
+          currentId={currentId}
+          gifExporting={gifExporting}
+          gifProgress={gifProgress}
+          videoExporting={videoExporting}
+          videoProgress={videoProgress}
+          onExportJson={handleExport}
+          onExportGif={handleExportGif}
+          onExportDotLottie={handleExportDotLottie}
+          onExportVideo={handleExportVideo}
+        />
         <button
           onClick={handleSave}
           disabled={saving || animationData === null || isNewMode}
