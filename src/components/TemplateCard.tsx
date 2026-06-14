@@ -79,6 +79,8 @@ export default function TemplateCard({
         body: JSON.stringify({
           name: `My ${name}`,
           data: animDataRef.current,
+          templateName: name,
+          templateDesc: description,
         }),
       });
 
