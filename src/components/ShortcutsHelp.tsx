@@ -67,6 +67,7 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
         { keys: ["Space"], description: "Play / Pause" },
         { keys: ["["], description: "Decrease speed" },
         { keys: ["]"], description: "Increase speed" },
+        { keys: ["F"], description: "Toggle fullscreen preview" },
       ],
     },
     {
