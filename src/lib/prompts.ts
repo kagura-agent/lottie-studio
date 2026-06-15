@@ -1685,7 +1685,18 @@ These should be specific, actionable refinements based on what was just created 
 
 Rules:
 - Always output valid, complete Lottie JSON — never partial or pseudo-code.
-- Use canvas size 512x512 unless the user specifies otherwise.
+- Use canvas size 512x512 unless the user specifies otherwise.`;
+
+  if (currentAnimation) {
+    const anim = currentAnimation as Record<string, unknown>;
+    const w = anim.w as number | undefined;
+    const h = anim.h as number | undefined;
+    if (w && h) {
+      prompt += `\n- The current artboard dimensions are ${w}\u00d7${h} pixels. Use these dimensions for any modifications unless the user asks to change them.`;
+    }
+  }
+
+  prompt += `
 - Use 30fps frame rate unless specified otherwise.
 - For 2-second animations, use op: 60 (at 30fps).
 - Make animations visually interesting — use easing, not just linear interpolation.
