@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
+import FullscreenPreview from "./FullscreenPreview";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -148,6 +149,7 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
   const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
   const [isRemixing, setIsRemixing] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const handleFrameChange = useCallback((frame: number, total: number) => {
     setCurrentFrame(frame);
@@ -194,6 +196,18 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
           &lt;/&gt; Embed
         </button>
         <button
+          onClick={() => setFullscreenOpen(true)}
+          className="px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+          title="Fullscreen preview"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+        </button>
+        <button
           onClick={handleRemix}
           disabled={isRemixing}
           className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium hover:from-purple-400 hover:to-pink-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -236,6 +250,19 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
       </div>
 
       {showEmbed && <EmbedModal id={id} onClose={() => setShowEmbed(false)} />}
+      {fullscreenOpen && (
+        <FullscreenPreview
+          animationData={animationData}
+          isPlaying={isPlaying}
+          speed={speed}
+          currentFrame={currentFrame}
+          totalFrames={totalFrames}
+          onTogglePlay={() => setIsPlaying((p) => !p)}
+          onSpeedChange={setSpeed}
+          onSeek={handleSeek}
+          onClose={() => setFullscreenOpen(false)}
+        />
+      )}
     </div>
   );
 }

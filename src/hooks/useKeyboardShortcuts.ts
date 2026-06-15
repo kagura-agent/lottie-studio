@@ -12,6 +12,7 @@ interface KeyboardShortcutHandlers {
   onSpeedDown?: () => void;
   onSpeedUp?: () => void;
   onShowHelp?: () => void;
+  onToggleFullscreen?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
@@ -59,6 +60,10 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         case " ":
           e.preventDefault();
           handlers.onTogglePlay();
+          break;
+        case "f":
+        case "F":
+          handlers.onToggleFullscreen?.();
           break;
         case "ArrowLeft":
           handlers.onSeekBackward?.();

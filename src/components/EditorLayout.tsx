@@ -16,6 +16,7 @@ import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
+import FullscreenPreview from "./FullscreenPreview";
 
 interface EditorPageProps {
   id: string | null;
@@ -58,6 +59,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined" && currentId) {
       return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
@@ -331,6 +333,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       if (idx < speeds.length - 1) setSpeed(speeds[idx + 1]);
     },
     onShowHelp: () => setShortcutsHelpOpen((v) => !v),
+    onToggleFullscreen: () => setFullscreenOpen((v) => !v),
   });
 
   const handleFrameChange = useCallback((frame: number, total: number) => {
@@ -546,6 +549,21 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             <div className="px-2 py-2 bg-zinc-900">
               <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
             </div>
+            <div className="px-2 py-2 bg-zinc-900">
+              <button
+                onClick={() => setFullscreenOpen(true)}
+                disabled={!animationData}
+                title="Fullscreen preview (F)"
+                className="flex items-center justify-center w-8 h-8 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div className="flex justify-center gap-2 px-4 pb-3">
             <button
@@ -661,6 +679,19 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
         open={shortcutsHelpOpen}
         onClose={() => setShortcutsHelpOpen(false)}
       />
+      {fullscreenOpen && (
+        <FullscreenPreview
+          animationData={animationData}
+          isPlaying={isPlaying}
+          speed={speed}
+          currentFrame={currentFrame}
+          totalFrames={totalFrames}
+          onTogglePlay={() => setIsPlaying((p) => !p)}
+          onSpeedChange={setSpeed}
+          onSeek={handleSeek}
+          onClose={() => setFullscreenOpen(false)}
+        />
+      )}
     </div>
   );
 }
