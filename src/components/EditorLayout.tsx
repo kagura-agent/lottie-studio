@@ -10,6 +10,7 @@ import ChatPanel from "./ChatPanel";
 import LayerPanel from "./LayerPanel";
 import Controls from "./Controls";
 import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
+import ArtboardPicker from "./ArtboardPicker";
 import ExportDropdown from "./ExportDropdown";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
@@ -75,6 +76,27 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     setCanvasBg(bg);
     if (currentId) localStorage.setItem(`lottie-bg-${currentId}`, bg);
   }, [currentId]);
+
+  // Artboard dimensions derived from current animation data
+  const currentWidth = (animationData as Record<string, unknown>)?.w as number ?? 512;
+  const currentHeight = (animationData as Record<string, unknown>)?.h as number ?? 512;
+
+  const handleArtboardChange = useCallback((w: number, h: number) => {
+    // Store as last-used dimensions globally
+    localStorage.setItem("lottie-artboard-last", JSON.stringify({ w, h }));
+    if (currentId) {
+      localStorage.setItem(`lottie-artboard-${currentId}`, JSON.stringify({ w, h }));
+    }
+
+    if (!animationData) return;
+
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    cloned.w = w;
+    cloned.h = h;
+    setAnimationData(cloned);
+    setJsonText(JSON.stringify(cloned, null, 2));
+    pushState(cloned);
+  }, [currentId, animationData, pushState]);
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -546,6 +568,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               onSeek={handleSeek}
               frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
             />
+            <div className="px-2 py-2 bg-zinc-900">
+              <ArtboardPicker width={currentWidth} height={currentHeight} onChange={handleArtboardChange} />
+            </div>
             <div className="px-2 py-2 bg-zinc-900">
               <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
             </div>
