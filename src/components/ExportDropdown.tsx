@@ -14,6 +14,8 @@ interface ExportDropdownProps {
   onExportGif: (e: React.MouseEvent) => void;
   onExportDotLottie: () => void;
   onExportVideo: (e: React.MouseEvent) => void;
+  onDuplicate: () => void;
+  isDuplicating: boolean;
 }
 
 export default function ExportDropdown({
@@ -28,6 +30,8 @@ export default function ExportDropdown({
   onExportGif,
   onExportDotLottie,
   onExportVideo,
+  onDuplicate,
+  isDuplicating,
 }: ExportDropdownProps) {
   const [open, setOpen] = useState(false);
   const [copiedItem, setCopiedItem] = useState<"share" | "embed" | null>(null);
@@ -160,6 +164,21 @@ export default function ExportDropdown({
               <polyline points="8 6 2 12 8 18" />
             </svg>
             {copiedItem === "embed" ? "Copied!" : "Copy Embed Code"}
+          </button>
+
+          {/* Separator */}
+          <div className="border-t border-zinc-700 my-1" />
+
+          {/* Duplicate */}
+          <button
+            onClick={() => { onDuplicate(); setOpen(false); }}
+            disabled={isNewMode || isDuplicating}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 17.1c0 1.326-1.074 2.4-2.4 2.4H5.4A2.4 2.4 0 013 17.1V8.7a2.4 2.4 0 012.4-2.4h1.2m4.8-2.4h5.4A2.4 2.4 0 0119.2 6.3v8.4a2.4 2.4 0 01-2.4 2.4h-8.4a2.4 2.4 0 01-2.4-2.4V6.3a2.4 2.4 0 012.4-2.4z" />
+            </svg>
+            {isDuplicating ? "Duplicating..." : "Duplicate"}
           </button>
         </div>
       )}
