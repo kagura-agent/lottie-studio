@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
 import type { LoopConfig } from "@/types/loopConfig";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import LottiePreview from "./LottiePreview";
 import JsonEditor from "./JsonEditor";
 import ChatPanel from "./ChatPanel";
@@ -23,7 +24,9 @@ interface EditorPageProps {
 }
 
 export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
+  const router = useRouter();
   const [currentId, setCurrentId] = useState<string | null>(id);
+  const [duplicating, setDuplicating] = useState(false);
   const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
   const [animationData, setAnimationData] = useState<object | null>(initialData);
   const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData ?? {});
@@ -276,6 +279,27 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   }, [currentId, jsonText, name]);
 
+  const handleDuplicate = useCallback(async () => {
+    if (!currentId || duplicating) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/animations/${currentId}/duplicate`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Duplicate failed");
+      const result = await res.json();
+      const newId = result.id;
+      if (newId) {
+        router.push(`/editor/${newId}`);
+      }
+    } catch (err) {
+      console.error("Duplicate failed:", err);
+      alert("Failed to duplicate animation. Please try again.");
+    } finally {
+      setDuplicating(false);
+    }
+  }, [currentId, duplicating, router]);
+
   const speeds = [0.5, 1, 2];
   useKeyboardShortcuts({
     onUndo: handleUndo,
@@ -374,6 +398,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onExportGif={handleExportGif}
           onExportDotLottie={handleExportDotLottie}
           onExportVideo={handleExportVideo}
+          onDuplicate={handleDuplicate}
+          isDuplicating={duplicating}
         />
         <button
           onClick={handleSave}
@@ -438,6 +464,14 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {shareStatus === "copied" ? "✓ Link Copied" : "Copy Share Link"}
+              </button>
+              <div className="border-t border-zinc-700 my-1" />
+              <button
+                onClick={() => { handleDuplicate(); setMobileMenuOpen(false); }}
+                disabled={isNewMode || duplicating}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {duplicating ? "Duplicating..." : "Duplicate"}
               </button>
             </div>
           )}
