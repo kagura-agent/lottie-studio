@@ -11,6 +11,7 @@ interface KeyboardShortcutHandlers {
   onSeekEnd?: () => void;
   onSpeedDown?: () => void;
   onSpeedUp?: () => void;
+  onShowHelp?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
@@ -36,6 +37,13 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
       if (mod && (e.key === "s" || e.key === "S")) {
         e.preventDefault();
         handlers.onSave();
+        return;
+      }
+
+      // Ctrl/Cmd + / → Show keyboard shortcuts help
+      if (mod && e.key === "/" && handlers.onShowHelp) {
+        e.preventDefault();
+        handlers.onShowHelp();
         return;
       }
 

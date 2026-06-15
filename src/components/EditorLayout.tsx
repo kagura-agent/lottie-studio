@@ -14,6 +14,7 @@ import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import VersionHistory from "./VersionHistory";
+import ShortcutsHelp from "./ShortcutsHelp";
 
 interface EditorPageProps {
   id: string | null;
@@ -53,6 +54,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [mobileView, setMobileView] = useState<"canvas" | "chat" | "layers">("chat");
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined" && currentId) {
       return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
@@ -304,6 +306,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       const idx = speeds.indexOf(speed);
       if (idx < speeds.length - 1) setSpeed(speeds[idx + 1]);
     },
+    onShowHelp: () => setShortcutsHelpOpen((v) => !v),
   });
 
   const handleFrameChange = useCallback((frame: number, total: number) => {
@@ -573,6 +576,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             </button>
             <div className="flex-1" />
             <button
+              onClick={() => setShortcutsHelpOpen(true)}
+              title="Keyboard Shortcuts (Ctrl+/)"
+              className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors text-zinc-400 hover:text-zinc-200"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8" />
+              </svg>
+            </button>
+            <button
               onClick={() => setVersionPanelOpen((v) => !v)}
               disabled={isNewMode}
               title="Version History"
@@ -610,6 +623,10 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onClose={() => setVersionPanelOpen(false)}
         />
       )}
+      <ShortcutsHelp
+        open={shortcutsHelpOpen}
+        onClose={() => setShortcutsHelpOpen(false)}
+      />
     </div>
   );
 }
