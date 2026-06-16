@@ -13,6 +13,7 @@ import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
 import ArtboardPicker from "./ArtboardPicker";
 import ExportDropdown from "./ExportDropdown";
 import ColorPalette from "./ColorPalette";
+import TimingEditor from "./TimingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -577,6 +578,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             </div>
             <div className="px-2 py-2 bg-zinc-900">
               <ColorPalette
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+            </div>
+            <div className="px-2 py-2 bg-zinc-900">
+              <TimingEditor
                 animationData={animationData}
                 onChange={(updated) => {
                   setAnimationData(updated as object);
