@@ -5,12 +5,14 @@ interface LottieLayer {
   ty: number;
   hd?: boolean;
   ind?: number;
+  ks?: { o?: { a?: number; k?: number | unknown[] } };
 }
 
 interface LayerPanelProps {
   animationData: object | null;
   onSelectLayer: (layerName: string) => void;
   onToggleVisibility: (layerIndex: number, hidden: boolean) => void;
+  onChangeOpacity: (layerIndex: number, opacity: number) => void;
 }
 
 function getTypeIcon(ty: number): string {
@@ -37,7 +39,24 @@ function getTypeName(ty: number): string {
   }
 }
 
-export default function LayerPanel({ animationData, onSelectLayer, onToggleVisibility }: LayerPanelProps) {
+function getOpacity(layer: LottieLayer): number {
+  const o = layer.ks?.o;
+  if (!o) return 100;
+  if (o.a === 1 && Array.isArray(o.k)) {
+    // Animated: read first keyframe start value
+    for (const kf of o.k) {
+      if (kf && typeof kf === 'object' && 's' in (kf as Record<string, unknown>)) {
+        const s = (kf as Record<string, unknown>).s;
+        if (Array.isArray(s) && typeof s[0] === 'number') return Math.round(s[0]);
+      }
+    }
+    return 100;
+  }
+  if (typeof o.k === 'number') return Math.round(o.k);
+  return 100;
+}
+
+export default function LayerPanel({ animationData, onSelectLayer, onToggleVisibility, onChangeOpacity }: LayerPanelProps) {
   const layers: LottieLayer[] = (animationData as Record<string, unknown>)?.layers as LottieLayer[] ?? [];
 
   // Reverse for render order: last in array = bottom layer visually
@@ -81,6 +100,18 @@ export default function LayerPanel({ animationData, onSelectLayer, onToggleVisib
               >
                 {name}
               </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] text-zinc-500 w-7 text-right tabular-nums">{getOpacity(layer)}%</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={getOpacity(layer)}
+                  onChange={(e) => onChangeOpacity(originalIndex, Number(e.target.value))}
+                  className="w-16 h-1 accent-zinc-400 bg-zinc-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300 [&::-webkit-slider-thumb]:hover:bg-white [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-zinc-300 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:hover:bg-white"
+                  title={`Opacity: ${getOpacity(layer)}%`}
+                />
+              </div>
               <button
                 onClick={() => onToggleVisibility(originalIndex, !isHidden)}
                 className={`shrink-0 w-7 h-7 flex items-center justify-center rounded text-xs transition-colors ${
