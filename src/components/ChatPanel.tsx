@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import MarkdownMessage from "./MarkdownMessage";
+import InlineLottiePreview from "./InlineLottiePreview";
 
 interface Message {
   id: string;
@@ -11,6 +12,7 @@ interface Message {
   isRepair?: boolean;
   suggestions?: string[];
   imageUrl?: string;
+  lottieJson?: object;
 }
 
 interface ChatPanelProps {
@@ -66,11 +68,12 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
         if (cancelled) return;
         if (data.messages && data.messages.length > 0) {
           setMessages(
-            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string }) => ({
+            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
               imageUrl: m.imageUrl,
+              lottieJson: m.lottieJson || undefined,
             }))
           );
         }
@@ -336,9 +339,10 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
             const msgId = assistantMsgId;
             const warningText = parsed.warning as string | undefined;
             const suggestionsList = parsed.suggestions;
+            const doneLottieJson = parsed.lottieJson as object | undefined;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson } : m
               )
             );
           }
@@ -566,6 +570,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                       : "bg-zinc-700 text-zinc-100"
                   }`}
                 >
+                  {msg.role === "assistant" && msg.lottieJson && (
+                    <InlineLottiePreview lottieJson={msg.lottieJson} />
+                  )}
                   {retryingMsgId === msg.id && !msg.content ? (
                     <span className="inline-flex gap-1">
                       <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
