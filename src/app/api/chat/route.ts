@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 interface ChatRequest {
   animationId?: string;
   message: string;
+  image?: string; // base64 data URL for image attachment
 }
 
 interface MessageRow {
@@ -19,12 +20,13 @@ interface MessageRow {
   role: "user" | "assistant";
   content: string;
   lottie_json: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
 export async function POST(request: Request) {
   const body: ChatRequest = await request.json();
-  const { message } = body;
+  const { message, image } = body;
   let { animationId } = body;
 
   if (!message?.trim()) {
@@ -53,14 +55,40 @@ export async function POST(request: Request) {
   }
 
   const history = db.prepare(
-    "SELECT role, content FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
+    "SELECT role, content, image_url FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
   ).all(animationId) as MessageRow[];
 
-  const llmMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+  type ContentPart = { type: "text" | "image_url"; text?: string; image_url?: { url: string } };
+  type LLMMessage = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
+
+  const llmMessages: LLMMessage[] = [
     { role: "system", content: buildSystemPrompt(currentAnimation, message) },
-    ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-    { role: "user", content: message },
+    ...history.map((m) => {
+      if (m.role === "user" && m.image_url) {
+        return {
+          role: m.role as "user" | "assistant",
+          content: [
+            { type: "image_url" as const, image_url: { url: m.image_url } },
+            { type: "text" as const, text: m.content },
+          ],
+        };
+      }
+      return { role: m.role as "user" | "assistant", content: m.content };
+    }),
   ];
+
+  // Build the current user message (multimodal if image attached)
+  if (image) {
+    llmMessages.push({
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: image } },
+        { type: "text", text: message },
+      ],
+    });
+  } else {
+    llmMessages.push({ role: "user", content: message });
+  }
 
   let llmResponse: Response;
   try {
@@ -207,8 +235,8 @@ export async function POST(request: Request) {
 
         // Save messages to DB
         db.prepare(
-          "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
-        ).run(randomUUID(), capturedAnimationId, message);
+          "INSERT INTO messages (id, animation_id, role, content, image_url) VALUES (?, ?, 'user', ?, ?)"
+        ).run(randomUUID(), capturedAnimationId, message, image || null);
 
         db.prepare(
           "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"

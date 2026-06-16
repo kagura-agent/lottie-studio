@@ -37,6 +37,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_messages_animation_id ON messages(animation_id, created_at)
 `);
 
+// Migration: add image_url column for chat image attachments
+try {
+  db.exec(`ALTER TABLE messages ADD COLUMN image_url TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

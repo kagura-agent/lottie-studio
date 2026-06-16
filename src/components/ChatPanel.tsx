@@ -10,6 +10,7 @@ interface Message {
   warning?: string;
   isRepair?: boolean;
   suggestions?: string[];
+  imageUrl?: string;
 }
 
 interface ChatPanelProps {
@@ -27,6 +28,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
   const [retryingMsgId, setRetryingMsgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -64,10 +66,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
         if (cancelled) return;
         if (data.messages && data.messages.length > 0) {
           setMessages(
-            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string }) => ({
+            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
+              imageUrl: m.imageUrl,
             }))
           );
         }
@@ -113,13 +116,14 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
-  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal) => {
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string) => {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         animationId: currentAnimationId,
         message: text,
+        ...(imageDataUrl ? { image: imageDataUrl } : {}),
       }),
       signal,
     });
@@ -351,21 +355,25 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
     setError(null);
 
+    const imageDataUrl = pendingImage;
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: text,
+      imageUrl: imageDataUrl || undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setPendingImage(null);
     setIsThinking(true);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      await streamResponse(text, undefined, controller.signal);
+      await streamResponse(text, undefined, controller.signal, imageDataUrl || undefined);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         // User cancelled — not an error
@@ -379,7 +387,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, streamResponse]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse]);
 
   const handleRetry = useCallback(async (assistantMsgId: string) => {
     if (isThinking || isStreaming) return;
@@ -443,6 +451,57 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
   const dismissWarning = useCallback((msgId: string) => {
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
+
+  const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+  const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+  const processImageFile = useCallback((file: File) => {
+    if (!SUPPORTED_TYPES.includes(file.type)) {
+      setError("Unsupported image format. Use PNG, JPEG, GIF, or WebP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("Image too large (max 4MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPendingImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) processImageFile(file);
+        return;
+      }
+    }
+  }, [processImageFile]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type.startsWith("image/")) {
+        processImageFile(files[i]);
+        return;
+      }
+    }
+  }, [processImageFile]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const starterChips = useMemo(() => {
     const allPrompts = [
@@ -518,7 +577,16 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                   ) : msg.role === "assistant" ? (
                     <MarkdownMessage content={msg.content} />
                   ) : (
-                    msg.content
+                    <>
+                      {msg.imageUrl && (
+                        <img
+                          src={msg.imageUrl}
+                          alt="Attached"
+                          className="max-w-[200px] max-h-[200px] rounded mb-1.5 object-contain"
+                        />
+                      )}
+                      {msg.content}
+                    </>
                   )}
                 </div>
                 {msg.role === "assistant" && !isThinking && !isStreaming && (
@@ -607,8 +675,47 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       )}
 
       {/* Input area */}
-      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900">
+      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900" onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
+        {/* Image preview */}
+        {pendingImage && (
+          <div className="mb-2 inline-flex relative">
+            <img
+              src={pendingImage}
+              alt="Attachment preview"
+              className="max-h-[120px] rounded border border-zinc-600 object-contain"
+            />
+            <button
+              onClick={() => setPendingImage(null)}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-700 border border-zinc-500 text-zinc-300 hover:bg-red-600 hover:border-red-500 hover:text-white flex items-center justify-center text-xs font-bold leading-none transition-colors"
+              aria-label="Remove image"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) processImageFile(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isThinking || isStreaming}
+            className="shrink-0 px-2 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Attach image"
+            title="Attach image (or paste / drag-drop)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M15.621 4.379a3 3 0 0 0-4.242 0l-7 7a3 3 0 0 0 4.241 4.243h.001l.497-.5a.75.75 0 0 1 1.064 1.057l-.498.501a4.5 4.5 0 0 1-6.364-6.364l7-7a4.5 4.5 0 0 1 6.368 6.36l-3.455 3.553A2.625 2.625 0 1 1 9.52 9.52l3.45-3.451a.75.75 0 1 1 1.061 1.06l-3.45 3.451a1.125 1.125 0 0 0 1.587 1.595l3.454-3.553a3 3 0 0 0 0-4.242Z" clipRule="evenodd" />
+            </svg>
+          </button>
           <textarea
             ref={inputRef}
             rows={1}

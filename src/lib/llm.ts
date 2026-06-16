@@ -1,9 +1,15 @@
 const LLM_API_URL = process.env.LLM_API_URL || "http://localhost:3201/v1";
 const LLM_MODEL = process.env.LLM_MODEL || "claude-sonnet-4-20250514";
 
+interface ContentPart {
+  type: "text" | "image_url";
+  text?: string;
+  image_url?: { url: string };
+}
+
 interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 }
 
 type ParseError = "no_json" | "invalid_json" | "invalid_lottie" | null;
