@@ -396,6 +396,34 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   }, [animationData, pushState]);
 
+  const handleChangeOpacity = useCallback((layerIndex: number, opacity: number) => {
+    if (!animationData) return;
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
+      const layer = cloned.layers[layerIndex];
+      if (!layer.ks) layer.ks = {};
+      if (!layer.ks.o) layer.ks.o = { a: 0, k: 100 };
+      if (layer.ks.o.a === 1 && Array.isArray(layer.ks.o.k)) {
+        // Animated opacity: set all keyframe values
+        for (const kf of layer.ks.o.k) {
+          if (kf && typeof kf === 'object' && 's' in kf) {
+            kf.s = [opacity];
+          }
+          if (kf && typeof kf === 'object' && 'e' in kf) {
+            kf.e = [opacity];
+          }
+        }
+      } else {
+        // Static opacity
+        layer.ks.o.a = 0;
+        layer.ks.o.k = opacity;
+      }
+      setAnimationData(cloned);
+      setJsonText(JSON.stringify(cloned, null, 2));
+      pushState(cloned);
+    }
+  }, [animationData, pushState]);
+
   return (
     <div className="flex flex-col h-[100dvh]">
       {/* Header */}
@@ -719,6 +747,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 animationData={animationData}
                 onSelectLayer={handleSelectLayer}
                 onToggleVisibility={handleToggleVisibility}
+                onChangeOpacity={handleChangeOpacity}
               />
             ) : (
               <JsonEditor value={jsonText} onChange={handleJsonChange} />
