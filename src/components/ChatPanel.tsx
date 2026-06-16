@@ -507,6 +507,23 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleClearChat = useCallback(async () => {
+    if (!currentAnimationId || messages.length === 0) return;
+    if (!window.confirm("Clear all chat messages? This cannot be undone.")) return;
+
+    try {
+      const res = await fetch(`/api/chat/${currentAnimationId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || "Failed to clear chat history");
+        return;
+      }
+      setMessages([]);
+    } catch {
+      setError("Failed to clear chat history");
+    }
+  }, [currentAnimationId, messages.length]);
+
   const starterChips = useMemo(() => {
     const allPrompts = [
       "\uD83C\uDF88 A bouncing red ball with a shadow",
@@ -536,6 +553,24 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
   return (
     <div className="flex flex-col h-full bg-zinc-900">
+      {/* Chat header with clear button */}
+      {messages.length > 0 && (
+        <div className="shrink-0 flex items-center justify-end px-3 pt-2">
+          <button
+            onClick={handleClearChat}
+            disabled={isThinking || isStreaming}
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Clear chat history"
+            title="Clear chat history"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5A.75.75 0 0 1 9.95 6Z" clipRule="evenodd" />
+            </svg>
+            Clear chat
+          </button>
+        </div>
+      )}
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
