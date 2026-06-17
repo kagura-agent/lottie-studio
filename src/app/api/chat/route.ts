@@ -2,6 +2,7 @@ import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { animationEvents } from "@/lib/events";
+import { extractIp, checkRate } from "@/lib/rateLimit";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -25,6 +26,15 @@ interface MessageRow {
 }
 
 export async function POST(request: Request) {
+  const ip = extractIp(request);
+  const rate = checkRate(ip);
+  if (!rate.ok) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests, slow down 🌸", retryAfterSec: rate.retryAfterSec }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rate.retryAfterSec) } }
+    );
+  }
+
   const body: ChatRequest = await request.json();
   const { message, image } = body;
   let { animationId } = body;

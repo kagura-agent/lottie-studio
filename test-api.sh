@@ -220,6 +220,39 @@ echo "--- Cleanup ---"
 curl -sf -X DELETE "$BASE/api/animations/$ID" > /dev/null && ok "Deleted original"
 curl -sf -X DELETE "$BASE/api/animations/$DUP_ID" > /dev/null && ok "Deleted duplicate"
 
+# 6. Rate-limit burst test (POST /api/chat — fake remote IP)
+echo ""
+echo "--- Step 6: Rate-limit burst test ---"
+GOT_429=0
+for i in $(seq 1 12); do
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 \
+    -X POST "$BASE/api/chat" \
+    -H "Content-Type: application/json" \
+    -H "x-forwarded-for: 203.0.113.7" \
+    -d '{"message":"ping"}' 2>/dev/null || echo "timeout")
+  if [ "$HTTP_CODE" = "429" ]; then
+    GOT_429=$((GOT_429+1))
+  fi
+done
+if [ "$GOT_429" -ge 1 ]; then
+  ok "Burst (12 req with fake IP) → $GOT_429 got HTTP 429"
+else
+  fail "Rate limit burst" "expected ≥1 HTTP 429, got 0"
+fi
+
+# 6b. Localhost bypass (no x-forwarded-for → rate limit must not trigger)
+echo ""
+echo "--- Step 6b: Rate-limit localhost bypass ---"
+BYPASS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 \
+  -X POST "$BASE/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"bypass test"}' 2>/dev/null || echo "timeout")
+if [ "$BYPASS_CODE" != "429" ]; then
+  ok "Localhost bypass: not rate-limited (got HTTP $BYPASS_CODE)"
+else
+  fail "Localhost bypass" "expected NOT 429, got $BYPASS_CODE"
+fi
+
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

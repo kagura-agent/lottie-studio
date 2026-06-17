@@ -148,6 +148,10 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     if (!contentType.includes("text/event-stream")) {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          const sec = errData.retryAfterSec;
+          throw new Error(sec ? `You're going fast — try again in ${sec} seconds 🌸` : "You're going fast — slow down 🌸");
+        }
         const errMsg = errData.error || `Request failed (${res.status})`;
         throw new Error(errMsg);
       }
