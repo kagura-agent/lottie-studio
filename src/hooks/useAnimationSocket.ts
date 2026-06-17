@@ -2,11 +2,12 @@ import { useEffect, useRef, useCallback } from "react";
 
 export function useAnimationSocket(animationId: string | null, onUpdated: () => void) {
   const onUpdatedRef = useRef(onUpdated);
-  onUpdatedRef.current = onUpdated;
+  useEffect(() => { onUpdatedRef.current = onUpdated; });
 
   const reconnectAttempt = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
   const unmountedRef = useRef(false);
+  const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
     if (unmountedRef.current || !animationId) return;
@@ -35,9 +36,12 @@ export function useAnimationSocket(animationId: string | null, onUpdated: () => 
       if (unmountedRef.current) return;
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempt.current), 30000);
       reconnectAttempt.current++;
-      setTimeout(connect, delay);
+      setTimeout(() => connectRef.current(), delay);
     };
   }, [animationId]);
+
+  // Keep connectRef in sync so the timeout closure always calls the latest version
+  useEffect(() => { connectRef.current = connect; });
 
   useEffect(() => {
     if (!animationId) return;
@@ -48,5 +52,6 @@ export function useAnimationSocket(animationId: string | null, onUpdated: () => 
       unmountedRef.current = true;
       wsRef.current?.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- animationId is already tracked via connect callback dependency
   }, [connect]);
 }

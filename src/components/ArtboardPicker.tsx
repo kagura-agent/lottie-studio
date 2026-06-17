@@ -31,12 +31,16 @@ export default function ArtboardPicker({ width, height, onChange }: ArtboardPick
   const [customW, setCustomW] = useState(String(width));
   const [customH, setCustomH] = useState(String(height));
   const ref = useRef<HTMLDivElement>(null);
+  const [prevWidth, setPrevWidth] = useState(width);
+  const [prevHeight, setPrevHeight] = useState(height);
 
-  // Sync custom inputs when external width/height change
-  useEffect(() => {
+  // Sync custom inputs when external width/height change (derived state pattern)
+  if (width !== prevWidth || height !== prevHeight) {
+    setPrevWidth(width);
+    setPrevHeight(height);
     setCustomW(String(width));
     setCustomH(String(height));
-  }, [width, height]);
+  }
 
   useEffect(() => {
     if (!open) return;

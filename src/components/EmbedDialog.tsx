@@ -20,6 +20,7 @@ export default function EmbedDialog({
 }: EmbedDialogProps) {
   const [activeTab, setActiveTab] = useState<Tab>("player");
   const [copied, setCopied] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
 
   useEffect(() => {
     if (!open) return;
@@ -30,13 +31,14 @@ export default function EmbedDialog({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setActiveTab("player");
-      setCopied(false);
-    }
-  }, [open]);
+  // Reset state when dialog opens (derived state pattern)
+  if (open && !prevOpen) {
+    setActiveTab("player");
+    setCopied(false);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   if (!open) return null;
 

@@ -50,6 +50,7 @@ export default function VersionHistory({ animationId, open, onClose }: VersionHi
   }, [animationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching: setState is in an async callback, not synchronous in the effect body
     if (open) fetchVersions();
   }, [open, fetchVersions]);
 

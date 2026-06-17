@@ -21,6 +21,10 @@ interface ChatPanelProps {
   onAnimationCreated?: (id: string, data?: object) => void;
 }
 
+// Image upload constraints (module-level to avoid recreating on each render)
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
 export default function ChatPanel({ animationId, insertText, onAnimationCreated }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -37,11 +41,20 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [prevAnimationId, setPrevAnimationId] = useState<string | undefined>(animationId);
+  const [prevInsertText, setPrevInsertText] = useState<string | undefined>(insertText);
 
-  // Keep currentAnimationId in sync when prop changes
-  useEffect(() => {
+  // Keep currentAnimationId in sync when prop changes (derived state pattern)
+  if (animationId !== prevAnimationId) {
+    setPrevAnimationId(animationId);
     setCurrentAnimationId(animationId);
-  }, [animationId]);
+  }
+
+  // Append text from layer panel selection (derived state pattern)
+  if (insertText && insertText !== prevInsertText) {
+    setPrevInsertText(insertText);
+    setInput((prev) => prev + insertText);
+  }
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,10 +123,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, [input]);
 
-  // Append text from layer panel selection
+  // Focus input when insertText changes
   useEffect(() => {
     if (!insertText) return;
-    setInput((prev) => prev + insertText);
     inputRef.current?.focus();
   }, [insertText]);
 
@@ -170,11 +182,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     const decoder = new TextDecoder();
     let sseBuffer = "";
     let assistantMsgId: string | null = existingAssistantMsgId ?? null;
-    let fullContent = "";
     let visibleContent = "";
     let insideJsonBlock = false;
     let fenceBuffer = "";
-    let repairContent = "";
     let repairVisibleContent = "";
     let repairInsideJsonBlock = false;
     let repairFenceBuffer = "";
@@ -214,7 +224,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
         if (parsed.type === "token") {
           const tokenText = parsed.text || "";
-          fullContent += tokenText;
 
           let visibleChunk = "";
           for (const ch of tokenText) {
@@ -273,7 +282,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
           setIsRepairing(true);
         } else if (parsed.type === "repair_token") {
           const tokenText = parsed.text || "";
-          repairContent += tokenText;
 
           let visibleChunk = "";
           for (const ch of tokenText) {
@@ -456,9 +464,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
 
-  const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
-  const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
-
   const processImageFile = useCallback((file: File) => {
     if (!SUPPORTED_TYPES.includes(file.type)) {
       setError("Unsupported image format. Use PNG, JPEG, GIF, or WebP.");
@@ -524,7 +529,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     }
   }, [currentAnimationId, messages.length]);
 
-  const starterChips = useMemo(() => {
+  const [starterChips] = useState(() => {
     const allPrompts = [
       "\uD83C\uDF88 A bouncing red ball with a shadow",
       "\uD83C\uDF38 Sakura petals falling and spinning",
@@ -539,7 +544,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     ];
     const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
-  }, []);
+  });
 
   // Find the last assistant message with suggestions (only show chips on the most recent one)
   const lastSuggestionMsgId = useMemo(() => {
@@ -621,6 +626,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                   ) : (
                     <>
                       {msg.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- data URL from user upload/paste, not supported by next/Image
                         <img
                           src={msg.imageUrl}
                           alt="Attached"
@@ -721,6 +727,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
         {/* Image preview */}
         {pendingImage && (
           <div className="mb-2 inline-flex relative">
+            {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not supported by next/Image */}
             <img
               src={pendingImage}
               alt="Attachment preview"
