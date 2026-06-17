@@ -13,7 +13,8 @@ interface TemplateCardProps {
 }
 
 export default function TemplateCard({
-  id,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- interface requires id for key prop usage by parent
+  id: _id,
   name,
   description,
   category,

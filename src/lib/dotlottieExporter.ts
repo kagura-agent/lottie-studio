@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- parameter reserved for future filename customization
 export async function exportDotLottie(animationData: object, name: string): Promise<Blob> {
   const zip = new JSZip();
 

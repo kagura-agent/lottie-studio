@@ -24,7 +24,6 @@ export async function exportToVideo({
   const inPoint = (data.ip as number) || 0;
   const outPoint = (data.op as number) || 60;
   const totalNativeFrames = Math.round(outPoint - inPoint);
-  const durationMs = (totalNativeFrames / nativeFps) * 1000;
 
   // Create offscreen container and canvas for lottie's canvas renderer
   const container = document.createElement("div");

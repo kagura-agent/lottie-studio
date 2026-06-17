@@ -33,6 +33,9 @@ export default function GalleryPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showUrlImport, setShowUrlImport] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [importingUrl, setImportingUrl] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("lottie-gallery-sort") as SortOption) || "newest";
@@ -167,6 +170,33 @@ export default function GalleryPage() {
     if (file) handleImport(file);
   }, [handleImport]);
 
+  const handleUrlImport = useCallback(async () => {
+    if (!urlInput.trim()) return;
+
+    setImportError(null);
+    setImportingUrl(true);
+    try {
+      const res = await fetch("/api/animations/import-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to import from URL");
+      }
+
+      const { id } = await res.json();
+      router.push(`/editor/${id}`);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+      setTimeout(() => setImportError(null), 5000);
+    } finally {
+      setImportingUrl(false);
+    }
+  }, [urlInput, router]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center flex-1">
@@ -192,40 +222,83 @@ export default function GalleryPage() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-100">
-              {animations.length > 0 ? "Animations" : "Get Started"}
-            </h1>
-            {animations.length > 0 && (
-              <p className="text-sm text-zinc-400 mt-1">
-                {animations.length} animation
-                {animations.length !== 1 ? "s" : ""}
-              </p>
-            )}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-semibold text-zinc-100">
+                {animations.length > 0 ? "Animations" : "Get Started"}
+              </h1>
+              {animations.length > 0 && (
+                <p className="text-sm text-zinc-400 mt-1">
+                  {animations.length} animation
+                  {animations.length !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.lottie"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                {importing ? "Importing..." : "Import"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowUrlImport(!showUrlImport);
+                  if (!showUrlImport) {
+                    setUrlInput("");
+                    setImportError(null);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+              >
+                Import URL
+              </button>
+              <Link
+                href="/editor/new"
+                className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
+              >
+                Create Animation
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.lottie"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
-            >
-              {importing ? "Importing..." : "Import"}
-            </button>
-            <Link
-              href="/editor/new"
-              className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
-            >
-              Create Animation
-            </Link>
-          </div>
+
+          {/* URL Import Input */}
+          {showUrlImport && (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !importingUrl) {
+                      handleUrlImport();
+                    }
+                  }}
+                  placeholder="https://example.com/animation.json"
+                  disabled={importingUrl}
+                  className="flex-1 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-50"
+                  autoFocus
+                />
+                <button
+                  onClick={handleUrlImport}
+                  disabled={!urlInput.trim() || importingUrl}
+                  className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {importingUrl ? "Importing..." : "Import"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Templates Section */}

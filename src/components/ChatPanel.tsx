@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import MarkdownMessage from "./MarkdownMessage";
+import InlineLottiePreview from "./InlineLottiePreview";
 
 interface Message {
   id: string;
@@ -10,6 +11,8 @@ interface Message {
   warning?: string;
   isRepair?: boolean;
   suggestions?: string[];
+  imageUrl?: string;
+  lottieJson?: object;
 }
 
 interface ChatPanelProps {
@@ -17,6 +20,10 @@ interface ChatPanelProps {
   insertText?: string;
   onAnimationCreated?: (id: string, data?: object) => void;
 }
+
+// Image upload constraints (module-level to avoid recreating on each render)
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -27,17 +34,27 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
   const [retryingMsgId, setRetryingMsgId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [prevAnimationId, setPrevAnimationId] = useState<string | undefined>(animationId);
+  const [prevInsertText, setPrevInsertText] = useState<string | undefined>(insertText);
 
-  // Keep currentAnimationId in sync when prop changes
-  useEffect(() => {
+  // Keep currentAnimationId in sync when prop changes (derived state pattern)
+  if (animationId !== prevAnimationId) {
+    setPrevAnimationId(animationId);
     setCurrentAnimationId(animationId);
-  }, [animationId]);
+  }
+
+  // Append text from layer panel selection (derived state pattern)
+  if (insertText && insertText !== prevInsertText) {
+    setPrevInsertText(insertText);
+    setInput((prev) => prev + insertText);
+  }
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,10 +81,12 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
         if (cancelled) return;
         if (data.messages && data.messages.length > 0) {
           setMessages(
-            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string }) => ({
+            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
+              imageUrl: m.imageUrl,
+              lottieJson: m.lottieJson || undefined,
             }))
           );
         }
@@ -104,22 +123,22 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, [input]);
 
-  // Append text from layer panel selection
+  // Focus input when insertText changes
   useEffect(() => {
     if (!insertText) return;
-    setInput((prev) => prev + insertText);
     inputRef.current?.focus();
   }, [insertText]);
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
-  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal) => {
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string) => {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         animationId: currentAnimationId,
         message: text,
+        ...(imageDataUrl ? { image: imageDataUrl } : {}),
       }),
       signal,
     });
@@ -163,11 +182,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     const decoder = new TextDecoder();
     let sseBuffer = "";
     let assistantMsgId: string | null = existingAssistantMsgId ?? null;
-    let fullContent = "";
     let visibleContent = "";
     let insideJsonBlock = false;
     let fenceBuffer = "";
-    let repairContent = "";
     let repairVisibleContent = "";
     let repairInsideJsonBlock = false;
     let repairFenceBuffer = "";
@@ -207,7 +224,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
         if (parsed.type === "token") {
           const tokenText = parsed.text || "";
-          fullContent += tokenText;
 
           let visibleChunk = "";
           for (const ch of tokenText) {
@@ -266,7 +282,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
           setIsRepairing(true);
         } else if (parsed.type === "repair_token") {
           const tokenText = parsed.text || "";
-          repairContent += tokenText;
 
           let visibleChunk = "";
           for (const ch of tokenText) {
@@ -332,9 +347,10 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
             const msgId = assistantMsgId;
             const warningText = parsed.warning as string | undefined;
             const suggestionsList = parsed.suggestions;
+            const doneLottieJson = parsed.lottieJson as object | undefined;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson } : m
               )
             );
           }
@@ -351,21 +367,25 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
     setError(null);
 
+    const imageDataUrl = pendingImage;
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: text,
+      imageUrl: imageDataUrl || undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setPendingImage(null);
     setIsThinking(true);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      await streamResponse(text, undefined, controller.signal);
+      await streamResponse(text, undefined, controller.signal, imageDataUrl || undefined);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         // User cancelled — not an error
@@ -379,7 +399,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, streamResponse]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse]);
 
   const handleRetry = useCallback(async (assistantMsgId: string) => {
     if (isThinking || isStreaming) return;
@@ -444,7 +464,72 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
 
-  const starterChips = useMemo(() => {
+  const processImageFile = useCallback((file: File) => {
+    if (!SUPPORTED_TYPES.includes(file.type)) {
+      setError("Unsupported image format. Use PNG, JPEG, GIF, or WebP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("Image too large (max 4MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPendingImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) processImageFile(file);
+        return;
+      }
+    }
+  }, [processImageFile]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type.startsWith("image/")) {
+        processImageFile(files[i]);
+        return;
+      }
+    }
+  }, [processImageFile]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleClearChat = useCallback(async () => {
+    if (!currentAnimationId || messages.length === 0) return;
+    if (!window.confirm("Clear all chat messages? This cannot be undone.")) return;
+
+    try {
+      const res = await fetch(`/api/chat/${currentAnimationId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || "Failed to clear chat history");
+        return;
+      }
+      setMessages([]);
+    } catch {
+      setError("Failed to clear chat history");
+    }
+  }, [currentAnimationId, messages.length]);
+
+  const [starterChips] = useState(() => {
     const allPrompts = [
       "\uD83C\uDF88 A bouncing red ball with a shadow",
       "\uD83C\uDF38 Sakura petals falling and spinning",
@@ -459,7 +544,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
     ];
     const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
-  }, []);
+  });
 
   // Find the last assistant message with suggestions (only show chips on the most recent one)
   const lastSuggestionMsgId = useMemo(() => {
@@ -473,6 +558,24 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
 
   return (
     <div className="flex flex-col h-full bg-zinc-900">
+      {/* Chat header with clear button */}
+      {messages.length > 0 && (
+        <div className="shrink-0 flex items-center justify-end px-3 pt-2">
+          <button
+            onClick={handleClearChat}
+            disabled={isThinking || isStreaming}
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Clear chat history"
+            title="Clear chat history"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5A.75.75 0 0 1 9.95 6Z" clipRule="evenodd" />
+            </svg>
+            Clear chat
+          </button>
+        </div>
+      )}
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
@@ -507,6 +610,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                       : "bg-zinc-700 text-zinc-100"
                   }`}
                 >
+                  {msg.role === "assistant" && msg.lottieJson && (
+                    <InlineLottiePreview lottieJson={msg.lottieJson} />
+                  )}
                   {retryingMsgId === msg.id && !msg.content ? (
                     <span className="inline-flex gap-1">
                       <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
@@ -518,7 +624,17 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
                   ) : msg.role === "assistant" ? (
                     <MarkdownMessage content={msg.content} />
                   ) : (
-                    msg.content
+                    <>
+                      {msg.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- data URL from user upload/paste, not supported by next/Image
+                        <img
+                          src={msg.imageUrl}
+                          alt="Attached"
+                          className="max-w-[200px] max-h-[200px] rounded mb-1.5 object-contain"
+                        />
+                      )}
+                      {msg.content}
+                    </>
                   )}
                 </div>
                 {msg.role === "assistant" && !isThinking && !isStreaming && (
@@ -607,8 +723,48 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
       )}
 
       {/* Input area */}
-      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900">
+      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900" onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
+        {/* Image preview */}
+        {pendingImage && (
+          <div className="mb-2 inline-flex relative">
+            {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview, not supported by next/Image */}
+            <img
+              src={pendingImage}
+              alt="Attachment preview"
+              className="max-h-[120px] rounded border border-zinc-600 object-contain"
+            />
+            <button
+              onClick={() => setPendingImage(null)}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-700 border border-zinc-500 text-zinc-300 hover:bg-red-600 hover:border-red-500 hover:text-white flex items-center justify-center text-xs font-bold leading-none transition-colors"
+              aria-label="Remove image"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) processImageFile(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isThinking || isStreaming}
+            className="shrink-0 px-2 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Attach image"
+            title="Attach image (or paste / drag-drop)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M15.621 4.379a3 3 0 0 0-4.242 0l-7 7a3 3 0 0 0 4.241 4.243h.001l.497-.5a.75.75 0 0 1 1.064 1.057l-.498.501a4.5 4.5 0 0 1-6.364-6.364l7-7a4.5 4.5 0 0 1 6.368 6.36l-3.455 3.553A2.625 2.625 0 1 1 9.52 9.52l3.45-3.451a.75.75 0 1 1 1.061 1.06l-3.45 3.451a1.125 1.125 0 0 0 1.587 1.595l3.454-3.553a3 3 0 0 0 0-4.242Z" clipRule="evenodd" />
+            </svg>
+          </button>
           <textarea
             ref={inputRef}
             rows={1}

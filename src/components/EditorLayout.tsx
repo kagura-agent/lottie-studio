@@ -13,6 +13,8 @@ import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
 import ArtboardPicker from "./ArtboardPicker";
 import ExportDropdown from "./ExportDropdown";
 import ColorPalette from "./ColorPalette";
+import TimingEditor from "./TimingEditor";
+import EasingEditor from "./EasingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -396,6 +398,77 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   }, [animationData, pushState]);
 
+  const handleChangeOpacity = useCallback((layerIndex: number, opacity: number) => {
+    if (!animationData) return;
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
+      const layer = cloned.layers[layerIndex];
+      if (!layer.ks) layer.ks = {};
+      if (!layer.ks.o) layer.ks.o = { a: 0, k: 100 };
+      if (layer.ks.o.a === 1 && Array.isArray(layer.ks.o.k)) {
+        // Animated opacity: set all keyframe values
+        for (const kf of layer.ks.o.k) {
+          if (kf && typeof kf === 'object' && 's' in kf) {
+            kf.s = [opacity];
+          }
+          if (kf && typeof kf === 'object' && 'e' in kf) {
+            kf.e = [opacity];
+          }
+        }
+      } else {
+        // Static opacity
+        layer.ks.o.a = 0;
+        layer.ks.o.k = opacity;
+      }
+      setAnimationData(cloned);
+      setJsonText(JSON.stringify(cloned, null, 2));
+      pushState(cloned);
+    }
+  }, [animationData, pushState]);
+
+  const handlePreviewOpacity = useCallback((layerIndex: number, opacity: number) => {
+    // Preview-only handler: updates canvas without pushing undo state
+    if (!animationData) return;
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
+      const layer = cloned.layers[layerIndex];
+      if (!layer.ks) layer.ks = {};
+      if (!layer.ks.o) layer.ks.o = { a: 0, k: 100 };
+      if (layer.ks.o.a === 1 && Array.isArray(layer.ks.o.k)) {
+        // Animated opacity: set all keyframe values
+        for (const kf of layer.ks.o.k) {
+          if (kf && typeof kf === 'object' && 's' in kf) {
+            kf.s = [opacity];
+          }
+          if (kf && typeof kf === 'object' && 'e' in kf) {
+            kf.e = [opacity];
+          }
+        }
+      } else {
+        // Static opacity
+        layer.ks.o.a = 0;
+        layer.ks.o.k = opacity;
+      }
+      // Update canvas preview without pushing to undo history
+      setAnimationData(cloned);
+      setJsonText(JSON.stringify(cloned, null, 2));
+    }
+  }, [animationData]);
+
+  const handleReorderLayers = useCallback((fromIndex: number, toIndex: number) => {
+    if (!animationData) return;
+    const cloned = JSON.parse(JSON.stringify(animationData));
+    if (cloned.layers && cloned.layers[fromIndex] !== undefined && cloned.layers[toIndex] !== undefined) {
+      // Remove layer from fromIndex
+      const [movedLayer] = cloned.layers.splice(fromIndex, 1);
+      // Insert at toIndex
+      cloned.layers.splice(toIndex, 0, movedLayer);
+      setAnimationData(cloned);
+      setJsonText(JSON.stringify(cloned, null, 2));
+      pushState(cloned);
+    }
+  }, [animationData, pushState]);
+
   return (
     <div className="flex flex-col h-[100dvh]">
       {/* Header */}
@@ -602,6 +675,26 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               />
             </div>
             <div className="px-2 py-2 bg-zinc-900">
+              <TimingEditor
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+            </div>
+            <div className="px-2 py-2 bg-zinc-900">
+              <EasingEditor
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+            </div>
+            <div className="px-2 py-2 bg-zinc-900">
               <button
                 onClick={() => setFullscreenOpen(true)}
                 disabled={!animationData}
@@ -713,6 +806,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 animationData={animationData}
                 onSelectLayer={handleSelectLayer}
                 onToggleVisibility={handleToggleVisibility}
+                onChangeOpacity={handleChangeOpacity}
+                onPreviewOpacity={handlePreviewOpacity}
+                onReorderLayers={handleReorderLayers}
               />
             ) : (
               <JsonEditor value={jsonText} onChange={handleJsonChange} />

@@ -56,7 +56,7 @@ export default function JsonEditor({ value, onChange }: JsonEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => { onChangeRef.current = onChange; });
 
   const createView = useCallback((container: HTMLElement, doc: string) => {
     const state = EditorState.create({
