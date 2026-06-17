@@ -28,3 +28,19 @@ export async function GET(
 
   return Response.json({ animationId, messages: formatted });
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ animationId: string }> }
+) {
+  const { animationId } = await params;
+
+  const animation = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
+  if (!animation) {
+    return Response.json({ error: "Animation not found" }, { status: 404 });
+  }
+
+  db.prepare("DELETE FROM messages WHERE animation_id = ?").run(animationId);
+
+  return Response.json({ success: true });
+}
