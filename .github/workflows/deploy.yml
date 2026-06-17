@@ -84,6 +84,7 @@ jobs:
           Environment=NODE_ENV=production
           Environment=PORT=3400
           Environment=HOSTNAME=0.0.0.0
+          Environment=LLM_API_KEY=${{ secrets.FLOWAY_API_KEY }}
           Restart=on-failure
           RestartSec=5
 
