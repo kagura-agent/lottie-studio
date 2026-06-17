@@ -210,14 +210,18 @@ export default function TimingEditor({
   // Local input states for controlled inputs
   const [durationInput, setDurationInput] = useState("");
   const [fpsInput, setFpsInput] = useState("");
+  const [prevOpen, setPrevOpen] = useState(false);
+  const [prevTiming, setPrevTiming] = useState(timing);
 
-  // Sync local input when popover opens or timing changes
-  useEffect(() => {
-    if (timing && open) {
+  // Sync local input when popover opens or timing changes (derived state pattern)
+  if ((open && !prevOpen) || (open && timing !== prevTiming)) {
+    if (timing) {
       setDurationInput(timing.duration.toFixed(1));
       setFpsInput(String(timing.frameRate));
     }
-  }, [open, timing]);
+  }
+  if (open !== prevOpen) setPrevOpen(open);
+  if (timing !== prevTiming) setPrevTiming(timing);
 
   // Outside-click dismiss
   useEffect(() => {

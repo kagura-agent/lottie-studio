@@ -68,11 +68,15 @@ export default function FullscreenPreview({
   }, []);
 
   useEffect(() => {
-    resetHideTimer();
+    // Start auto-hide timer on mount
+    const timer = setTimeout(() => {
+      setControlsVisible(false);
+    }, HIDE_DELAY);
     return () => {
+      clearTimeout(timer);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
-  }, [resetHideTimer]);
+  }, []);
 
   const handleMouseMove = useCallback(() => {
     resetHideTimer();

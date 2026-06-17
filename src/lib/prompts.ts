@@ -1639,7 +1639,6 @@ export function selectExamples(userMessage: string, maxExamples: number = 5): Ex
     .filter(s => s.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  const remaining = maxExamples - 1;
   for (const { entry } of scored) {
     if (selected.length >= maxExamples) break;
     selected.push(entry);

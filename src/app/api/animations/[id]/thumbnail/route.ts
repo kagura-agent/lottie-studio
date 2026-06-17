@@ -1,4 +1,4 @@
-import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { db } from "@/lib/db";
 import { createCanvas } from "canvas";
 import fs from "node:fs";
 import path from "node:path";

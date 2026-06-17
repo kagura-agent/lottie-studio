@@ -54,11 +54,15 @@ export default function LottiePreview({
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const frameCallbackRef = useRef(onFrameChange);
-  frameCallbackRef.current = onFrameChange;
   const loopConfigRef = useRef(loopConfig);
-  loopConfigRef.current = loopConfig;
   const directionRef = useRef<1 | -1>(1);
   const loopCountRef = useRef(0);
+
+  // Sync refs via effect to avoid updating during render
+  useEffect(() => {
+    frameCallbackRef.current = onFrameChange;
+    loopConfigRef.current = loopConfig;
+  });
 
   // Zoom & pan state
   const [scale, setScale] = useState(1);
@@ -72,8 +76,10 @@ export default function LottiePreview({
   // Refs for latest state in event handlers
   const scaleRef = useRef(scale);
   const translateRef = useRef(translate);
-  scaleRef.current = scale;
-  translateRef.current = translate;
+  useEffect(() => {
+    scaleRef.current = scale;
+    translateRef.current = translate;
+  });
 
   // Pinch tracking
   const lastPinchDistRef = useRef<number | null>(null);
