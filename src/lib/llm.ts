@@ -1,5 +1,6 @@
-const LLM_API_URL = process.env.LLM_API_URL || "http://localhost:3201/v1";
-const LLM_MODEL = process.env.LLM_MODEL || "claude-sonnet-4-20250514";
+const LLM_API_URL = process.env.LLM_API_URL || "http://localhost:8000/v1";
+const LLM_MODEL = process.env.LLM_MODEL || "claude-sonnet-4-6";
+const LLM_API_KEY = process.env.LLM_API_KEY || "";
 
 interface ContentPart {
   type: "text" | "image_url";
@@ -21,12 +22,18 @@ interface LLMResponse {
   suggestions: string[] | null;
 }
 
+function llmHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (LLM_API_KEY) headers["Authorization"] = `Bearer ${LLM_API_KEY}`;
+  return headers;
+}
+
 export async function chatCompletion(messages: ChatMessage[]): Promise<LLMResponse> {
   const url = `${LLM_API_URL}/chat/completions`;
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: llmHeaders(),
     body: JSON.stringify({
       model: LLM_MODEL,
       messages,
@@ -52,7 +59,7 @@ export async function chatCompletionStream(messages: ChatMessage[]): Promise<Res
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: llmHeaders(),
     body: JSON.stringify({
       model: LLM_MODEL,
       messages,
@@ -97,7 +104,7 @@ export async function chatCompletionRepairStream(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: llmHeaders(),
     body: JSON.stringify({
       model: LLM_MODEL,
       messages: repairMessages,
