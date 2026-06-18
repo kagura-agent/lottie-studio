@@ -9,7 +9,8 @@ interface Bucket {
   windowStart: number;
 }
 
-const buckets = new Map<string, Bucket>();
+const globalForRateLimit = globalThis as unknown as { __lottieRateBuckets?: Map<string, Bucket> };
+const buckets = globalForRateLimit.__lottieRateBuckets ?? (globalForRateLimit.__lottieRateBuckets = new Map<string, Bucket>());
 
 const LOCALHOST_IPS = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
@@ -33,6 +34,9 @@ export function checkRate(ip: string): { ok: true } | { ok: false; retryAfterSec
   if (LOCALHOST_IPS.has(ip)) {
     return { ok: true };
   }
+
+  // TEMP DIAGNOSTIC — remove after #169 verified in prod
+  console.log('[ratelimit]', ip, buckets.size, buckets.get(ip)?.count);
 
   // In dev, "unknown" (no x-forwarded-for) bypasses so local tools work.
   // In prod, Caddy ALWAYS sets x-forwarded-for. If it's missing, that's a
