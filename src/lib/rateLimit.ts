@@ -9,7 +9,8 @@ interface Bucket {
   windowStart: number;
 }
 
-const buckets = new Map<string, Bucket>();
+const globalForRateLimit = globalThis as unknown as { __lottieRateBuckets?: Map<string, Bucket> };
+const buckets = globalForRateLimit.__lottieRateBuckets ?? (globalForRateLimit.__lottieRateBuckets = new Map<string, Bucket>());
 
 const LOCALHOST_IPS = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 
