@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
 import FullscreenPreview from "./FullscreenPreview";
+import { exportDotLottie } from "@/lib/dotlottieExporter";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -150,6 +151,46 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
   const [isRemixing, setIsRemixing] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const downloadRef = useRef<HTMLDivElement>(null);
+
+  // Close download dropdown on outside click
+  useEffect(() => {
+    if (!downloadOpen) return;
+    const handler = (e: globalThis.MouseEvent) => {
+      if (downloadRef.current && !downloadRef.current.contains(e.target as Node)) {
+        setDownloadOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [downloadOpen]);
+
+  const handleDownloadJson = useCallback(() => {
+    const blob = new Blob([JSON.stringify(animationData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setDownloadOpen(false);
+  }, [animationData, name]);
+
+  const handleDownloadDotLottie = useCallback(async () => {
+    const blob = await exportDotLottie(animationData, name);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.lottie`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setDownloadOpen(false);
+  }, [animationData, name]);
 
   const handleFrameChange = useCallback((frame: number, total: number) => {
     setCurrentFrame(frame);
@@ -195,6 +236,45 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
         >
           &lt;/&gt; Embed
         </button>
+        <div className="relative" ref={downloadRef}>
+          <button
+            onClick={() => setDownloadOpen((v) => !v)}
+            className="px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+            title="Download"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          {downloadOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[180px] py-1">
+              <button
+                onClick={handleDownloadJson}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download JSON
+              </button>
+              <button
+                onClick={handleDownloadDotLottie}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download .lottie
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setFullscreenOpen(true)}
           className="px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
