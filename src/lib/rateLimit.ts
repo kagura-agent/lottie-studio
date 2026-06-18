@@ -35,9 +35,6 @@ export function checkRate(ip: string): { ok: true } | { ok: false; retryAfterSec
     return { ok: true };
   }
 
-  // TEMP DIAGNOSTIC — remove after #169 verified in prod
-  console.log('[ratelimit]', ip, buckets.size, buckets.get(ip)?.count);
-
   // In dev, "unknown" (no x-forwarded-for) bypasses so local tools work.
   // In prod, Caddy ALWAYS sets x-forwarded-for. If it's missing, that's a
   // direct-to-Node hit (proxy bypass / misconfig) — share one bucket so a
