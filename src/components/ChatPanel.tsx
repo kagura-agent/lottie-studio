@@ -19,13 +19,14 @@ interface ChatPanelProps {
   animationId?: string;
   insertText?: string;
   onAnimationCreated?: (id: string, data?: object) => void;
+  onAnimationUpdated?: (id: string, data: object) => void;
 }
 
 // Image upload constraints (module-level to avoid recreating on each render)
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
-export default function ChatPanel({ animationId, insertText, onAnimationCreated }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -343,15 +344,25 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
           }
         } else if (parsed.type === "done") {
           setIsRepairing(false);
+          const doneLottieJson = parsed.lottieJson as object | undefined;
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
-            onAnimationCreated?.(parsed.animationId, parsed.lottieJson as object | undefined);
+            onAnimationCreated?.(parsed.animationId, doneLottieJson);
+            // Trigger thumbnail capture for new animations
+            if (doneLottieJson) {
+              onAnimationUpdated?.(parsed.animationId, doneLottieJson);
+            }
+          } else if (doneLottieJson) {
+            // Existing animation was updated — trigger thumbnail capture
+            const captureId = currentAnimationId || parsed.animationId;
+            if (captureId) {
+              onAnimationUpdated?.(captureId, doneLottieJson);
+            }
           }
           if (assistantMsgId && parsed.reply) {
             const msgId = assistantMsgId;
             const warningText = parsed.warning as string | undefined;
             const suggestionsList = parsed.suggestions;
-            const doneLottieJson = parsed.lottieJson as object | undefined;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson } : m
@@ -363,7 +374,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated 
         }
       }
     }
-  }, [currentAnimationId, onAnimationCreated]);
+  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated]);
 
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();

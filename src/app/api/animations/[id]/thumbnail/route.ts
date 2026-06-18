@@ -80,7 +80,19 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Check cache
+  // Check for a real captured thumbnail first
+  const capturedPath = path.join(THUMBNAILS_DIR, `${id}.captured.png`);
+  if (fs.existsSync(capturedPath)) {
+    const captured = fs.readFileSync(capturedPath);
+    return new NextResponse(new Uint8Array(captured), {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      },
+    });
+  }
+
+  // Fall back to generated text-on-gradient thumbnail
   const cachePath = path.join(THUMBNAILS_DIR, `${id}.png`);
   if (fs.existsSync(cachePath)) {
     const cached = fs.readFileSync(cachePath);
@@ -92,7 +104,7 @@ export async function GET(
     });
   }
 
-  // Generate thumbnail
+  // Generate text-on-gradient thumbnail
   const name = row.name || "Untitled";
   const buffer = generateThumbnail(name);
 
@@ -105,4 +117,79 @@ export async function GET(
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
     },
   });
+}
+
+const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024; // 5MB
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  // Validate id to prevent path traversal
+  if (!/^[\w-]+$/.test(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  // Check if animation exists
+  const row = db.prepare("SELECT id FROM animations WHERE id = ?").get(id) as
+    | { id: string }
+    | undefined;
+
+  if (!row) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  let body: { thumbnail?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.thumbnail || typeof body.thumbnail !== "string") {
+    return NextResponse.json(
+      { error: "Missing thumbnail field" },
+      { status: 400 }
+    );
+  }
+
+  // Strip data URL prefix if present
+  const base64Match = body.thumbnail.match(
+    /^data:image\/png;base64,(.+)$/
+  );
+  const base64Data = base64Match ? base64Match[1] : body.thumbnail;
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(base64Data, "base64");
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid base64 data" },
+      { status: 400 }
+    );
+  }
+
+  if (buffer.length > MAX_THUMBNAIL_SIZE) {
+    return NextResponse.json(
+      { error: "Thumbnail too large" },
+      { status: 413 }
+    );
+  }
+
+  // Minimal PNG signature check
+  const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (buffer.length < 8 || !buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return NextResponse.json(
+      { error: "Not a valid PNG file" },
+      { status: 400 }
+    );
+  }
+
+  // Save as captured thumbnail (separate from generated cache)
+  const capturedPath = path.join(THUMBNAILS_DIR, `${id}.captured.png`);
+  fs.writeFileSync(capturedPath, buffer);
+
+  return NextResponse.json({ ok: true });
 }
