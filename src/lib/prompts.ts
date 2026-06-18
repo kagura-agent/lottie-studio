@@ -1,4 +1,6 @@
-const LOTTIE_SPEC = `
+// ─── Spec Sections (selectively injected based on user intent) ───
+
+const SPEC_CORE = `
 ## Lottie JSON Structure
 
 A Lottie animation is a JSON object with these top-level properties:
@@ -74,53 +76,35 @@ Colors use RGBA with values 0-1:
 - Purple: [0.5, 0, 0.5, 1]
 - Orange: [1, 0.5, 0, 1]
 
-## Trim Paths (ty: "tm")
-Animates stroke drawing by controlling which portion of a path is visible.
-- "s": start — animated property, 0-100 (percentage along the path)
-- "e": end — animated property, 0-100
-- "o": offset — animated property, 0-360 (degrees, shifts the visible segment)
-Place after stroke ("st") in a group's "it" array. Animate "e" from 0→100 to draw a stroke on, or animate "s" from 0→100 to erase it.
+## Easing Presets
 
-## Repeater (ty: "rp")
-Creates copies of shapes in a group with cumulative transforms.
-- "c": copies — animated property (number of copies including original)
-- "o": offset — animated property (shifts the starting index)
-- "tr": transform per copy — contains "p" (position offset), "r" (rotation), "s" (scale), "o" (opacity) applied cumulatively to each copy
-Place at the end of a group's "it" array (before the group transform "tr"). Example: 8 copies with 45° rotation each = a radial pattern.
+Named easing curves for keyframe i (in-tangent) and o (out-tangent) values:
 
-## Gradient Fills (ty: "gf")
-Fills shapes with a linear or radial gradient.
-- "t": gradient type — 1 = linear, 2 = radial
-- "s": start point — animated [x, y]
-- "e": end point — animated [x, y]
-- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
-  Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
-- "o": opacity — animated, 0-100
+| Preset | i (in-tangent) | o (out-tangent) | Feel |
+|---|---|---|---|
+| linear | {x:[1],y:[1]} | {x:[0],y:[0]} | Constant speed, mechanical |
+| ease-in-out | {x:[0.42],y:[1]} | {x:[0.58],y:[0]} | Smooth start and stop |
+| ease-in | {x:[0.42],y:[0]} | {x:[1],y:[1]} | Slow start, fast end |
+| ease-out | {x:[0],y:[0]} | {x:[0.58],y:[1]} | Fast start, slow stop |
+| bounce | {x:[0.34],y:[1.56]} | {x:[0.64],y:[1]} | Overshoots target then settles |
+| snappy | {x:[0.1],y:[1]} | {x:[0.9],y:[0]} | Fast start, sharp stop |
+| gentle | {x:[0.25],y:[1]} | {x:[0.75],y:[0]} | Very slow, soft curve |
 
-## Gradient Strokes (ty: "gs")
-Strokes shapes with a linear or radial gradient. Combines gradient properties with stroke properties.
-- "t": gradient type — 1 = linear, 2 = radial
-- "s": start point — animated [x, y] (relative to layer, same as gf)
-- "e": end point — animated [x, y]
-- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
-  Same format as gradient fill. For a rainbow: 6+ stops evenly spaced across hue wheel.
-- "o": opacity — animated, 0-100
-- "w": stroke width — animated property
-- "lc": line cap — 1 = butt, 2 = round, 3 = square
-- "lj": line join — 1 = miter, 2 = round, 3 = bevel
-- "d": dash array — same format as regular strokes [{"n": "d", "v": {"a":0,"k":10}}, {"n": "g", "v": {"a":0,"k":5}}]
-Use gradient stroke when the outline itself should show a gradient. For a gradient-filled shape with a solid border, use gradient fill (gf) + regular stroke (st) instead.
+**Elastic** (multiple overshoots): Cannot be done with a single keyframe pair. Simulate with 3-4 keyframes that oscillate past the target with decreasing amplitude (e.g., target 100: 100→120→95→102→100).
 
-## Path Shapes (ty: "sh")
-Custom shapes using bezier paths. The "ks" property contains path data:
-{"a": 0, "k": {"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}}
-- "v": vertices (anchor points)
-- "i": in-tangents (relative to each vertex, for curve arriving at vertex)
-- "o": out-tangents (relative to each vertex, for curve leaving vertex)
-- "c": true = closed path, false = open path
-- Straight segments: tangents are [0,0]
-- Circular arcs: tangent length ≈ 0.5523 × radius (kappa constant)
+### Keyword Mapping
+When users describe timing with natural language, map to these presets:
+- "bouncy", "springy" → bounce
+- "smooth", "flowing" → ease-in-out
+- "sharp", "crisp", "snappy" → snappy
+- "soft", "gentle", "slow" → gentle
+- "linear", "constant", "even" → linear
+- "accelerate", "speed up" → ease-in
+- "decelerate", "slow down" → ease-out
+- "elastic", "rubbery", "jelly" → elastic (multi-keyframe)
+`;
 
+const SPEC_SHAPES = `
 ## Polystar Shape (ty: "sr")
 Parametric stars and regular polygons. Simpler than manual path vertices.
 - "sy": 1 = star, 2 = polygon
@@ -145,7 +129,9 @@ Arrow/chevron pointing right (centered, 200×200):
 
 Crescent moon (two circular arcs, 512×512):
 {"v":[[300,96],[300,416],[220,416],[220,96]],"i":[[−113,0],[0,113],[−75,0],[0,−75]],"o":[[0,−113],[113,0],[0,75],[75,0]],"c":true}
+`;
 
+const SPEC_TEXT = `
 ## Text Layer (ty: 5)
 Displays and animates text.
 - "ty": 5
@@ -199,32 +185,9 @@ To animate text character-by-character, animate the range selector's "s" (start)
 - Default to "Arial" if no font specified
 - Lottie players must have the font available; web-safe fonts ensure broadest compatibility
 - For the "fonts" top-level property, list fonts used: {"list": [{"fName": "Arial", "fFamily": "Arial", "fStyle": "Regular"}]}
+`;
 
-## Layer Parenting (parent / ind)
-Layers can be parented to other layers, inheriting the parent's transform (position, rotation, scale).
-- "ind": unique layer index (integer) — every layer must have one
-- "parent": the "ind" value of the parent layer — the child inherits the parent's transform
-Child layers' transforms become relative to the parent. If a parent moves, rotates, or scales, all children follow.
-
-## Null Layer (ty: 3)
-An invisible layer used purely as a parent/controller. It has no visual output but carries a full transform.
-- "ty": 3
-- "nm": name
-- "ind": layer index (used as the "parent" value for child layers)
-- "ip"/"op": in/out points
-- "ks": transform (position, rotation, scale, opacity, anchor point)
-- No "shapes" or visual content
-
-Common patterns:
-- **Orbiting**: Null at center with animated rotation; child shape layers offset from center orbit around it.
-- **Group movement**: Null with animated position; multiple child layers move together as a unit.
-- **Hierarchical chains**: Layer A parents to Null B, which parents to Null C — transforms cascade (e.g., pendulum arm + bob).
-
-Tips:
-- Set the null's anchor point to [0,0] and position to the desired pivot (e.g., [256,256] for canvas center).
-- Child layers' position is relative to the parent's anchor, so offset the child to control orbit radius.
-- Multiple layers can share the same parent for synchronized group behavior.
-
+const SPEC_MASKS = `
 ## Mask Shapes (masksProperties)
 Masks clip or reveal portions of a layer using animated paths. Any layer can have a "masksProperties" array.
 Each mask object:
@@ -243,7 +206,9 @@ Each mask object:
 Common pattern: Animate the mask path vertices ("pt" with a:1) over time for wipe/reveal effects.
 Example mask (rectangle covering left half of 512×512 canvas):
 {"inv": false, "mode": "a", "pt": {"a": 0, "k": {"v": [[0,0],[256,0],[256,512],[0,512]], "i": [[0,0],[0,0],[0,0],[0,0]], "o": [[0,0],[0,0],[0,0],[0,0]], "c": true}}, "o": {"a": 0, "k": 100}, "x": {"a": 0, "k": 0}}
+`;
 
+const SPEC_TRACK_MATTES = `
 ## Track Mattes (tt / td)
 Track mattes use one layer to define the visibility of another layer.
 The matte layer (the "stencil") sits directly ABOVE the content layer in the layers array.
@@ -256,6 +221,140 @@ The matte layer (the "stencil") sits directly ABOVE the content layer in the lay
 
 Layer order matters: in the "layers" array, the matte layer (td: 1) must come BEFORE the content layer (tt: N) since layers are rendered top-to-bottom (lower index = on top).
 The matte layer's shapes/content define the clipping region — animate its shapes or transform to create dynamic clipping effects.
+`;
+
+const SPEC_EFFECTS = `
+## Layer Effects
+
+Effects are applied at the layer level using the "ef" array (same level as "ks", "shapes", etc.).
+Each effect object has:
+- "ty": effect type number
+- "nm": effect name
+- "np": number of parameters (including the effect itself)
+- "ix": effect index
+- "en": enabled (1 = on, 0 = off)
+- "ef": array of effect parameters
+
+Each effect parameter:
+- {"ty": 2, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for color params (ty: 2, value is [r,g,b,a] 0-1)
+- {"ty": 0, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for scalar params (ty: 0)
+
+Parameters can be animated (a: 1 with keyframes) just like other Lottie properties.
+
+### Drop Shadow (ty: 25)
+Parameters (in order):
+0. Shadow Color — ty: 2, color [r, g, b, a] (0-1)
+1. Opacity — ty: 0, range 0-255
+2. Direction — ty: 0, angle in degrees (0-360)
+3. Distance — ty: 0, pixels
+4. Softness — ty: 0, blur size in pixels
+
+### Gaussian Blur (ty: 29)
+Parameters (in order):
+0. Blurriness — ty: 0, blur amount in pixels
+1. Dimensions — ty: 0, direction (1 = horizontal+vertical, 2 = horizontal only, 3 = vertical only)
+2. Repeat Edge Pixels — ty: 0, (0 = off, 1 = on)
+
+Effects go on the LAYER object, not inside shape groups. Example:
+{"ty": 4, "nm": "Shape", "ks": {...}, "shapes": [...], "ef": [{...effect...}]}
+`;
+
+const SPEC_GRADIENTS = `
+## Gradient Fills (ty: "gf")
+Fills shapes with a linear or radial gradient.
+- "t": gradient type — 1 = linear, 2 = radial
+- "s": start point — animated [x, y]
+- "e": end point — animated [x, y]
+- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
+  Color stop values: position (0-1), then r, g, b (0-1). For 2 stops: [0, r1, g1, b1, 1, r2, g2, b2].
+- "o": opacity — animated, 0-100
+
+## Gradient Strokes (ty: "gs")
+Strokes shapes with a linear or radial gradient. Combines gradient properties with stroke properties.
+- "t": gradient type — 1 = linear, 2 = radial
+- "s": start point — animated [x, y] (relative to layer, same as gf)
+- "e": end point — animated [x, y]
+- "g": gradient colors — {"p": numColorStops, "k": {"a": 0, "k": [stop1pos, r, g, b, stop2pos, r, g, b, ...]}}
+  Same format as gradient fill. For a rainbow: 6+ stops evenly spaced across hue wheel.
+- "o": opacity — animated, 0-100
+- "w": stroke width — animated property
+- "lc": line cap — 1 = butt, 2 = round, 3 = square
+- "lj": line join — 1 = miter, 2 = round, 3 = bevel
+- "d": dash array — same format as regular strokes [{"n": "d", "v": {"a":0,"k":10}}, {"n": "g", "v": {"a":0,"k":5}}]
+Use gradient stroke when the outline itself should show a gradient. For a gradient-filled shape with a solid border, use gradient fill (gf) + regular stroke (st) instead.
+`;
+
+const SPEC_PATHS = `
+## Path Shapes (ty: "sh")
+Custom shapes using bezier paths. The "ks" property contains path data:
+{"a": 0, "k": {"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}}
+- "v": vertices (anchor points)
+- "i": in-tangents (relative to each vertex, for curve arriving at vertex)
+- "o": out-tangents (relative to each vertex, for curve leaving vertex)
+- "c": true = closed path, false = open path
+- Straight segments: tangents are [0,0]
+- Circular arcs: tangent length ≈ 0.5523 × radius (kappa constant)
+
+### Ready-made Path Data
+Heart (512×512 canvas, centered at 256,256):
+{"v":[[256,450],[256,180],[80,218],[80,370]],"i":[[97,0],[0,0],[0,90],[0,0]],"o":[[−97,0],[−120,0],[0,0],[0,0]],"c":true}
+Note: a heart needs two mirrored cubic arcs — use two path groups or a single path with ~8 vertices:
+{"v":[[256,416],[140,225],[186,144],[256,210],[326,144],[372,225],[256,416]],"i":[[40,30],[0,50],[-30,0],[0,-30],[30,0],[0,0],[-40,30]],"o":[[-40,30],[0,0],[30,0],[0,-30],[-30,0],[0,50],[40,30]],"c":true}
+
+Arrow/chevron pointing right (centered, 200×200):
+{"v":[[186,156],[306,256],[186,356]],"i":[[0,0],[0,0],[0,0]],"o":[[0,0],[0,0],[0,0]],"c":false}
+
+Crescent moon (two circular arcs, 512×512):
+{"v":[[300,96],[300,416],[220,416],[220,96]],"i":[[−113,0],[0,113],[−75,0],[0,−75]],"o":[[0,−113],[113,0],[0,75],[75,0]],"c":true}
+`;
+
+const SPEC_PRECOMPS = `
+## Precomp Layers (ty: 0) and Assets
+
+Precomps let you define a reusable composition in the top-level "assets" array and reference it from layers.
+
+### Top-level "assets" array
+Add an "assets" array at the root of the Lottie JSON (same level as "layers"):
+- Each precomp asset: {"id": "unique_id", "layers": [...], "fr": 30, "w": 512, "h": 512}
+- "id": unique string identifier referenced by precomp layers
+- "layers": array of layer objects (same format as top-level layers)
+- "fr"/"w"/"h": frame rate and dimensions (usually match the root)
+
+### Precomp Layer (ty: 0)
+A layer that renders an asset composition:
+- "ty": 0
+- "refId": string matching an asset's "id"
+- "w": width of the precomp
+- "h": height of the precomp
+- "ks": transform (position, scale, rotation, opacity, anchor point — same as other layers)
+- "ip"/"op": in/out points
+- "ind": layer index
+- "tm": time remapping — animated property that controls playback speed/direction of the precomp
+
+### When to use precomps
+- **Reusable elements**: Same shape group needed multiple times (e.g., multiple butterflies, repeated icons) — define once in assets, instantiate with different transforms
+- **Nested compositions**: A sub-scene contained within a larger scene (e.g., a clock face inside a room)
+- **Organization**: Break complex animations into logical groups
+
+### When NOT to use precomps
+- Simple animations with few layers — precomps add complexity for no benefit
+- Single-use compositions — just use regular layers
+`;
+
+const SPEC_MODIFIERS = `
+## Trim Paths (ty: "tm")
+Animates stroke drawing by controlling which portion of a path is visible.
+- "s": start — animated property, 0-100 (percentage along the path)
+- "e": end — animated property, 0-100
+- "o": offset — animated property, 0-360 (degrees, shifts the visible segment)
+Place after stroke ("st") in a group's "it" array. Animate "e" from 0→100 to draw a stroke on, or animate "s" from 0→100 to erase it.
+
+## Repeater (ty: "rp")
+Creates copies of shapes in a group with cumulative transforms.
+- "c": copies — animated property (number of copies including original)
+- "o": offset — animated property (shifts the starting index)
+- "tr": transform per copy — contains "p" (position offset), "r" (rotation), "s" (scale), "o" (opacity) applied cumulatively to each copy
+Place at the end of a group's "it" array (before the group transform "tr"). Example: 8 copies with 45° rotation each = a radial pattern.
 
 ## Stroke Dashes ("d" property on "st" items)
 Add a "d" array to any stroke ("st") to create dashed lines:
@@ -292,99 +391,48 @@ Combines multiple shapes in a group using boolean operations (union, subtract, i
   - Donut/ring: outer ellipse + smaller inner ellipse + merge paths mode 3 (subtract)
   - Crescent moon: two overlapping ellipses + merge paths mode 3 (subtract)
   - Venn overlap: two ellipses + merge paths mode 4 (intersect)
-
-## Precomp Layers (ty: 0) and Assets
-
-Precomps let you define a reusable composition in the top-level "assets" array and reference it from layers.
-
-### Top-level "assets" array
-Add an "assets" array at the root of the Lottie JSON (same level as "layers"):
-- Each precomp asset: {"id": "unique_id", "layers": [...], "fr": 30, "w": 512, "h": 512}
-- "id": unique string identifier referenced by precomp layers
-- "layers": array of layer objects (same format as top-level layers)
-- "fr"/"w"/"h": frame rate and dimensions (usually match the root)
-
-### Precomp Layer (ty: 0)
-A layer that renders an asset composition:
-- "ty": 0
-- "refId": string matching an asset's "id"
-- "w": width of the precomp
-- "h": height of the precomp
-- "ks": transform (position, scale, rotation, opacity, anchor point — same as other layers)
-- "ip"/"op": in/out points
-- "ind": layer index
-- "tm": time remapping — animated property that controls playback speed/direction of the precomp
-
-### When to use precomps
-- **Reusable elements**: Same shape group needed multiple times (e.g., multiple butterflies, repeated icons) — define once in assets, instantiate with different transforms
-- **Nested compositions**: A sub-scene contained within a larger scene (e.g., a clock face inside a room)
-- **Organization**: Break complex animations into logical groups
-
-### When NOT to use precomps
-- Simple animations with few layers — precomps add complexity for no benefit
-- Single-use compositions — just use regular layers
-
-## Easing Presets
-
-Named easing curves for keyframe i (in-tangent) and o (out-tangent) values:
-
-| Preset | i (in-tangent) | o (out-tangent) | Feel |
-|---|---|---|---|
-| linear | {x:[1],y:[1]} | {x:[0],y:[0]} | Constant speed, mechanical |
-| ease-in-out | {x:[0.42],y:[1]} | {x:[0.58],y:[0]} | Smooth start and stop |
-| ease-in | {x:[0.42],y:[0]} | {x:[1],y:[1]} | Slow start, fast end |
-| ease-out | {x:[0],y:[0]} | {x:[0.58],y:[1]} | Fast start, slow stop |
-| bounce | {x:[0.34],y:[1.56]} | {x:[0.64],y:[1]} | Overshoots target then settles |
-| snappy | {x:[0.1],y:[1]} | {x:[0.9],y:[0]} | Fast start, sharp stop |
-| gentle | {x:[0.25],y:[1]} | {x:[0.75],y:[0]} | Very slow, soft curve |
-
-**Elastic** (multiple overshoots): Cannot be done with a single keyframe pair. Simulate with 3-4 keyframes that oscillate past the target with decreasing amplitude (e.g., target 100: 100→120→95→102→100).
-
-### Keyword Mapping
-When users describe timing with natural language, map to these presets:
-- "bouncy", "springy" → bounce
-- "smooth", "flowing" → ease-in-out
-- "sharp", "crisp", "snappy" → snappy
-- "soft", "gentle", "slow" → gentle
-- "linear", "constant", "even" → linear
-- "accelerate", "speed up" → ease-in
-- "decelerate", "slow down" → ease-out
-- "elastic", "rubbery", "jelly" → elastic (multi-keyframe)
-
-## Layer Effects
-
-Effects are applied at the layer level using the "ef" array (same level as "ks", "shapes", etc.).
-Each effect object has:
-- "ty": effect type number
-- "nm": effect name
-- "np": number of parameters (including the effect itself)
-- "ix": effect index
-- "en": enabled (1 = on, 0 = off)
-- "ef": array of effect parameters
-
-Each effect parameter:
-- {"ty": 2, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for color params (ty: 2, value is [r,g,b,a] 0-1)
-- {"ty": 0, "nm": "name", "ix": index, "v": {"a": 0, "k": value}} — for scalar params (ty: 0)
-
-Parameters can be animated (a: 1 with keyframes) just like other Lottie properties.
-
-### Drop Shadow (ty: 25)
-Parameters (in order):
-0. Shadow Color — ty: 2, color [r, g, b, a] (0-1)
-1. Opacity — ty: 0, range 0-255
-2. Direction — ty: 0, angle in degrees (0-360)
-3. Distance — ty: 0, pixels
-4. Softness — ty: 0, blur size in pixels
-
-### Gaussian Blur (ty: 29)
-Parameters (in order):
-0. Blurriness — ty: 0, blur amount in pixels
-1. Dimensions — ty: 0, direction (1 = horizontal+vertical, 2 = horizontal only, 3 = vertical only)
-2. Repeat Edge Pixels — ty: 0, (0 = off, 1 = on)
-
-Effects go on the LAYER object, not inside shape groups. Example:
-{"ty": 4, "nm": "Shape", "ks": {...}, "shapes": [...], "ef": [{...effect...}]}
 `;
+
+const SPEC_PARENTING = `
+## Layer Parenting (parent / ind)
+Layers can be parented to other layers, inheriting the parent's transform (position, rotation, scale).
+- "ind": unique layer index (integer) — every layer must have one
+- "parent": the "ind" value of the parent layer — the child inherits the parent's transform
+Child layers' transforms become relative to the parent. If a parent moves, rotates, or scales, all children follow.
+
+## Null Layer (ty: 3)
+An invisible layer used purely as a parent/controller. It has no visual output but carries a full transform.
+- "ty": 3
+- "nm": name
+- "ind": layer index (used as the "parent" value for child layers)
+- "ip"/"op": in/out points
+- "ks": transform (position, rotation, scale, opacity, anchor point)
+- No "shapes" or visual content
+
+Common patterns:
+- **Orbiting**: Null at center with animated rotation; child shape layers offset from center orbit around it.
+- **Group movement**: Null with animated position; multiple child layers move together as a unit.
+- **Hierarchical chains**: Layer A parents to Null B, which parents to Null C — transforms cascade (e.g., pendulum arm + bob).
+
+Tips:
+- Set the null's anchor point to [0,0] and position to the desired pivot (e.g., [256,256] for canvas center).
+- Child layers' position is relative to the parent's anchor, so offset the child to control orbit radius.
+- Multiple layers can share the same parent for synchronized group behavior.
+`;
+
+const SPEC_SECTIONS: Record<string, string> = {
+  CORE: SPEC_CORE,
+  SHAPES: SPEC_SHAPES,
+  TEXT: SPEC_TEXT,
+  MASKS: SPEC_MASKS,
+  TRACK_MATTES: SPEC_TRACK_MATTES,
+  EFFECTS: SPEC_EFFECTS,
+  GRADIENTS: SPEC_GRADIENTS,
+  PATHS: SPEC_PATHS,
+  PRECOMPS: SPEC_PRECOMPS,
+  MODIFIERS: SPEC_MODIFIERS,
+  PARENTING: SPEC_PARENTING,
+};
 
 const EXAMPLE_CIRCLE = JSON.stringify({
   v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
@@ -1657,17 +1705,83 @@ export function selectExamples(userMessage: string, maxExamples: number = 5): Ex
   return selected;
 }
 
+// ─── Intent Analysis ───
+
+const INTENT_KEYWORDS: Record<string, string[]> = {
+  TEXT: ['text', 'word', 'letter', 'type', 'typewriter', 'font', 'title', 'heading', 'caption', 'subtitle', 'paragraph', 'label', 'write', 'writing'],
+  MASKS: ['mask', 'reveal', 'wipe', 'clip', 'clipping', 'curtain', 'unveil'],
+  TRACK_MATTES: ['matte', 'stencil', 'alpha matte', 'luma'],
+  EFFECTS: ['shadow', 'blur', 'glow', 'effect', 'drop shadow', 'gaussian'],
+  GRADIENTS: ['gradient', 'rainbow', 'color transition', 'linear gradient', 'radial gradient', 'spectrum'],
+  PATHS: ['path', 'bezier', 'curve', 'heart', 'arrow', 'crescent', 'custom shape', 'star', 'polygon', 'draw'],
+  PRECOMPS: ['precomp', 'composition', 'reuse', 'instance', 'nested', 'asset'],
+  MODIFIERS: ['trim', 'dash', 'dashed', 'repeater', 'repeat', 'copies', 'merge', 'boolean', 'subtract', 'intersect', 'round corner', 'donut', 'ring'],
+  PARENTING: ['parent', 'orbit', 'follow', 'group', 'hierarchy', 'pendulum', 'chain', 'null layer'],
+  SHAPES: ['shape', 'circle', 'square', 'rectangle', 'ellipse', 'rect', 'ball', 'dot', 'box'],
+};
+
+// Sections that indicate a non-shape-focused task
+const NON_SHAPE_SECTIONS = new Set(['TEXT', 'EFFECTS', 'MASKS', 'TRACK_MATTES']);
+
+export function analyzeIntent(message: string, currentAnimation: object | null): Set<string> {
+  const sections = new Set<string>(['CORE']);
+  const lower = message.toLowerCase();
+
+  // Keyword scanning
+  for (const [section, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        sections.add(section);
+        break;
+      }
+    }
+  }
+
+  // Default: include SHAPES for most requests unless exclusively non-shape sections
+  const nonCoreSections = [...sections].filter(s => s !== 'CORE');
+  const hasOnlyNonShape = nonCoreSections.length > 0 && nonCoreSections.every(s => NON_SHAPE_SECTIONS.has(s));
+  if (!hasOnlyNonShape) {
+    sections.add('SHAPES');
+  }
+
+  // Animation scanning for modification requests
+  if (currentAnimation) {
+    const animStr = JSON.stringify(currentAnimation);
+    if (animStr.includes('"ty":5') || animStr.includes('"ty": 5')) sections.add('TEXT');
+    if (animStr.includes('masksProperties')) sections.add('MASKS');
+    if (animStr.includes('"td":') || animStr.includes('"tt":')) sections.add('TRACK_MATTES');
+    if (animStr.includes('"ef":[')) sections.add('EFFECTS');
+    if (animStr.includes('"gf"') || animStr.includes('"gs"')) sections.add('GRADIENTS');
+    if (animStr.includes('"sh"')) sections.add('PATHS');
+    if (animStr.includes('"ty":0,') || animStr.includes('"ty": 0,') || animStr.includes('"refId"')) sections.add('PRECOMPS');
+    if (animStr.includes('"tm"') || animStr.includes('"rp"') || animStr.includes('"rd"') || animStr.includes('"mm"')) sections.add('MODIFIERS');
+    if (animStr.includes('"parent":') || animStr.includes('"ty":3,') || animStr.includes('"ty": 3,')) sections.add('PARENTING');
+  }
+
+  return sections;
+}
+
 export function buildSystemPrompt(currentAnimation: object | null, userMessage?: string): string {
   const examples = userMessage
     ? selectExamples(userMessage)
     : EXAMPLE_REGISTRY.slice(0, 5);
+
+  // Selective spec injection based on user intent
+  const sections = userMessage
+    ? analyzeIntent(userMessage, currentAnimation)
+    : new Set(Object.keys(SPEC_SECTIONS));
+
+  const specString = [...sections]
+    .filter(s => SPEC_SECTIONS[s])
+    .map(s => SPEC_SECTIONS[s])
+    .join('\n');
 
   const exampleBlocks = examples
     .map(e => `### ${e.title}\n\`\`\`json\n${e.json}\n\`\`\``)
     .join("\n\n");
   let prompt = `You are a Lottie animation expert. You create and modify Lottie JSON animations based on user descriptions.
 
-${LOTTIE_SPEC}
+${specString}
 
 ## Example Animations
 
