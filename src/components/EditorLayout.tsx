@@ -19,6 +19,7 @@ import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
+import ErrorBoundary from "./ErrorBoundary";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
 import FullscreenPreview from "./FullscreenPreview";
@@ -635,22 +636,29 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       </div>
 
       {/* Main content */}
+      <ErrorBoundary fallbackMessage="The editor encountered an unexpected error.">
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Preview panel - hidden on mobile when chat is active */}
         <div className={`flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
           mobileView === "canvas" ? "flex flex-1" : "hidden md:flex"
         }`}>
           <div className="flex-1 p-4 min-h-0">
-            <LottiePreview
-              animationData={animationData}
-              isPlaying={isPlaying}
-              speed={speed}
-              loopConfig={loopConfig}
-              onFrameChange={handleFrameChange}
-              seekToFrame={seekFrame}
-              background={canvasBg}
-              placeholder={isNewMode && animationData === null}
-            />
+            <ErrorBoundary
+              key={currentId ?? "new"}
+              fallbackMessage="The canvas ran into a problem rendering this animation."
+              onReset={() => setAnimationData(animationData)}
+            >
+              <LottiePreview
+                animationData={animationData}
+                isPlaying={isPlaying}
+                speed={speed}
+                loopConfig={loopConfig}
+                onFrameChange={handleFrameChange}
+                seekToFrame={seekFrame}
+                background={canvasBg}
+                placeholder={isNewMode && animationData === null}
+              />
+            </ErrorBoundary>
           </div>
           <div className="flex items-center border-t border-zinc-800">
             <Controls
@@ -807,7 +815,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} />
+              <ErrorBoundary fallbackMessage="Chat ran into a problem.">
+                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} />
+              </ErrorBoundary>
             ) : rightPanel === "layers" ? (
               <LayerPanel
                 animationData={animationData}
@@ -823,6 +833,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
         </div>
       </div>
+      </ErrorBoundary>
       {currentId && (
         <VersionHistory
           animationId={currentId}
