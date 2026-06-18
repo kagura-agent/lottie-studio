@@ -18,6 +18,7 @@ import EasingEditor from "./EasingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
 import FullscreenPreview from "./FullscreenPreview";
@@ -162,6 +163,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
     window.history.replaceState(null, '', `/editor/${newId}`);
   }, [pushState]);
+
+  // Capture and upload a thumbnail after animation is created or updated via chat
+  const handleAnimationUpdated = useCallback((animId: string, data: object) => {
+    // Fire-and-forget: non-blocking, failures are silent
+    captureAndUploadThumbnail(animId, data);
+  }, []);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -800,7 +807,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} />
+              <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} />
             ) : rightPanel === "layers" ? (
               <LayerPanel
                 animationData={animationData}
