@@ -6,7 +6,9 @@
     "dev": "tsx watch server.ts",
     "build": "next build && esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist/server.js --external:next --external:better-sqlite3",
     "start": "tsx server.ts",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
@@ -41,11 +43,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
