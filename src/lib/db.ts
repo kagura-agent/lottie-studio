@@ -44,6 +44,13 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add share_chat column to control chat history visibility on share page
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN share_chat INTEGER DEFAULT 0`);
+} catch {
+  // Column already exists — ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
