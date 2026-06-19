@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import ExploreCard from "@/components/ExploreCard";
+
+type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
 
 interface ExploreAnimation {
   id: string;
@@ -27,12 +29,17 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchAnimations = useCallback(async (p: number) => {
+  const fetchAnimations = useCallback(async (p: number, q: string, sort: SortOption) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/animations/explore?page=${p}&limit=24`);
+      const params = new URLSearchParams({ page: String(p), limit: "24", sort });
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/animations/explore?${params}`);
       if (!res.ok) {
         if (res.status === 429) {
           setError("Too many requests. Please wait a moment and try again.");
@@ -51,8 +58,23 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    fetchAnimations(1);
+    fetchAnimations(1, "", sortOption);
   }, [fetchAnimations]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      fetchAnimations(1, value, sortOption);
+    }, 300);
+  };
+
+  const handleSortChange = (value: SortOption) => {
+    setSortOption(value);
+    setPage(1);
+    fetchAnimations(1, searchQuery, value);
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -83,6 +105,52 @@ export default function ExplorePage() {
           </div>
         </div>
 
+        {/* Search and Sort Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search animations..."
+              className="w-full pl-9 pr-8 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => handleSearchChange("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <select
+            value={sortOption}
+            onChange={(e) => handleSortChange(e.target.value as SortOption)}
+            className="px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="name-asc">Name A–Z</option>
+            <option value="name-desc">Name Z–A</option>
+          </select>
+        </div>
+
         {/* Loading skeleton */}
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -106,7 +174,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(page)}
+              onClick={() => fetchAnimations(page, searchQuery, sortOption)}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               Retry
@@ -132,18 +200,31 @@ export default function ExplorePage() {
                 />
               </svg>
             </div>
-            <h2 className="text-lg font-medium text-zinc-300 mb-2">
-              No shared animations yet
-            </h2>
-            <p className="text-sm text-zinc-500 mb-6">
-              Be the first to share an animation with the community!
-            </p>
-            <Link
-              href="/editor/new"
-              className="inline-block px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
-            >
-              Create your own
-            </Link>
+            {searchQuery ? (
+              <>
+                <h2 className="text-lg font-medium text-zinc-300 mb-2">
+                  No results found
+                </h2>
+                <p className="text-sm text-zinc-500 mb-6">
+                  Try a different search term
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-medium text-zinc-300 mb-2">
+                  No shared animations yet
+                </h2>
+                <p className="text-sm text-zinc-500 mb-6">
+                  Be the first to share an animation with the community!
+                </p>
+                <Link
+                  href="/editor/new"
+                  className="inline-block px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
+                >
+                  Create your own
+                </Link>
+              </>
+            )}
           </div>
         )}
 
@@ -160,7 +241,7 @@ export default function ExplorePage() {
             {data.totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center gap-4">
                 <button
-                  onClick={() => fetchAnimations(page - 1)}
+                  onClick={() => fetchAnimations(page - 1, searchQuery, sortOption)}
                   disabled={page <= 1}
                   className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -170,7 +251,7 @@ export default function ExplorePage() {
                   Page {page} of {data.totalPages}
                 </span>
                 <button
-                  onClick={() => fetchAnimations(page + 1)}
+                  onClick={() => fetchAnimations(page + 1, searchQuery, sortOption)}
                   disabled={page >= data.totalPages}
                   className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
