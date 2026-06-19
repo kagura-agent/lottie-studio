@@ -138,9 +138,80 @@ interface ShareViewProps {
   id: string;
   name: string;
   animationData: object;
+  messages?: { role: string; content: string; imageUrl?: string }[];
 }
 
-export default function ShareView({ id, name, animationData }: ShareViewProps) {
+/** Strip JSON code blocks from assistant messages, keeping only conversational text */
+function stripJsonBlocks(content: string): string {
+  // Remove ```json ... ``` blocks
+  let stripped = content.replace(/```json[\s\S]*?```/g, "");
+  // Remove standalone ``` blocks that look like JSON (start with { or [)
+  stripped = stripped.replace(/```\s*[\[{][\s\S]*?```/g, "");
+  // Collapse multiple blank lines
+  stripped = stripped.replace(/\n{3,}/g, "\n\n").trim();
+  return stripped;
+}
+
+function ChatHistory({ messages }: { messages: { role: string; content: string; imageUrl?: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="w-full max-w-2xl mx-auto mt-6">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 transition-colors text-sm font-medium"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform ${expanded ? "rotate-90" : ""}`}
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        💬 How this was made
+        <span className="text-zinc-500 text-xs">({messages.length} messages)</span>
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-3 border-l-2 border-zinc-700 pl-4">
+          {messages.map((msg, i) => {
+            const isUser = msg.role === "user";
+            const displayContent = isUser ? msg.content : stripJsonBlocks(msg.content);
+            if (!displayContent && !msg.imageUrl) return null;
+            return (
+              <div key={i} className="flex flex-col gap-1">
+                <span className={`text-xs font-medium ${
+                  isUser ? "text-blue-400" : "text-emerald-400"
+                }`}>
+                  {isUser ? "Prompt" : "Assistant"}
+                </span>
+                {msg.imageUrl && (
+                  <img
+                    src={msg.imageUrl}
+                    alt="Attachment"
+                    className="w-16 h-16 object-cover rounded-lg border border-zinc-700"
+                  />
+                )}
+                {displayContent && (
+                  <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words">
+                    {displayContent}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ShareView({ id, name, animationData, messages }: ShareViewProps) {
   const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
@@ -302,7 +373,7 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
         </Link>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 min-h-0">
+      <div className="flex-1 flex flex-col items-center p-4 md:p-8 min-h-0 overflow-y-auto">
         <div className="w-full max-w-2xl flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0">
             <LottiePreview
@@ -327,6 +398,9 @@ export default function ShareView({ id, name, animationData }: ShareViewProps) {
             frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
           />
         </div>
+        {messages && messages.length > 0 && (
+          <ChatHistory messages={messages} />
+        )}
       </div>
 
       {showEmbed && <EmbedModal id={id} onClose={() => setShowEmbed(false)} />}

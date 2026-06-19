@@ -68,6 +68,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [shareChat, setShareChat] = useState(false);
+  const [shareChatSaving, setShareChatSaving] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
     if (typeof window !== "undefined" && currentId) {
       return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
@@ -136,6 +138,21 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   }, [currentId, pushState]);
 
   useAnimationSocket(currentId, handleExternalUpdate);
+
+  // Load share_chat setting from API on mount
+  useEffect(() => {
+    if (!currentId) return;
+    let cancelled = false;
+    fetch(`/api/animations/${currentId}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!cancelled && data && data.share_chat !== undefined) {
+          setShareChat(!!data.share_chat);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentId]);
 
   // Callback for ChatPanel when a new animation is created (blank-canvas flow)
   const handleAnimationCreated = useCallback(async (newId: string, newData?: object) => {
@@ -337,6 +354,27 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   }, [currentId, duplicating, router]);
 
+  const handleToggleShareChat = useCallback(async () => {
+    if (!currentId || shareChatSaving) return;
+    const newValue = !shareChat;
+    setShareChat(newValue);
+    setShareChatSaving(true);
+    try {
+      const res = await fetch(`/api/animations/${currentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ share_chat: newValue }),
+      });
+      if (!res.ok) {
+        setShareChat(!newValue); // revert on failure
+      }
+    } catch {
+      setShareChat(!newValue); // revert on failure
+    } finally {
+      setShareChatSaving(false);
+    }
+  }, [currentId, shareChat, shareChatSaving]);
+
   const speeds = [0.5, 1, 2];
   useKeyboardShortcuts({
     onUndo: handleUndo,
@@ -518,6 +556,21 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           Embed
         </button>
         <button
+          onClick={handleToggleShareChat}
+          disabled={isNewMode || shareChatSaving}
+          title="Include chat history in share page"
+          className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            shareChat
+              ? "border-emerald-600 text-emerald-400 hover:border-emerald-500"
+              : "border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          {shareChat ? "Chat shared" : "Share chat"}
+        </button>
+        <button
           onClick={handleSave}
           disabled={saving || animationData === null || isNewMode}
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
@@ -574,6 +627,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Embed
+              </button>
+              <button
+                onClick={() => { handleToggleShareChat(); setMobileMenuOpen(false); }}
+                disabled={isNewMode || shareChatSaving}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {shareChat ? "✓ Chat history shared" : "Share chat history"}
               </button>
               <button
                 onClick={() => {

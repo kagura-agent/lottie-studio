@@ -39,7 +39,7 @@ export async function PUT(
   }
 
   const body = await request.json();
-  const { name, data } = body;
+  const { name, data, share_chat } = body;
 
   if (data) {
     const frameCount = data.op ?? data.totalFrames ?? null;
@@ -52,6 +52,10 @@ export async function PUT(
     ).run(name, frameCount, durationSeconds, id);
   } else if (name) {
     db.prepare("UPDATE animations SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name, id);
+  }
+
+  if (share_chat !== undefined) {
+    db.prepare("UPDATE animations SET share_chat = ? WHERE id = ?").run(share_chat ? 1 : 0, id);
   }
 
   const row = db.prepare("SELECT * FROM animations WHERE id = ?").get(id);

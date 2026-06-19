@@ -74,11 +74,29 @@ export default async function SharePage({ params }: Props) {
     notFound();
   }
 
+  // Fetch chat messages when share_chat is enabled
+  let messages: { role: string; content: string; imageUrl?: string }[] | undefined;
+  if (row.share_chat) {
+    const rows = db
+      .prepare(
+        "SELECT role, content, image_url FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
+      )
+      .all(id) as { role: string; content: string; image_url: string | null }[];
+    if (rows.length > 0) {
+      messages = rows.map((m) => ({
+        role: m.role,
+        content: m.content,
+        ...(m.image_url ? { imageUrl: m.image_url } : {}),
+      }));
+    }
+  }
+
   return (
     <ShareView
       id={id}
       name={(row.name as string) ?? "Untitled"}
       animationData={data}
+      messages={messages}
     />
   );
 }
