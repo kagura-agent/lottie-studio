@@ -546,16 +546,16 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
   const [starterChips] = useState(() => {
     const allPrompts = [
-      "\uD83C\uDF88 A bouncing red ball with a shadow",
-      "\uD83C\uDF38 Sakura petals falling and spinning",
-      "\u2B50 A pulsing loading spinner",
-      "\uD83C\uDFA8 A colorful rotating pinwheel",
-      "\uD83D\uDCAB Stars twinkling in the night sky",
-      "\uD83D\uDD04 A smooth progress circle animation",
-      "\uD83D\uDE80 A rocket launching with flame particles",
-      "\uD83C\uDF0A An ocean wave rolling across the screen",
-      "\u2764\uFE0F A heartbeat pulse animation",
-      "\uD83C\uDF19 A day-to-night sky transition",
+      "A bouncing ball with squash and stretch",
+      "A smooth toggle switch animation",
+      "Sakura petals falling gently",
+      "Hello World text fading in letter by letter",
+      "A logo spinning and settling into place",
+      "A creative loading animation with dots",
+      "Colorful waves flowing across the screen",
+      "A simple character waving hello",
+      "A glowing neon sign flickering on",
+      "Confetti bursting from the center",
     ];
     const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
