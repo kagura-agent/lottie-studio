@@ -22,21 +22,43 @@ export async function GET(request: Request) {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "24", 10)));
   const offset = (page - 1) * limit;
+  const q = url.searchParams.get("q")?.trim() ?? "";
+  const sort = url.searchParams.get("sort") ?? "newest";
+
+  const whereClause = q
+    ? "WHERE share_chat = 1 AND name LIKE ?"
+    : "WHERE share_chat = 1";
+  const params: (string | number)[] = q ? [`%${q}%`] : [];
+
+  let orderBy: string;
+  switch (sort) {
+    case "oldest":
+      orderBy = "created_at ASC";
+      break;
+    case "name-asc":
+      orderBy = "name COLLATE NOCASE ASC";
+      break;
+    case "name-desc":
+      orderBy = "name COLLATE NOCASE DESC";
+      break;
+    default:
+      orderBy = "created_at DESC";
+  }
 
   const totalRow = db
-    .prepare("SELECT COUNT(*) as count FROM animations WHERE share_chat = 1")
-    .get() as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM animations ${whereClause}`)
+    .get(...params) as { count: number };
   const total = totalRow.count;
 
   const rows = db
     .prepare(
       `SELECT id, name, created_at, frame_count
        FROM animations
-       WHERE share_chat = 1
-       ORDER BY created_at DESC
+       ${whereClause}
+       ORDER BY ${orderBy}
        LIMIT ? OFFSET ?`
     )
-    .all(limit, offset) as {
+    .all(...params, limit, offset) as {
     id: string;
     name: string;
     created_at: string;
