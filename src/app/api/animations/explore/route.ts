@@ -1,5 +1,7 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { checkRate, extractIp } from "@/lib/rateLimit";
+import { TAG_VOCABULARY } from "@/lib/tag-inference";
+import type { AnimationTag } from "@/lib/tag-inference";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -24,11 +26,25 @@ export async function GET(request: Request) {
   const offset = (page - 1) * limit;
   const q = url.searchParams.get("q")?.trim() ?? "";
   const sort = url.searchParams.get("sort") ?? "newest";
+  const tagParam = url.searchParams.get("tag")?.trim() ?? "";
 
-  const whereClause = q
-    ? "WHERE share_chat = 1 AND name LIKE ?"
-    : "WHERE share_chat = 1";
-  const params: (string | number)[] = q ? [`%${q}%`] : [];
+  // Build WHERE clauses
+  const conditions: string[] = ["share_chat = 1"];
+  const params: (string | number)[] = [];
+
+  if (q) {
+    conditions.push("name LIKE ?");
+    params.push(`%${q}%`);
+  }
+
+  if (tagParam && TAG_VOCABULARY.includes(tagParam as AnimationTag)) {
+    // Match tag in comma-separated tags column
+    // Handles: exact match, start of string, end of string, or middle
+    conditions.push("(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)");
+    params.push(tagParam, `${tagParam},%`, `%,${tagParam}`, `%,${tagParam},%`);
+  }
+
+  const whereClause = "WHERE " + conditions.join(" AND ");
 
   let orderBy: string;
   switch (sort) {
@@ -52,7 +68,7 @@ export async function GET(request: Request) {
 
   const rows = db
     .prepare(
-      `SELECT id, name, created_at, frame_count
+      `SELECT id, name, created_at, frame_count, tags
        FROM animations
        ${whereClause}
        ORDER BY ${orderBy}
@@ -63,6 +79,7 @@ export async function GET(request: Request) {
     name: string;
     created_at: string;
     frame_count: number | null;
+    tags: string | null;
   }[];
 
   // Enrich with layer_count, w, h from the animation JSON files
@@ -84,11 +101,30 @@ export async function GET(request: Request) {
     return { ...row, layer_count: layerCount, w, h };
   });
 
+  // Compute tag counts for all shared animations (for filter chip counts)
+  const tagCountRows = db
+    .prepare(
+      `SELECT tags FROM animations WHERE share_chat = 1 AND tags IS NOT NULL AND tags != ''`
+    )
+    .all() as { tags: string }[];
+
+  const tagCounts: Record<string, number> = {};
+  for (const row of tagCountRows) {
+    const tags = row.tags.split(",");
+    for (const tag of tags) {
+      const trimmed = tag.trim();
+      if (trimmed && TAG_VOCABULARY.includes(trimmed as AnimationTag)) {
+        tagCounts[trimmed] = (tagCounts[trimmed] || 0) + 1;
+      }
+    }
+  }
+
   return Response.json({
     animations,
     total,
     page,
     limit,
     totalPages: Math.ceil(total / limit),
+    tagCounts,
   });
 }

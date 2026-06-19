@@ -58,6 +58,13 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add tags column for auto-categorization (comma-separated tag list)
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN tags TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

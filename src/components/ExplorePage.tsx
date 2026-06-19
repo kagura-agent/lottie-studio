@@ -14,6 +14,7 @@ interface ExploreAnimation {
   layer_count: number | null;
   w: number | null;
   h: number | null;
+  tags: string | null;
 }
 
 interface ExploreResponse {
@@ -22,7 +23,14 @@ interface ExploreResponse {
   page: number;
   limit: number;
   totalPages: number;
+  tagCounts: Record<string, number>;
 }
+
+const TAG_ORDER = [
+  "loading", "text", "logo", "icon", "nature", "abstract",
+  "geometric", "character", "transition", "ui-element",
+  "celebration", "notification",
+];
 
 export default function ExplorePage() {
   const [data, setData] = useState<ExploreResponse | null>(null);
@@ -31,14 +39,22 @@ export default function ExplorePage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
+  const [activeTag, setActiveTag] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("tag") || "";
+    }
+    return "";
+  });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchAnimations = useCallback(async (p: number, q: string, sort: SortOption) => {
+  const fetchAnimations = useCallback(async (p: number, q: string, sort: SortOption, tag?: string) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ page: String(p), limit: "24", sort });
       if (q) params.set("q", q);
+      if (tag) params.set("tag", tag);
       const res = await fetch(`/api/animations/explore?${params}`);
       if (!res.ok) {
         if (res.status === 429) {
@@ -58,7 +74,7 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    fetchAnimations(1, "", sortOption);
+    fetchAnimations(1, "", sortOption, activeTag);
   }, [fetchAnimations]);
 
   const handleSearchChange = (value: string) => {
@@ -66,14 +82,31 @@ export default function ExplorePage() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPage(1);
-      fetchAnimations(1, value, sortOption);
+      fetchAnimations(1, value, sortOption, activeTag);
     }, 300);
   };
 
   const handleSortChange = (value: SortOption) => {
     setSortOption(value);
     setPage(1);
-    fetchAnimations(1, searchQuery, value);
+    fetchAnimations(1, searchQuery, value, activeTag);
+  };
+
+  const handleTagChange = (tag: string) => {
+    const newTag = tag === activeTag ? "" : tag;
+    setActiveTag(newTag);
+    setPage(1);
+    fetchAnimations(1, searchQuery, sortOption, newTag);
+    // URL sync
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (newTag) {
+        url.searchParams.set("tag", newTag);
+      } else {
+        url.searchParams.delete("tag");
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   return (
@@ -151,6 +184,35 @@ export default function ExplorePage() {
           </select>
         </div>
 
+        {/* Category filter chips */}
+        {data?.tagCounts && Object.keys(data.tagCounts).length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+            <button
+              onClick={() => handleTagChange("")}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                activeTag === ""
+                  ? "bg-white text-zinc-900"
+                  : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              All
+            </button>
+            {TAG_ORDER.filter((t) => (data.tagCounts[t] ?? 0) > 0).map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleTagChange(tag)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  activeTag === tag
+                    ? "bg-white text-zinc-900"
+                    : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                {tag.charAt(0).toUpperCase() + tag.slice(1)} ({data.tagCounts[tag]})
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Loading skeleton */}
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -174,7 +236,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(page, searchQuery, sortOption)}
+              onClick={() => fetchAnimations(page, searchQuery, sortOption, activeTag)}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               Retry
@@ -241,7 +303,7 @@ export default function ExplorePage() {
             {data.totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center gap-4">
                 <button
-                  onClick={() => fetchAnimations(page - 1, searchQuery, sortOption)}
+                  onClick={() => fetchAnimations(page - 1, searchQuery, sortOption, activeTag)}
                   disabled={page <= 1}
                   className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -251,7 +313,7 @@ export default function ExplorePage() {
                   Page {page} of {data.totalPages}
                 </span>
                 <button
-                  onClick={() => fetchAnimations(page + 1, searchQuery, sortOption)}
+                  onClick={() => fetchAnimations(page + 1, searchQuery, sortOption, activeTag)}
                   disabled={page >= data.totalPages}
                   className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
