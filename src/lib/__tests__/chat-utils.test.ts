@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   compactHistory,
+  isUndoIntent,
   HISTORY_CAP,
   LOTTIE_CODE_BLOCK_RE,
   type MessageRow,
@@ -186,5 +187,66 @@ describe("compactHistory", () => {
     const originalContent = msgs[0].content;
     compactHistory(msgs);
     expect(msgs[0].content).toBe(originalContent);
+  });
+});
+
+describe("isUndoIntent", () => {
+  it("detects exact undo keywords", () => {
+    expect(isUndoIntent("undo")).toBe(true);
+    expect(isUndoIntent("revert")).toBe(true);
+    expect(isUndoIntent("go back")).toBe(true);
+    expect(isUndoIntent("undo that")).toBe(true);
+    expect(isUndoIntent("undo last change")).toBe(true);
+    expect(isUndoIntent("revert to previous")).toBe(true);
+  });
+
+  it("detects Chinese undo keywords", () => {
+    expect(isUndoIntent("撤销")).toBe(true);
+    expect(isUndoIntent("回退")).toBe(true);
+    expect(isUndoIntent("撤回")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isUndoIntent("Undo")).toBe(true);
+    expect(isUndoIntent("REVERT")).toBe(true);
+    expect(isUndoIntent("Go Back")).toBe(true);
+    expect(isUndoIntent("UNDO THAT")).toBe(true);
+  });
+
+  it("handles whitespace", () => {
+    expect(isUndoIntent("  undo  ")).toBe(true);
+    expect(isUndoIntent("\n revert \n")).toBe(true);
+  });
+
+  it("detects go back variants", () => {
+    expect(isUndoIntent("go back one step")).toBe(true);
+    expect(isUndoIntent("go back please")).toBe(true);
+  });
+
+  it("detects undo with generic suffixes", () => {
+    expect(isUndoIntent("undo it")).toBe(true);
+    expect(isUndoIntent("undo this")).toBe(true);
+    expect(isUndoIntent("undo please")).toBe(true);
+    expect(isUndoIntent("revert that")).toBe(true);
+    expect(isUndoIntent("undo last edit")).toBe(true);
+    expect(isUndoIntent("undo last step")).toBe(true);
+  });
+
+  it("rejects modification requests containing undo", () => {
+    expect(isUndoIntent("undo the rotation")).toBe(false);
+    expect(isUndoIntent("undo the color change and make it blue")).toBe(false);
+    expect(isUndoIntent("revert the background color")).toBe(false);
+  });
+
+  it("rejects long messages", () => {
+    expect(isUndoIntent("can you please undo the last thing you did")).toBe(false);
+    expect(isUndoIntent("I want to undo the rotation and make it bigger")).toBe(false);
+  });
+
+  it("rejects unrelated messages", () => {
+    expect(isUndoIntent("make a bouncing ball")).toBe(false);
+    expect(isUndoIntent("change the color to red")).toBe(false);
+    expect(isUndoIntent("")).toBe(false);
+    expect(isUndoIntent("   ")).toBe(false);
   });
 });
