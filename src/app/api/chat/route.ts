@@ -1,7 +1,7 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
-import { compactHistory } from "@/lib/chat-utils";
+import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
 import type { MessageRow } from "@/lib/chat-utils";
 import { animationEvents } from "@/lib/events";
 import { extractIp, checkRate } from "@/lib/rateLimit";
@@ -15,6 +15,127 @@ interface ChatRequest {
   animationId?: string;
   message: string;
   image?: string; // base64 data URL for image attachment
+}
+
+/**
+ * Handle undo/revert intent: restore previous version without calling the LLM.
+ */
+function handleUndo(animationId: string, message: string): Response {
+  const encoder = new TextEncoder();
+
+  // Find the previous version (second-to-last)
+  const lastVersion = db.prepare(
+    "SELECT MAX(version_num) as max_num FROM versions WHERE animation_id = ?"
+  ).get(animationId) as { max_num: number | null } | undefined;
+
+  const currentVersionNum = lastVersion?.max_num ?? 0;
+
+  if (currentVersionNum <= 1) {
+    // No previous version to revert to
+    const reply = "Nothing to undo \u2014 this is the first version.";
+
+    // Save user message and assistant reply
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
+    ).run(randomUUID(), animationId, message);
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'assistant', ?)"
+    ).run(randomUUID(), animationId, reply);
+
+    const doneEvent = JSON.stringify({ type: "done", reply, animationId });
+    const body = encoder.encode(`data: ${doneEvent}\n\n`);
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(body);
+        controller.close();
+      }
+    }), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
+  // Get the previous version
+  const prevVersion = db.prepare(
+    "SELECT lottie_json FROM versions WHERE animation_id = ? AND version_num = ?"
+  ).get(animationId, currentVersionNum - 1) as { lottie_json: string } | undefined;
+
+  if (!prevVersion) {
+    // Shouldn't happen, but handle gracefully
+    const reply = "Nothing to undo \u2014 previous version not found.";
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
+    ).run(randomUUID(), animationId, message);
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'assistant', ?)"
+    ).run(randomUUID(), animationId, reply);
+
+    const doneEvent = JSON.stringify({ type: "done", reply, animationId });
+    const body = encoder.encode(`data: ${doneEvent}\n\n`);
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(body);
+        controller.close();
+      }
+    }), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
+  const lottieJson = JSON.parse(prevVersion.lottie_json);
+
+  // Restore animation file
+  const animationFile = path.join(ANIMATIONS_DIR, `${animationId}.json`);
+  fs.writeFileSync(animationFile, prevVersion.lottie_json);
+
+  // Update animations table metadata
+  const lottie = lottieJson as Record<string, unknown>;
+  const frameCount = (lottie.op as number) ?? null;
+  const frameRate = (lottie.fr as number) ?? 30;
+  const durationSeconds = frameCount != null ? frameCount / frameRate : null;
+  db.prepare(
+    "UPDATE animations SET frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(frameCount, durationSeconds, animationId);
+
+  // Save the revert as a new version (so further undo is possible)
+  const nextVersion = currentVersionNum + 1;
+  const reply = "\u21a9\ufe0f Reverted to the previous version.";
+  db.prepare(
+    "INSERT INTO versions (animation_id, version_num, lottie_json, trigger_message) VALUES (?, ?, ?, ?)"
+  ).run(animationId, nextVersion, prevVersion.lottie_json, message);
+
+  // Save messages
+  db.prepare(
+    "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
+  ).run(randomUUID(), animationId, message);
+  db.prepare(
+    "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
+  ).run(randomUUID(), animationId, reply, prevVersion.lottie_json);
+
+  // Emit update event
+  animationEvents.emit("updated", { animationId });
+
+  const doneEvent = JSON.stringify({ type: "done", reply, lottieJson, animationId });
+  const body = encoder.encode(`data: ${doneEvent}\n\n`);
+  return new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(body);
+      controller.close();
+    }
+  }), {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 }
 
 export async function POST(request: Request) {
@@ -33,6 +154,34 @@ export async function POST(request: Request) {
 
   if (!message?.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
+  }
+
+  // --- Undo intent detection (before LLM call) ---
+  if (isUndoIntent(message)) {
+    if (!animationId) {
+      // No animation context — cannot undo
+      const encoder = new TextEncoder();
+      const reply = "Cannot undo \u2014 no saved animation to revert.";
+      const doneEvent = JSON.stringify({ type: "done", reply });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+    const existing = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
+    if (!existing) {
+      return Response.json({ error: "Animation not found" }, { status: 404 });
+    }
+    return handleUndo(animationId, message);
   }
 
   if (animationId) {
