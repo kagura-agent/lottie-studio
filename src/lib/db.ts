@@ -51,6 +51,13 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add template_source column to track which template an animation was remixed from
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN template_source TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -26,8 +26,8 @@ export async function POST(request: Request) {
   fs.writeFileSync(path.join(ANIMATIONS_DIR, `${id}.json`), JSON.stringify(data));
 
   db.prepare(
-    "INSERT INTO animations (id, name, frame_count, duration_seconds) VALUES (?, ?, ?, ?)"
-  ).run(id, name, frameCount, durationSeconds);
+    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, name, frameCount, durationSeconds, templateName || null);
 
   // Persist seed assistant message when created from a template
   if (templateName) {
