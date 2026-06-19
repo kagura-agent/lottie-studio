@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface ExploreCardProps {
   animation: {
@@ -16,11 +17,13 @@ interface ExploreCardProps {
 }
 
 export default function ExploreCard({ animation }: ExploreCardProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [remixing, setRemixing] = useState(false);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -79,6 +82,54 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
     };
   }, [animation.id, loaded]);
 
+  const handleRemix = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (remixing) return;
+      setRemixing(true);
+      try {
+        const res = await fetch(`/api/animations/${animation.id}/remix`, {
+          method: "POST",
+        });
+        if (!res.ok) throw new Error("Remix failed");
+        const data = await res.json();
+        router.push(`/editor/${data.id}`);
+      } catch {
+        alert("Failed to remix animation. Please try again.");
+      } finally {
+        setRemixing(false);
+      }
+    },
+    [animation.id, remixing, router]
+  );
+
+  const handleDownload = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const res = await fetch(`/api/animations/${animation.id}`);
+        if (!res.ok) throw new Error("Download failed");
+        const json = await res.json();
+        const blob = new Blob([JSON.stringify(json.data)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${animation.name}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch {
+        alert("Failed to download animation. Please try again.");
+      }
+    },
+    [animation.id, animation.name]
+  );
+
   const frames =
     animation.frame_count != null ? `${animation.frame_count} frames` : null;
   const layers =
@@ -111,6 +162,27 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
             Failed to load
           </div>
         )}
+
+        {/* Quick-action buttons */}
+        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 p-2 bg-black/60 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
+          <button
+            onClick={handleRemix}
+            disabled={remixing}
+            aria-label="Remix animation"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          >
+            <span aria-hidden="true">✨</span>
+            {remixing ? "Remixing…" : "Remix"}
+          </button>
+          <button
+            onClick={handleDownload}
+            aria-label="Download animation as JSON"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          >
+            <span aria-hidden="true">⬇️</span>
+            Download
+          </button>
+        </div>
       </div>
       <div className="p-4">
         <h3 className="text-sm font-medium text-zinc-100 truncate group-hover:text-white">
