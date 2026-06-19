@@ -420,6 +420,54 @@ Tips:
 - Multiple layers can share the same parent for synchronized group behavior.
 `;
 
+const SPEC_MORPHING = `
+## Path Morphing (Shape Morphing)
+
+Path morphing animates a shape ("sh" type) between two or more different path shapes by keyframing the "ks" property.
+
+### Requirements
+- Both start and end shapes MUST have the **same number of vertices** for smooth interpolation.
+- The path is animated by setting "a": 1 on the "ks" property and providing keyframes with path data.
+- Each keyframe contains "s" (start path data) and "e" (end path data), each being an array with one path object {v, i, o, c}.
+
+### Keyframe Structure for Path Morphing
+\`\`\`json
+{
+  "ty": "sh",
+  "ks": {
+    "a": 1,
+    "k": [
+      {
+        "t": 0,
+        "s": [{"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}],
+        "e": [{"v": [[x,y],...], "i": [[dx,dy],...], "o": [[dx,dy],...], "c": true}],
+        "i": {"x": [0.42], "y": [1]},
+        "o": {"x": [0.58], "y": [0]}
+      },
+      {"t": 30, "s": [{...end path...}]}
+    ]
+  }
+}
+\`\`\`
+
+### Vertex Matching Strategies
+- To morph between shapes with different natural vertex counts, add extra vertices on straight segments of the simpler shape.
+- Example: A circle normally uses 4 vertices, but to morph to a 5-pointed star (10 vertices), redraw the circle with 10 evenly-spaced vertices with appropriate tangent handles.
+- For N evenly-spaced points on a circle of radius R, tangent handle length = (4/3) × tan(π/(2N)) × R.
+- For 10 points on radius 150: handle length ≈ 32 pixels.
+
+### Common Morph Patterns
+- **Circle ↔ Star**: Use 10 vertices for both. Circle has all vertices at equal radius with tangent handles; star alternates between outer and inner radius with zero tangents.
+- **Hamburger ↔ X icon**: 3 separate path layers, each with 2 vertices. Top/bottom lines rotate to diagonals, middle line collapses.
+- **Square ↔ Circle**: Use 4 vertices for both. Square has [0,0] tangents; circle has tangent length ≈ 0.5523 × radius (kappa constant).
+
+### Tips
+- Keep "c" (closed) consistent between keyframes.
+- Use easing on keyframes for organic-feeling morphs.
+- For looping morphs: add a final keyframe that returns to the start shape.
+- Tangent handles interpolate too — transitioning from curved (non-zero tangents) to straight ([0,0] tangents) creates a satisfying sharpening effect.
+`;
+
 const SPEC_SECTIONS: Record<string, string> = {
   CORE: SPEC_CORE,
   SHAPES: SPEC_SHAPES,
@@ -432,6 +480,7 @@ const SPEC_SECTIONS: Record<string, string> = {
   PRECOMPS: SPEC_PRECOMPS,
   MODIFIERS: SPEC_MODIFIERS,
   PARENTING: SPEC_PARENTING,
+  MORPHING: SPEC_MORPHING,
 };
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -1586,6 +1635,125 @@ const EXAMPLE_GRADIENT_STROKE_RING = JSON.stringify({
   }]
 });
 
+const EXAMPLE_CIRCLE_TO_STAR = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [{
+    ty: 4, nm: "Circle to Star Morph", ind: 0, ip: 0, op: 60,
+    ks: {
+      p: { a: 0, k: [256, 256] },
+      s: { a: 0, k: [100, 100] },
+      r: { a: 0, k: 0 },
+      o: { a: 0, k: 100 },
+      a: { a: 0, k: [0, 0] }
+    },
+    shapes: [{
+      ty: "gr", nm: "Morph Group",
+      it: [
+        { ty: "sh", nm: "Morph Path", ks: {
+          a: 1,
+          k: [
+            { t: 0, s: [{ v: [[0,-150],[88,-121],[143,-46],[143,46],[88,121],[0,150],[-88,121],[-143,46],[-143,-46],[-88,-121]], i: [[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19],[32,0],[26,19],[10,30],[-10,30],[-26,19]], o: [[32,0],[26,19],[10,30],[-10,30],[-26,19],[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19]], c: true }], e: [{ v: [[0,-150],[38,-53],[143,-46],[62,20],[88,121],[0,65],[-88,121],[-62,20],[-143,-46],[-38,-53]], i: [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]], c: true }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+            { t: 30, s: [{ v: [[0,-150],[38,-53],[143,-46],[62,20],[88,121],[0,65],[-88,121],[-62,20],[-143,-46],[-38,-53]], i: [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]], c: true }], e: [{ v: [[0,-150],[88,-121],[143,-46],[143,46],[88,121],[0,150],[-88,121],[-143,46],[-143,-46],[-88,-121]], i: [[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19],[32,0],[26,19],[10,30],[-10,30],[-26,19]], o: [[32,0],[26,19],[10,30],[-10,30],[-26,19],[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19]], c: true }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+            { t: 60, s: [{ v: [[0,-150],[88,-121],[143,-46],[143,46],[88,121],[0,150],[-88,121],[-143,46],[-143,-46],[-88,-121]], i: [[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19],[32,0],[26,19],[10,30],[-10,30],[-26,19]], o: [[32,0],[26,19],[10,30],[-10,30],[-26,19],[-32,0],[-26,-19],[-10,-30],[10,-30],[26,-19]], c: true }] }
+          ]
+        } },
+        { ty: "fl", nm: "Fill", c: { a: 1, k: [
+          { t: 0, s: [0.2, 0.6, 1, 1], e: [1, 0.8, 0, 1], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 30, s: [1, 0.8, 0, 1], e: [0.2, 0.6, 1, 1], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [0.2, 0.6, 1, 1] }
+        ] }, o: { a: 0, k: 100 } },
+        { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+      ]
+    }]
+  }]
+});
+
+const EXAMPLE_HAMBURGER_TO_X = JSON.stringify({
+  v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+  layers: [
+    {
+      ty: 4, nm: "Top Line", ind: 0, ip: 0, op: 60,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Top Line Group",
+        it: [
+          { ty: "sh", nm: "Top Path", ks: {
+            a: 1,
+            k: [
+              { t: 0, s: [{ v: [[-80,-50],[80,-50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[-56,-56],[56,56]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 30, s: [{ v: [[-56,-56],[56,56]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[-80,-50],[80,-50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 60, s: [{ v: [[-80,-50],[80,-50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }] }
+            ]
+          } },
+          { ty: "st", nm: "Stroke", c: { a: 0, k: [1, 1, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 16 }, lc: 2, lj: 2 },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Middle Line", ind: 1, ip: 0, op: 60,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 1, k: [
+          { t: 0, s: [100], e: [0], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 15, s: [0], e: [0], i: { x: [1], y: [1] }, o: { x: [0], y: [0] } },
+          { t: 45, s: [0], e: [100], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+          { t: 60, s: [100] }
+        ] },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Middle Line Group",
+        it: [
+          { ty: "sh", nm: "Middle Path", ks: {
+            a: 1,
+            k: [
+              { t: 0, s: [{ v: [[-80,0],[80,0]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[0,0],[0,0]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 30, s: [{ v: [[0,0],[0,0]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[-80,0],[80,0]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 60, s: [{ v: [[-80,0],[80,0]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }] }
+            ]
+          } },
+          { ty: "st", nm: "Stroke", c: { a: 0, k: [1, 1, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 16 }, lc: 2, lj: 2 },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    },
+    {
+      ty: 4, nm: "Bottom Line", ind: 2, ip: 0, op: 60,
+      ks: {
+        p: { a: 0, k: [256, 256] },
+        s: { a: 0, k: [100, 100] },
+        r: { a: 0, k: 0 },
+        o: { a: 0, k: 100 },
+        a: { a: 0, k: [0, 0] }
+      },
+      shapes: [{
+        ty: "gr", nm: "Bottom Line Group",
+        it: [
+          { ty: "sh", nm: "Bottom Path", ks: {
+            a: 1,
+            k: [
+              { t: 0, s: [{ v: [[-80,50],[80,50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[-56,56],[56,-56]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 30, s: [{ v: [[-56,56],[56,-56]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], e: [{ v: [[-80,50],[80,50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }], i: { x: [0.42], y: [1] }, o: { x: [0.58], y: [0] } },
+              { t: 60, s: [{ v: [[-80,50],[80,50]], i: [[0,0],[0,0]], o: [[0,0],[0,0]], c: false }] }
+            ]
+          } },
+          { ty: "st", nm: "Stroke", c: { a: 0, k: [1, 1, 1, 1] }, o: { a: 0, k: 100 }, w: { a: 0, k: 16 }, lc: 2, lj: 2 },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }
+        ]
+      }]
+    }
+  ]
+});
+
 interface ExampleEntry {
   name: string;
   title: string;
@@ -1622,6 +1790,8 @@ const EXAMPLE_REGISTRY: ExampleEntry[] = [
   { name: "EXAMPLE_MERGE_SUBTRACT", title: "Donut ring (merge paths subtract — inner circle cut from outer)", categories: ["modifier"], json: EXAMPLE_MERGE_SUBTRACT },
   { name: "EXAMPLE_MERGE_INTERSECT", title: "Crescent moon (merge paths subtract — offset circle cuts into main circle)", categories: ["modifier"], json: EXAMPLE_MERGE_INTERSECT },
   { name: "EXAMPLE_GRADIENT_STROKE_RING", title: "Rainbow progress ring (gradient stroke with trim paths)", categories: ["stroke", "gradient", "color", "modifier"], json: EXAMPLE_GRADIENT_STROKE_RING },
+  { name: "EXAMPLE_CIRCLE_TO_STAR", title: "Circle to star morph (path morphing with 10 matched vertices, looping)", categories: ["morphing", "path"], json: EXAMPLE_CIRCLE_TO_STAR },
+  { name: "EXAMPLE_HAMBURGER_TO_X", title: "Hamburger menu to X icon (3 lines morph to X shape, looping)", categories: ["morphing", "path", "stroke"], json: EXAMPLE_HAMBURGER_TO_X },
 ];
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
@@ -1642,6 +1812,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   easing: ["bounce", "spring", "elastic", "smooth", "gentle", "snappy", "ease", "timing", "speed", "slow", "fast", "crisp", "sharp"],
   effect: ["shadow", "blur", "glow", "effect", "blurry", "sharp", "soft", "drop shadow", "gaussian", "neon"],
   gradient: ["gradient", "rainbow", "gradient fill", "gradient stroke", "linear gradient", "radial gradient", "color stops"],
+  morphing: ["morph", "morphing", "transform into", "change shape", "become", "transition from", "icon transition", "shape shift", "evolve into"],
 };
 
 export function selectExamples(userMessage: string, maxExamples: number = 5): ExampleEntry[] {
@@ -1718,6 +1889,7 @@ const INTENT_KEYWORDS: Record<string, string[]> = {
   MODIFIERS: ['trim', 'dash', 'dashed', 'repeater', 'repeat', 'copies', 'merge', 'boolean', 'subtract', 'intersect', 'round corner', 'donut', 'ring'],
   PARENTING: ['parent', 'orbit', 'follow', 'group', 'hierarchy', 'pendulum', 'chain', 'null layer'],
   SHAPES: ['shape', 'circle', 'square', 'rectangle', 'ellipse', 'rect', 'ball', 'dot', 'box'],
+  MORPHING: ['morph', 'morphing', 'transform into', 'change shape', 'become', 'transition from', 'icon transition', 'shape shift', 'evolve into'],
 };
 
 // Sections that indicate a non-shape-focused task
@@ -1756,6 +1928,10 @@ export function analyzeIntent(message: string, currentAnimation: object | null):
     if (animStr.includes('"ty":0,') || animStr.includes('"ty": 0,') || animStr.includes('"refId"')) sections.add('PRECOMPS');
     if (animStr.includes('"tm"') || animStr.includes('"rp"') || animStr.includes('"rd"') || animStr.includes('"mm"')) sections.add('MODIFIERS');
     if (animStr.includes('"parent":') || animStr.includes('"ty":3,') || animStr.includes('"ty": 3,')) sections.add('PARENTING');
+    if (animStr.includes('"sh"') && animStr.includes('"a":1') || animStr.includes('"a": 1')) {
+      // Check for animated path data (morphing)
+      if (animStr.includes('"sh"') && (animStr.match(/"ty"\s*:\s*"sh"[\s\S]*?"a"\s*:\s*1/) || animStr.includes('morph'))) sections.add('MORPHING');
+    }
   }
 
   return sections;
