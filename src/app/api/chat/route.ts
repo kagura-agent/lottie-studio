@@ -211,11 +211,22 @@ export async function POST(request: Request) {
 
   const history = compactHistory(rawHistory);
 
+  // Check if animation was created from a template
+  const animRow = db.prepare(
+    "SELECT template_source FROM animations WHERE id = ?"
+  ).get(animationId) as { template_source: string | null } | undefined;
+  const templateSource = animRow?.template_source || null;
+
   type ContentPart = { type: "text" | "image_url"; text?: string; image_url?: { url: string } };
   type LLMMessage = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
 
+  let systemPrompt = buildSystemPrompt(currentAnimation, message);
+  if (templateSource) {
+    systemPrompt += `\n\nThe user is working with a remix of the "${templateSource}" template.`;
+  }
+
   const llmMessages: LLMMessage[] = [
-    { role: "system", content: buildSystemPrompt(currentAnimation, message) },
+    { role: "system", content: systemPrompt },
     ...history.map((m) => {
       if (m.role === "user" && m.image_url) {
         return {
