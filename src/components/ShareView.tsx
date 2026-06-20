@@ -191,6 +191,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
                   {isUser ? "Prompt" : "Assistant"}
                 </span>
                 {msg.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- base64 data URLs from user uploads, not optimizable by next/image
                   <img
                     src={msg.imageUrl}
                     alt="Attachment"

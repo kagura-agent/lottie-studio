@@ -74,8 +74,35 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    fetchAnimations(1, "", sortOption, activeTag);
-  }, [fetchAnimations]);
+    let cancelled = false;
+
+    const load = async () => {
+      setError(null);
+      try {
+        const params = new URLSearchParams({ page: "1", limit: "24", sort: sortOption });
+        if (activeTag) params.set("tag", activeTag);
+        const res = await fetch(`/api/animations/explore?${params}`);
+        if (cancelled) return;
+        if (!res.ok) {
+          if (res.status === 429) {
+            setError("Too many requests. Please wait a moment and try again.");
+            return;
+          }
+          throw new Error("Failed to fetch animations");
+        }
+        const json: ExploreResponse = await res.json();
+        setData(json);
+        setPage(1);
+      } catch {
+        if (!cancelled) setError("Failed to load animations. Please try again.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [sortOption, activeTag]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
