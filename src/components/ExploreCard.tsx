@@ -13,7 +13,18 @@ interface ExploreCardProps {
     layer_count: number | null;
     w: number | null;
     h: number | null;
+    view_count?: number;
   };
+}
+
+function formatViewCount(count: number): string {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return String(count);
 }
 
 export default function ExploreCard({ animation }: ExploreCardProps) {
@@ -136,6 +147,10 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
     animation.layer_count != null
       ? `${animation.layer_count} layer${animation.layer_count !== 1 ? "s" : ""}`
       : null;
+  const views =
+    animation.view_count != null && animation.view_count > 0
+      ? `${formatViewCount(animation.view_count)} views`
+      : null;
 
   return (
     <Link
@@ -191,6 +206,7 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
         <div className="mt-1 flex gap-3 text-xs text-zinc-500">
           {frames && <span>{frames}</span>}
           {layers && <span>{layers}</span>}
+          {views && <span>{views}</span>}
         </div>
       </div>
     </Link>

@@ -65,6 +65,13 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add view_count column to track animation views
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN view_count INTEGER DEFAULT 0`);
+} catch {
+  // Column already exists — ignore
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

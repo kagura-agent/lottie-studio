@@ -170,6 +170,17 @@ interface ShareViewProps {
   name: string;
   animationData: object;
   messages?: { role: string; content: string; imageUrl?: string }[];
+  viewCount?: number;
+}
+
+function formatViewCount(count: number): string {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return String(count);
 }
 
 /** Strip JSON code blocks from assistant messages, keeping only conversational text */
@@ -243,7 +254,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
   );
 }
 
-export default function ShareView({ id, name, animationData, messages }: ShareViewProps) {
+export default function ShareView({ id, name, animationData, messages, viewCount: initialViewCount }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEmbed = searchParams.get("embed") === "true";
@@ -257,7 +268,18 @@ export default function ShareView({ id, name, animationData, messages }: ShareVi
   const [showEmbed, setShowEmbed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
   const downloadRef = useRef<HTMLDivElement>(null);
+
+  // Record a view on page load
+  useEffect(() => {
+    fetch(`/api/animations/${id}/view`, { method: "POST" })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.view_count != null) setViewCount(data.view_count);
+      })
+      .catch(() => { /* ignore */ });
+  }, [id]);
 
   // Close download dropdown on outside click
   useEffect(() => {
@@ -347,6 +369,13 @@ export default function ShareView({ id, name, animationData, messages }: ShareVi
         <h1 className="text-zinc-100 text-lg font-semibold px-1 flex-1 min-w-0 truncate">
           {name}
         </h1>
+        <span className="text-zinc-500 text-sm flex items-center gap-1 shrink-0" title={`${viewCount} views`}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          {formatViewCount(viewCount)}
+        </span>
         <button
           onClick={() => setShowEmbed(true)}
           className="px-4 py-1.5 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"

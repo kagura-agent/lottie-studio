@@ -57,6 +57,9 @@ export async function GET(request: Request) {
     case "name-desc":
       orderBy = "name COLLATE NOCASE DESC";
       break;
+    case "most-viewed":
+      orderBy = "COALESCE(view_count, 0) DESC";
+      break;
     default:
       orderBy = "created_at DESC";
   }
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
 
   const rows = db
     .prepare(
-      `SELECT id, name, created_at, frame_count, tags
+      `SELECT id, name, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count
        FROM animations
        ${whereClause}
        ORDER BY ${orderBy}
@@ -80,6 +83,7 @@ export async function GET(request: Request) {
     created_at: string;
     frame_count: number | null;
     tags: string | null;
+    view_count: number;
   }[];
 
   // Enrich with layer_count, w, h from the animation JSON files

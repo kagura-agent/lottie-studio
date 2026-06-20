@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import ExploreCard from "@/components/ExploreCard";
 
-type SortOption = "newest" | "oldest" | "name-asc" | "name-desc";
+type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed";
 
 interface ExploreAnimation {
   id: string;
@@ -15,6 +15,7 @@ interface ExploreAnimation {
   w: number | null;
   h: number | null;
   tags: string | null;
+  view_count?: number;
 }
 
 interface ExploreResponse {
@@ -206,6 +207,7 @@ export default function ExplorePage() {
           >
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
+            <option value="most-viewed">Most viewed</option>
             <option value="name-asc">Name A–Z</option>
             <option value="name-desc">Name Z–A</option>
           </select>
