@@ -24,6 +24,7 @@ import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
 import FullscreenPreview from "./FullscreenPreview";
 import EmbedDialog from "./EmbedDialog";
+import KeyframeTimeline from "./KeyframeTimeline";
 
 interface EditorPageProps {
   id: string | null;
@@ -720,6 +721,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               />
             </ErrorBoundary>
           </div>
+          <KeyframeTimeline
+            animationData={animationData}
+            currentFrame={currentFrame}
+            totalFrames={totalFrames}
+            onSeek={handleSeek}
+          />
           <div className="flex items-center border-t border-zinc-800">
             <Controls
               isPlaying={isPlaying}
