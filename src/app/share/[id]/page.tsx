@@ -30,6 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: name,
     description: "Lottie animation created with Lottie Studio",
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
       title: name,
       description: "Lottie animation created with Lottie Studio",
@@ -91,12 +94,33 @@ export default async function SharePage({ params }: Props) {
     }
   }
 
+  const name = (row.name as string) ?? "Untitled";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name,
+    description: "Lottie animation created with Lottie Studio",
+    url: `${BASE_URL}/share/${id}`,
+    thumbnailUrl: `${BASE_URL}/api/animations/${id}/thumbnail`,
+    dateCreated: row.created_at as string,
+    author: {
+      "@type": "Organization",
+      name: "Lottie Studio",
+    },
+  };
+
   return (
-    <ShareView
-      id={id}
-      name={(row.name as string) ?? "Untitled"}
-      animationData={data}
-      messages={messages}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ShareView
+        id={id}
+        name={name}
+        animationData={data}
+        messages={messages}
+      />
+    </>
   );
 }
