@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
@@ -22,31 +22,39 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
   const [autoplay, setAutoplay] = useState(true);
   const [loop, setLoop] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<"iframe" | "lottie-web">("iframe");
 
-  const snippet = useMemo(() => {
-    const attrs = [
-      `src="${BASE_URL}/api/animations/${id}/json"`,
-      `background="transparent"`,
-      `speed="1"`,
-      loop ? "loop" : "",
-      autoplay ? "autoplay" : "",
-      `style="width: ${width}px; height: ${height}px;"`,
-    ]
-      .filter(Boolean)
-      .join("\n  ");
+  const iframeSnippet = useMemo(() => {
+    return `<iframe src="${BASE_URL}/share/${id}?embed=true" width="${width}" height="${height}" frameborder="0" allowtransparency="true"></iframe>`;
+  }, [id, width, height]);
 
-    return `<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>\n<lottie-player\n  ${attrs}\n></lottie-player>`;
+  const lottieWebSnippet = useMemo(() => {
+    const loopStr = loop ? "true" : "false";
+    const autoplayStr = autoplay ? "true" : "false";
+    return `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<div id="lottie-${id}" style="width: ${width}px; height: ${height}px;"></div>
+<script>
+  lottie.loadAnimation({
+    container: document.getElementById('lottie-${id}'),
+    renderer: 'svg',
+    loop: ${loopStr},
+    autoplay: ${autoplayStr},
+    path: '${BASE_URL}/api/animations/${id}/json'
+  });
+</script>`;
   }, [id, width, height, autoplay, loop]);
+
+  const activeSnippet = tab === "iframe" ? iframeSnippet : lottieWebSnippet;
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(snippet);
+      await navigator.clipboard.writeText(activeSnippet);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // fallback
       const textarea = document.createElement("textarea");
-      textarea.value = snippet;
+      textarea.value = activeSnippet;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
@@ -54,7 +62,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [snippet]);
+  }, [activeSnippet]);
 
   return (
     <div
@@ -72,6 +80,29 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
             className="text-zinc-400 hover:text-zinc-200 transition-colors text-xl leading-none"
           >
             ✕
+          </button>
+        </div>
+
+        <div className="flex gap-1 p-1 bg-zinc-800 rounded-lg mb-4">
+          <button
+            onClick={() => { setTab("iframe"); setCopied(false); }}
+            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === "iframe"
+                ? "bg-zinc-600 text-zinc-100"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            iframe
+          </button>
+          <button
+            onClick={() => { setTab("lottie-web"); setCopied(false); }}
+            className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === "lottie-web"
+                ? "bg-zinc-600 text-zinc-100"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            lottie-web
           </button>
         </div>
 
@@ -119,7 +150,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
 
         <div className="relative">
           <pre className="bg-zinc-950 border border-zinc-700 rounded-lg p-4 overflow-x-auto text-xs text-zinc-300 font-mono leading-relaxed">
-            <code>{snippet}</code>
+            <code>{activeSnippet}</code>
           </pre>
         </div>
 
@@ -214,6 +245,8 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
 
 export default function ShareView({ id, name, animationData, messages }: ShareViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEmbed = searchParams.get("embed") === "true";
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [loopConfig, setLoopConfig] = useState<LoopConfig>({ mode: "loop" });
@@ -288,6 +321,19 @@ export default function ShareView({ id, name, animationData, messages }: ShareVi
       alert("Failed to remix animation. Please try again.");
     }
   }, [id, router]);
+
+  if (isEmbed) {
+    return (
+      <div className="w-screen h-screen" style={{ background: "transparent" }}>
+        <LottiePreview
+          animationData={animationData}
+          isPlaying={true}
+          speed={1}
+          loopConfig={{ mode: "loop" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen">
