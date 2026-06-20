@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Build artifacts and vendored scripts
     "dist/**",
     "public/gif.worker.js",
+    // Test coverage output
+    "coverage/**",
   ]),
 ]);
 
