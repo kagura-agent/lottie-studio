@@ -1,4 +1,4 @@
-import { templates } from "../../../../data/templates";
+import { templates } from "@/data/templates";
 
 export const dynamic = "force-dynamic";
 

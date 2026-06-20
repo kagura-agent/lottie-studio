@@ -1,4 +1,4 @@
-import { templates } from "../../../../../data/templates";
+import { templates } from "@/data/templates";
 import fs from "node:fs";
 import path from "node:path";
 
