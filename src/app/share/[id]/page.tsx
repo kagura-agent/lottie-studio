@@ -96,6 +96,7 @@ export default async function SharePage({ params }: Props) {
   }
 
   const name = (row.name as string) ?? "Untitled";
+  const viewCount = (row.view_count as number) ?? 0;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
@@ -122,6 +123,7 @@ export default async function SharePage({ params }: Props) {
           name={name}
           animationData={data}
           messages={messages}
+          viewCount={viewCount}
         />
       </Suspense>
     </>
