@@ -2,6 +2,7 @@ import { db, ANIMATIONS_DIR } from "@/lib/db";
 import fs from "node:fs";
 import path from "node:path";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import ShareView from "@/components/ShareView";
 import type { Metadata } from "next";
 
@@ -115,12 +116,14 @@ export default async function SharePage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ShareView
-        id={id}
-        name={name}
-        animationData={data}
-        messages={messages}
-      />
+      <Suspense>
+        <ShareView
+          id={id}
+          name={name}
+          animationData={data}
+          messages={messages}
+        />
+      </Suspense>
     </>
   );
 }
