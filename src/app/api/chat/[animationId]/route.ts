@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { animationId } = await params;
 
-  const animation = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
+  const animation = db.prepare("SELECT id, template_source FROM animations WHERE id = ?").get(animationId) as { id: string; template_source: string | null } | undefined;
   if (!animation) {
     return Response.json({ error: "Animation not found" }, { status: 404 });
   }
@@ -26,7 +26,7 @@ export async function GET(
     createdAt: m.created_at,
   }));
 
-  return Response.json({ animationId, messages: formatted });
+  return Response.json({ animationId, messages: formatted, templateSource: animation.template_source || null });
 }
 
 export async function DELETE(

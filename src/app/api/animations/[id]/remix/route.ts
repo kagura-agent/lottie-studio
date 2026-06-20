@@ -31,8 +31,8 @@ export async function POST(
 
   // Insert new animation row (no chat history copied)
   db.prepare(
-    "INSERT INTO animations (id, name, frame_count, duration_seconds) VALUES (?, ?, ?, ?)"
-  ).run(newId, newName, row.frame_count, row.duration_seconds);
+    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source) VALUES (?, ?, ?, ?, ?)"
+  ).run(newId, newName, row.frame_count, row.duration_seconds, row.name as string);
 
   const newRow = db.prepare("SELECT * FROM animations WHERE id = ?").get(newId);
   return Response.json(newRow, { status: 201 });

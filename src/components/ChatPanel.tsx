@@ -41,6 +41,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
+  const autoDescribeTriggeredRef = useRef<string | undefined>(undefined);
+  const handleSendRef = useRef<((prompt?: string) => Promise<void>) | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [prevAnimationId, setPrevAnimationId] = useState<string | undefined>(animationId);
   const [prevInsertText, setPrevInsertText] = useState<string | undefined>(insertText);
@@ -90,6 +92,10 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
               lottieJson: m.lottieJson || undefined,
             }))
           );
+        } else if (data.templateSource && autoDescribeTriggeredRef.current !== animationId) {
+          // Remix with empty history — auto-trigger describe
+          autoDescribeTriggeredRef.current = animationId;
+          handleSendRef.current?.("Describe this animation and suggest ways I can modify it");
         }
       } catch {
         // Silently ignore history load errors — user can still chat
@@ -415,6 +421,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setIsStreaming(false);
     }
   }, [input, isThinking, isStreaming, pendingImage, streamResponse]);
+
+  // Keep handleSendRef in sync for use in async callbacks (e.g. auto-describe)
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   const handleRetry = useCallback(async (assistantMsgId: string) => {
     if (isThinking || isStreaming) return;
