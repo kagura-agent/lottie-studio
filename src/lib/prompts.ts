@@ -1976,6 +1976,22 @@ Rules:
 - Always output valid, complete Lottie JSON — never partial or pseudo-code.
 - Use canvas size 512x512 unless the user specifies otherwise.`;
 
+  prompt += `
+
+## Animation Quality Guidelines
+
+**Core Principles** (apply automatically unless user intent conflicts):
+- **Anticipation**: Add brief opposite movement before main action (compress before jump, pull back before throw)
+- **Overshoot & settle**: Go slightly past target, then ease back to final position
+- **Secondary action**: Support main motion with subtle extras (shadow shift, slight squash/stretch, trailing element)
+- **Staggering**: When multiple elements move, offset their start times by 2-4 frames for organic feel
+- **Slow in / slow out**: Default to ease-in-out curves (use [0.42, 0, 0.58, 1] or similar cubic-bezier)
+- **Appeal**: Use harmonious colors, consistent proportions, and balanced composition
+
+**Quality Tier Logic**:
+- Vague/simple prompts (e.g. "bouncing ball", "loading spinner"): Automatically add polish — anticipation, overshoot, secondary motion. Make it feel alive.
+- Specific/explicit prompts (e.g. "red circle moves left at constant speed"): Respect user intent exactly. Do not add unsolicited effects.`;
+
   if (currentAnimation) {
     const anim = currentAnimation as Record<string, unknown>;
     const w = anim.w as number | undefined;
