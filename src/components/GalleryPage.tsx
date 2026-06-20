@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
+import HeroWelcome from "@/components/HeroWelcome";
 import Link from "next/link";
 import { parseLottieFile } from "@/lib/importLottie";
 
@@ -42,9 +43,20 @@ export default function GalleryPage() {
     }
     return "newest";
   });
+  const [heroDismissed, setHeroDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lottie-hero-dismissed") === "true";
+    }
+    return false;
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
   const router = useRouter();
+
+  const handleHeroDismiss = useCallback(() => {
+    localStorage.setItem("lottie-hero-dismissed", "true");
+    setHeroDismissed(true);
+  }, []);
 
   const filteredAndSortedAnimations = useMemo(() => {
     let result = animations;
@@ -219,6 +231,11 @@ export default function GalleryPage() {
           <div className="mb-4 px-4 py-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
             {importError}
           </div>
+        )}
+
+        {/* Hero welcome for first-time visitors */}
+        {animations.length === 0 && !heroDismissed && (
+          <HeroWelcome onDismiss={handleHeroDismiss} />
         )}
 
         {/* Header */}
