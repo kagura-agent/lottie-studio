@@ -141,4 +141,68 @@ Second block:
     const result = parseResponse(content);
     expect(result.suggestions).toBeNull();
   });
+
+  // --- COMMAND detection tests ---
+
+  it("detects COMMAND line and returns command object", () => {
+    const content = `COMMAND: {"type": "pause"}
+⏸️ Paused the animation.`;
+    const result = parseResponse(content);
+    expect(result.command).toEqual({ type: "pause" });
+    expect(result.reply).toBe("⏸️ Paused the animation.");
+    expect(result.lottieJson).toBeNull();
+    expect(result.parseError).toBeNull();
+  });
+
+  it("detects COMMAND with parameters", () => {
+    const content = `COMMAND: {"type": "speed", "speed": 2}
+⚡ Doubled the playback speed.`;
+    const result = parseResponse(content);
+    expect(result.command).toEqual({ type: "speed", speed: 2 });
+    expect(result.reply).toBe("⚡ Doubled the playback speed.");
+    expect(result.parseError).toBeNull();
+  });
+
+  it("detects COMMAND with resize params", () => {
+    const content = `COMMAND: {"type": "resize", "width": 800, "height": 600}
+🔲 Resized to 800×600.`;
+    const result = parseResponse(content);
+    expect(result.command).toEqual({ type: "resize", width: 800, height: 600 });
+    expect(result.reply).toContain("Resized");
+  });
+
+  it("returns default reply when COMMAND has no text after it", () => {
+    const content = `COMMAND: {"type": "play"}`;
+    const result = parseResponse(content);
+    expect(result.command).toEqual({ type: "play" });
+    expect(result.reply).toBe("Done.");
+    expect(result.parseError).toBeNull();
+  });
+
+  it("falls through to normal parsing when COMMAND JSON is malformed", () => {
+    const content = `COMMAND: {invalid json}
+Some text here`;
+    const result = parseResponse(content);
+    expect(result.command).toBeUndefined();
+    expect(result.parseError).toBe("no_json");
+  });
+
+  it("falls through when COMMAND object has no type field", () => {
+    const content = `COMMAND: {"action": "pause"}
+Some text`;
+    const result = parseResponse(content);
+    expect(result.command).toBeUndefined();
+    expect(result.parseError).toBe("no_json");
+  });
+
+  it("prioritizes COMMAND over JSON code blocks", () => {
+    const content = `COMMAND: {"type": "export_gif"}
+📦 Exporting as GIF...
+\`\`\`json
+{"v":"5.7.1","layers":[{"ty":4}]}
+\`\`\``;
+    const result = parseResponse(content);
+    expect(result.command).toEqual({ type: "export_gif" });
+    expect(result.lottieJson).toBeNull();
+  });
 });

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
 import type { LoopConfig } from "@/types/loopConfig";
+import type { Command } from "@/lib/commands";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LottiePreview from "./LottiePreview";
@@ -516,6 +517,54 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     }
   }, [animationData, pushState]);
 
+  const handleCommand = useCallback((command: Command) => {
+    switch (command.type) {
+      case "play":
+        setIsPlaying(true);
+        break;
+      case "pause":
+        setIsPlaying(false);
+        break;
+      case "speed":
+        setSpeed(command.speed);
+        break;
+      case "loop":
+        setLoopConfig({ mode: "loop" });
+        break;
+      case "once":
+        setLoopConfig({ mode: "once" });
+        break;
+      case "export_gif":
+        handleExportGif({ preventDefault: () => {} } as MouseEvent);
+        break;
+      case "export_video":
+        handleExportVideo({ preventDefault: () => {} } as MouseEvent);
+        break;
+      case "export_json":
+        handleExport();
+        break;
+      case "export_dotlottie":
+        handleExportDotLottie();
+        break;
+      case "undo":
+        handleUndo();
+        break;
+      case "redo":
+        handleRedo();
+        break;
+      case "resize":
+        handleArtboardChange(command.width, command.height);
+        break;
+      case "background":
+        handleBgChange(command.color as CanvasBackground);
+        break;
+      case "fullscreen":
+        setFullscreenOpen(true);
+        break;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange]);
+
   return (
     <div className="flex flex-col h-[100dvh]">
       {/* Header */}
@@ -883,7 +932,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
               <ErrorBoundary fallbackMessage="Chat ran into a problem.">
-                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} />
+                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} />
               </ErrorBoundary>
             ) : rightPanel === "layers" ? (
               <LayerPanel
