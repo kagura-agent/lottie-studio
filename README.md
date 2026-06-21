@@ -87,6 +87,36 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Export:** gif.js, canvas, JSZip
 - **Testing:** Vitest
 
+## API
+
+### POST /api/generate
+
+Programmatic endpoint for generating Lottie animations from a text prompt.
+
+**Request:**
+```json
+{
+  "prompt": "A bouncing red ball",
+  "width": 512,
+  "height": 512,
+  "duration": 2
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `prompt` | string | *(required)* | Animation description (max 500 chars) |
+| `width` | number | 512 | Canvas width in px (64–2048) |
+| `height` | number | 512 | Canvas height in px (64–2048) |
+| `duration` | number | 2 | Duration in seconds (0.5–30) |
+
+**Response (200):**
+```json
+{ "success": true, "animation": { /* Lottie JSON */ }, "description": "..." }
+```
+
+**Errors:** 400 (validation), 429 (rate limit — 5 req/min), 500 (generation failure).
+
 ## Deployment
 
 Production builds run on a self-hosted VM behind a Caddy reverse proxy.
