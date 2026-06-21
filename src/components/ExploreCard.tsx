@@ -15,6 +15,8 @@ interface ExploreCardProps {
     h: number | null;
     view_count?: number;
   };
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string) => void;
 }
 
 function formatViewCount(count: number): string {
@@ -27,7 +29,7 @@ function formatViewCount(count: number): string {
   return String(count);
 }
 
-export default function ExploreCard({ animation }: ExploreCardProps) {
+export default function ExploreCard({ animation, isFavorite, onToggleFavorite }: ExploreCardProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
@@ -141,6 +143,15 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
     [animation.id, animation.name]
   );
 
+  const handleFavorite = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleFavorite?.(animation.id);
+    },
+    [animation.id, onToggleFavorite]
+  );
+
   const frames =
     animation.frame_count != null ? `${animation.frame_count} frames` : null;
   const layers =
@@ -176,6 +187,30 @@ export default function ExploreCard({ animation }: ExploreCardProps) {
           <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
             Failed to load
           </div>
+        )}
+
+        {/* Favorite button */}
+        {onToggleFavorite && (
+          <button
+            onClick={handleFavorite}
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-zinc-700/50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={isFavorite ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              className={`w-5 h-5 transition-transform active:scale-125 ${isFavorite ? "text-red-500" : "text-zinc-300"}`}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+              />
+            </svg>
+          </button>
         )}
 
         {/* Quick-action buttons */}

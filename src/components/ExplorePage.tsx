@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import ExploreCard from "@/components/ExploreCard";
+import { useFavorites } from "@/hooks/useFavorites";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed";
 
@@ -48,6 +49,8 @@ export default function ExplorePage() {
     return "";
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const fetchAnimations = useCallback(async (p: number, q: string, sort: SortOption, tag?: string) => {
     setLoading(true);
@@ -211,6 +214,35 @@ export default function ExplorePage() {
             <option value="name-asc">Name A–Z</option>
             <option value="name-desc">Name Z–A</option>
           </select>
+          <button
+            onClick={() => setShowFavoritesOnly((v) => !v)}
+            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              showFavoritesOnly
+                ? "border-red-500/50 bg-red-500/10 text-red-400"
+                : "border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={showFavoritesOnly ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              className="w-4 h-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+              />
+            </svg>
+            Favorites
+            {favoritesCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-violet-600 text-white text-xs rounded-full leading-none">
+                {favoritesCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Category filter chips */}
@@ -322,11 +354,51 @@ export default function ExplorePage() {
         {/* Animation grid */}
         {!loading && !error && data && data.animations.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.animations.map((anim) => (
-                <ExploreCard key={anim.id} animation={anim} />
-              ))}
-            </div>
+            {(() => {
+              const displayedAnimations = showFavoritesOnly
+                ? data.animations.filter((anim) => isFavorite(anim.id))
+                : data.animations;
+
+              if (displayedAnimations.length === 0) {
+                return (
+                  <div className="text-center py-16">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      className="w-12 h-12 mx-auto text-zinc-500 mb-4"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+                      />
+                    </svg>
+                    <h2 className="text-lg font-medium text-zinc-300 mb-2">
+                      No favorites on this page
+                    </h2>
+                    <p className="text-sm text-zinc-500">
+                      Click the heart icon on animations to add them to your favorites
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {displayedAnimations.map((anim) => (
+                    <ExploreCard
+                      key={anim.id}
+                      animation={anim}
+                      isFavorite={isFavorite(anim.id)}
+                      onToggleFavorite={toggleFavorite}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* Pagination */}
             {data.totalPages > 1 && (
