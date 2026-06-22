@@ -27,6 +27,7 @@ import FullscreenPreview from "./FullscreenPreview";
 import EmbedDialog from "./EmbedDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
+import ImportLottie from "./ImportLottie";
 
 interface EditorPageProps {
   id: string | null;
@@ -781,6 +782,11 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 placeholder={isNewMode && animationData === null}
               />
             </ErrorBoundary>
+            {isNewMode && animationData === null && (
+              <div className="mt-4">
+                <ImportLottie onImported={handleAnimationCreated} />
+              </div>
+            )}
           </div>
           <KeyframeTimeline
             animationData={animationData}

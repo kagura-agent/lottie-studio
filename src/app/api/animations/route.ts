@@ -12,7 +12,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, data, templateName, templateDesc } = body;
+  const { name, data, templateName, templateDesc, importMessage } = body;
 
   if (!name || !data) {
     return Response.json({ error: "name and data are required" }, { status: 400 });
@@ -36,6 +36,14 @@ export async function POST(request: Request) {
     db.prepare(
       "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'assistant', ?)"
     ).run(msgId, id, content);
+  }
+
+  // Persist seed assistant message for file imports
+  if (importMessage) {
+    const msgId = randomUUID();
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'assistant', ?)"
+    ).run(msgId, id, importMessage);
   }
 
   const row = db.prepare("SELECT * FROM animations WHERE id = ?").get(id);
