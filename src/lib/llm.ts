@@ -15,11 +15,12 @@ interface ChatMessage {
 
 type ParseError = "no_json" | "invalid_json" | "invalid_lottie" | null;
 
-interface LLMResponse {
+export interface LLMResponse {
   reply: string;
   lottieJson: object | null;
   parseError: ParseError;
   suggestions: string[] | null;
+  command?: object | null;
 }
 
 function llmHeaders(): Record<string, string> {
@@ -124,6 +125,20 @@ export async function chatCompletionRepairStream(
 }
 
 export function parseResponse(content: string): LLMResponse {
+  // Check for COMMAND: line before anything else
+  const commandMatch = content.match(/^COMMAND:\s*(.+)$/m);
+  if (commandMatch) {
+    try {
+      const command = JSON.parse(commandMatch[1].trim());
+      if (command && typeof command === "object" && command.type) {
+        const reply = content.replace(/^COMMAND:\s*.+$/m, "").trim();
+        return { reply: reply || "Done.", lottieJson: null, parseError: null, suggestions: null, command };
+      }
+    } catch {
+      // Malformed COMMAND JSON — fall through to normal parsing
+    }
+  }
+
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
 
   // Extract suggestions

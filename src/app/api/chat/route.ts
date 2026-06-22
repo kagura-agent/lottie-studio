@@ -313,7 +313,9 @@ export async function POST(request: Request) {
         }
 
         // Stream ended — finalize
-        let { reply, lottieJson, parseError, suggestions } = parseResponse(accumulated);
+        const parsed = parseResponse(accumulated);
+        const { command } = parsed;
+        let { reply, lottieJson, parseError, suggestions } = parsed;
 
         // Auto-repair: if parse failed, try once with error context
         const shouldRetryNoJson =
@@ -322,6 +324,7 @@ export async function POST(request: Request) {
 
         if (
           !lottieJson &&
+          !command &&
           parseError &&
           (parseError === "invalid_json" || parseError === "invalid_lottie" || shouldRetryNoJson)
         ) {
@@ -384,7 +387,7 @@ export async function POST(request: Request) {
 
         // Build warning message when Lottie JSON generation failed
         let warning: string | undefined;
-        if (!lottieJson && parseError) {
+        if (!lottieJson && !command && parseError) {
           switch (parseError) {
             case "invalid_json":
               warning = "The generated animation code was malformed. Try rephrasing your request.";
@@ -448,6 +451,7 @@ export async function POST(request: Request) {
           animationId: capturedAnimationId,
           ...(warning ? { warning } : {}),
           ...(suggestions ? { suggestions } : {}),
+          ...(command ? { command } : {}),
         });
         controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
       } catch (err) {

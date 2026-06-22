@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
+import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
+import { parseCommand, type Command } from "@/lib/commands";
 
 interface Message {
   id: string;
@@ -20,13 +22,14 @@ interface ChatPanelProps {
   insertText?: string;
   onAnimationCreated?: (id: string, data?: object) => void;
   onAnimationUpdated?: (id: string, data: object) => void;
+  onCommand?: (command: Command) => void;
 }
 
 // Image upload constraints (module-level to avoid recreating on each render)
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
-export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -226,7 +229,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
         const data = trimmed.slice(6);
-        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[] };
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
         try {
           parsed = JSON.parse(data);
         } catch {
@@ -375,16 +378,64 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
               )
             );
           }
+          // Execute command if present in the response
+          if (parsed.command && typeof parsed.command === "object" && (parsed.command as Record<string, unknown>).type) {
+            onCommand?.(parsed.command as Command);
+          }
         } else if (parsed.type === "error") {
           setError(parsed.error || "An unexpected error occurred");
         }
       }
     }
-  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated]);
+  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated, onCommand]);
 
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();
     if (!text || isThinking || isStreaming) return;
+
+    // Slash command handling — intercept before API call
+    const command = parseCommand(text);
+    if (command) {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: text,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+
+      // Build feedback message based on command type
+      let feedback: string;
+      switch (command.type) {
+        case "play": feedback = "\u25b6\ufe0f Playing"; break;
+        case "pause": feedback = "\u23f8\ufe0f Paused"; break;
+        case "speed": feedback = `\u26a1 Speed set to ${command.speed}x`; break;
+        case "loop": feedback = "\ud83d\udd01 Loop mode"; break;
+        case "once": feedback = "1\ufe0f\u20e3 Play once"; break;
+        case "export_gif": feedback = "\ud83d\udce6 Exporting GIF..."; break;
+        case "export_video": feedback = "\ud83d\udce6 Exporting video..."; break;
+        case "export_json": feedback = "\ud83d\udce6 Exporting JSON..."; break;
+        case "export_dotlottie": feedback = "\ud83d\udce6 Exporting dotLottie..."; break;
+        case "undo": feedback = "\u21a9\ufe0f Undo"; break;
+        case "redo": feedback = "\u21aa\ufe0f Redo"; break;
+        case "resize": feedback = `\ud83d\udd32 Resized to ${command.width}x${command.height}`; break;
+        case "background": feedback = `\ud83c\udfa8 Background set to ${command.color}`; break;
+        case "fullscreen": feedback = "\u26f6 Fullscreen toggled"; break;
+        case "error": feedback = `\u26a0\ufe0f ${command.message}`; break;
+      }
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: feedback,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      if (command.type !== "error") {
+        onCommand?.(command);
+      }
+      return;
+    }
 
     setError(null);
 
@@ -420,7 +471,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, pendingImage, streamResponse]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand]);
 
   // Keep handleSendRef in sync for use in async callbacks (e.g. auto-describe)
   useEffect(() => {
@@ -470,7 +521,42 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     }
   }, [isThinking, isStreaming, messages, streamResponse]);
 
+  // --- Autocomplete state (adjust during render when input changes) ---
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompleteQuery, setAutocompleteQuery] = useState("");
+  const [prevInput, setPrevInput] = useState(input);
+  if (input !== prevInput) {
+    setPrevInput(input);
+    const trimmed = input.trimStart();
+    if (trimmed.startsWith("/") && !trimmed.includes(" ")) {
+      setShowAutocomplete(true);
+      setAutocompleteQuery(trimmed);
+    } else {
+      setShowAutocomplete(false);
+      setAutocompleteQuery("");
+    }
+  }
+
+  const handleAutocompleteSelect = useCallback((cmd: CommandDef) => {
+    if (cmd.hasParams) {
+      setInput(cmd.command + " ");
+    } else {
+      setInput(cmd.command);
+    }
+    setShowAutocomplete(false);
+    inputRef.current?.focus();
+  }, []);
+
+  const handleAutocompleteDismiss = useCallback(() => {
+    setShowAutocomplete(false);
+  }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Let the autocomplete handle navigation keys when visible
+    if (showAutocomplete && ["ArrowUp", "ArrowDown", "Enter", "Tab", "Escape"].includes(e.key)) {
+      // The CommandAutocomplete component handles these via document-level listener
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -749,7 +835,14 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       )}
 
       {/* Input area */}
-      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900" onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
+      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900 relative" onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
+        {/* Command autocomplete dropdown */}
+        <CommandAutocomplete
+          query={autocompleteQuery}
+          visible={showAutocomplete}
+          onSelect={handleAutocompleteSelect}
+          onDismiss={handleAutocompleteDismiss}
+        />
         {/* Image preview */}
         {pendingImage && (
           <div className="mb-2 inline-flex relative">

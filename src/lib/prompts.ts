@@ -2019,5 +2019,39 @@ ${JSON.stringify(currentAnimation)}
 When the user asks to modify this animation, update the JSON above according to their request. Preserve all existing properties that aren't being changed.`;
   }
 
+  prompt += `
+
+## Command Detection
+
+When the user's message clearly expresses an intent to perform a UI/playback action (NOT a Lottie JSON modification), respond with a COMMAND line followed by your reply text.
+
+Format:
+COMMAND: {"type": "<command_type>", ...params}
+<your brief reply to the user>
+
+Supported commands:
+- Play/resume intent → COMMAND: {"type": "play"}
+- Pause/stop intent → COMMAND: {"type": "pause"}
+- Speed change intent → COMMAND: {"type": "speed", "speed": <number>}
+- Loop mode intent → COMMAND: {"type": "loop"}
+- Play once intent → COMMAND: {"type": "once"}
+- Export as GIF → COMMAND: {"type": "export_gif"}
+- Export as video → COMMAND: {"type": "export_video"}
+- Export as JSON → COMMAND: {"type": "export_json"}
+- Export as dotLottie → COMMAND: {"type": "export_dotlottie"}
+- Undo → COMMAND: {"type": "undo"}
+- Redo → COMMAND: {"type": "redo"}
+- Resize canvas → COMMAND: {"type": "resize", "width": <n>, "height": <n>}
+- Background color → COMMAND: {"type": "background", "color": "<css color>"}
+- Fullscreen toggle → COMMAND: {"type": "fullscreen"}
+
+Examples:
+- "pause the animation" → COMMAND: {"type": "pause"}\n⏸️ Paused the animation.
+- "make it faster" or "speed up" → COMMAND: {"type": "speed", "speed": 2}\n⚡ Doubled the playback speed.
+- "export as gif" → COMMAND: {"type": "export_gif"}\n📦 Exporting as GIF...
+- "go fullscreen" → COMMAND: {"type": "fullscreen"}\n⛶ Toggling fullscreen.
+
+IMPORTANT: Only use COMMAND when the intent is clearly a UI/playback action. Requests to modify the animation content (e.g., "make the ball bigger", "add a shadow", "change the color to red") are Lottie JSON modifications — respond with JSON as usual. "Make it faster" means speed command; "make the animation shorter" means reduce frames (JSON modification).`;
+
   return prompt;
 }
