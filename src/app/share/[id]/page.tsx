@@ -4,6 +4,7 @@ import path from "node:path";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import ShareView from "@/components/ShareView";
+import RelatedAnimations from "@/components/RelatedAnimations";
 import type { Metadata } from "next";
 
 const BASE_URL =
@@ -130,6 +131,7 @@ export default async function SharePage({ params }: Props) {
           viewCount={viewCount}
         />
       </Suspense>
+      <RelatedAnimations animationId={id} />
     </>
   );
 }
