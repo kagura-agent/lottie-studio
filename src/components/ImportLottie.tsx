@@ -41,8 +41,11 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
     setImporting(true);
 
     try {
-      if (!file.name.endsWith(".json")) {
-        setError("Please select a .json file");
+      const isSvg = file.name.toLowerCase().endsWith(".svg");
+      const isJson = file.name.toLowerCase().endsWith(".json");
+
+      if (!isJson && !isSvg) {
+        setError("Please select a .json or .svg file");
         setImporting(false);
         return;
       }
@@ -53,6 +56,29 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
         return;
       }
 
+      if (isSvg) {
+        // SVG files: send to conversion endpoint
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/import-svg", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setError(errData.error || "SVG conversion failed");
+          setImporting(false);
+          return;
+        }
+
+        const result = await res.json();
+        onImported(result.id, result.data);
+        return;
+      }
+
+      // JSON files: validate client-side and create animation
       const text = await file.text();
       let parsed: unknown;
       try {
@@ -141,7 +167,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json"
+        accept=".json,.svg"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -157,10 +183,10 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
 
       <div className="text-center">
         <p className="text-sm text-zinc-300 font-medium">
-          {importing ? "Importing..." : "Import Lottie JSON"}
+          {importing ? "Converting..." : "Import Lottie JSON or SVG"}
         </p>
         <p className="text-xs text-zinc-500 mt-1">
-          Drop a .json file here or click to browse
+          Drop a .json or .svg file here or click to browse
         </p>
       </div>
 
@@ -169,7 +195,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
         disabled={importing}
         className="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 hover:bg-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {importing ? "Importing..." : "Choose File"}
+        {importing ? "Converting..." : "Choose File"}
       </button>
 
       {error && (
