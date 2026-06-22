@@ -26,6 +26,7 @@ import ShortcutsHelp from "./ShortcutsHelp";
 import FullscreenPreview from "./FullscreenPreview";
 import EmbedDialog from "./EmbedDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
+import QualityPanel from "./QualityPanel";
 
 interface EditorPageProps {
   id: string | null;
@@ -598,6 +599,17 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onDuplicate={handleDuplicate}
           isDuplicating={duplicating}
         />
+        {!isNewMode && animationData && (
+          <QualityPanel
+            animationData={animationData}
+            onSuggestionClick={(suggestion) => {
+              setInsertText(suggestion);
+              setRightPanel("chat");
+              setMobileView("chat");
+              setTimeout(() => setInsertText(""), 0);
+            }}
+          />
+        )}
         <button
           onClick={() => setEmbedOpen(true)}
           disabled={isNewMode}
