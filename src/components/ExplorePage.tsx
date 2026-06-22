@@ -10,6 +10,7 @@ type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed"
 interface ExploreAnimation {
   id: string;
   name: string;
+  description?: string | null;
   created_at: string;
   frame_count: number | null;
   layer_count: number | null;

@@ -25,18 +25,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const name = (row.name as string) ?? "Untitled";
+  const description =
+    (row.description as string) || "Lottie animation created with Lottie Studio";
   const url = `${BASE_URL}/share/${id}`;
   const thumbnailUrl = `${BASE_URL}/api/animations/${id}/thumbnail`;
 
   return {
     title: name,
-    description: "Lottie animation created with Lottie Studio",
+    description,
     alternates: {
       canonical: url,
     },
     openGraph: {
       title: name,
-      description: "Lottie animation created with Lottie Studio",
+      description,
       url,
       images: [
         {
@@ -51,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: name,
-      description: "Lottie animation created with Lottie Studio",
+      description,
       images: [thumbnailUrl],
     },
   };
@@ -97,11 +99,13 @@ export default async function SharePage({ params }: Props) {
 
   const name = (row.name as string) ?? "Untitled";
   const viewCount = (row.view_count as number) ?? 0;
+  const animDescription =
+    (row.description as string) || "Lottie animation created with Lottie Studio";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
     name,
-    description: "Lottie animation created with Lottie Studio",
+    description: animDescription,
     url: `${BASE_URL}/share/${id}`,
     thumbnailUrl: `${BASE_URL}/api/animations/${id}/thumbnail`,
     dateCreated: row.created_at as string,
