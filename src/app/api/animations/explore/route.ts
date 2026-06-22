@@ -71,7 +71,7 @@ export async function GET(request: Request) {
 
   const rows = db
     .prepare(
-      `SELECT id, name, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count
+      `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count
        FROM animations
        ${whereClause}
        ORDER BY ${orderBy}
@@ -80,6 +80,7 @@ export async function GET(request: Request) {
     .all(...params, limit, offset) as {
     id: string;
     name: string;
+    description: string | null;
     created_at: string;
     frame_count: number | null;
     tags: string | null;

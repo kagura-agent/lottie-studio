@@ -9,6 +9,7 @@ interface ExploreCardProps {
   animation: {
     id: string;
     name: string;
+    description?: string | null;
     frame_count: number | null;
     layer_count: number | null;
     w: number | null;
@@ -238,6 +239,11 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
         <h3 className="text-sm font-medium text-zinc-100 truncate group-hover:text-white">
           {animation.name}
         </h3>
+        {animation.description && (
+          <p className="mt-1 text-xs text-zinc-400 line-clamp-2">
+            {animation.description}
+          </p>
+        )}
         <div className="mt-1 flex gap-3 text-xs text-zinc-500">
           {frames && <span>{frames}</span>}
           {layers && <span>{layers}</span>}

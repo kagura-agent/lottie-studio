@@ -5,6 +5,7 @@ import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
 import type { MessageRow } from "@/lib/chat-utils";
 import { animationEvents } from "@/lib/events";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
+import { extractDescription } from "@/lib/description";
 import { extractIp, checkRate } from "@/lib/rateLimit";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -429,6 +430,14 @@ export async function POST(request: Request) {
             db.prepare(
               "UPDATE animations SET tags = ? WHERE id = ?"
             ).run(serializeTags(tags), capturedAnimationId);
+          }
+
+          // Extract and save description from assistant reply
+          const description = extractDescription(reply);
+          if (description) {
+            db.prepare(
+              "UPDATE animations SET description = ? WHERE id = ?"
+            ).run(description, capturedAnimationId);
           }
 
           // Auto-save version
