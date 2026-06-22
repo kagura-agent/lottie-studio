@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { QualityResult, CheckStatus } from "@/lib/quality";
+import { useState, useMemo, useCallback } from "react";
+import type { CheckStatus } from "@/lib/quality";
 import { analyzeQuality } from "@/lib/quality";
 
 interface QualityPanelProps {
@@ -28,17 +28,12 @@ const statusIcons: Record<CheckStatus, string> = {
 };
 
 export default function QualityPanel({ animationData, onSuggestionClick }: QualityPanelProps) {
-  const [result, setResult] = useState<QualityResult | null>(null);
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    if (!animationData) {
-      setResult(null);
-      return;
-    }
+  const result = useMemo(() => {
+    if (!animationData) return null;
     const json = JSON.stringify(animationData);
-    const analysis = analyzeQuality(animationData as Record<string, unknown>, json);
-    setResult(analysis);
+    return analyzeQuality(animationData as Record<string, unknown>, json);
   }, [animationData]);
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
