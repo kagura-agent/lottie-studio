@@ -36,10 +36,15 @@ const TAG_ORDER = [
 ];
 
 export default function ExplorePage() {
-  const [data, setData] = useState<ExploreResponse | null>(null);
+  const [animations, setAnimations] = useState<ExploreAnimation[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [tagCounts, setTagCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [activeTag, setActiveTag] = useState<string>(() => {
@@ -50,12 +55,31 @@ export default function ExplorePage() {
     return "";
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const fetchingRef = useRef(false);
   const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  const fetchAnimations = useCallback(async (p: number, q: string, sort: SortOption, tag?: string) => {
-    setLoading(true);
+  const fetchAnimations = useCallback(async (
+    p: number,
+    q: string,
+    sort: SortOption,
+    tag: string | undefined,
+    mode: "reset" | "append",
+  ) => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    if (mode === "reset") {
+      setAnimations([]);
+      setHasMore(false);
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError(null);
+
     try {
       const params = new URLSearchParams({ page: String(p), limit: "24", sort });
       if (q) params.set("q", q);
@@ -69,20 +93,35 @@ export default function ExplorePage() {
         throw new Error("Failed to fetch animations");
       }
       const json: ExploreResponse = await res.json();
-      setData(json);
-      setPage(p);
+
+      if (mode === "reset") {
+        setAnimations(json.animations);
+      } else {
+        setAnimations((prev) => [...prev, ...json.animations]);
+      }
+
+      setTotal(json.total);
+      setTotalPages(json.totalPages);
+      setTagCounts(json.tagCounts);
+      setPage(json.page);
+      setHasMore(json.page < json.totalPages);
     } catch {
       setError("Failed to load animations. Please try again.");
     } finally {
-      setLoading(false);
+      if (mode === "reset") {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+      fetchingRef.current = false;
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      setError(null);
       try {
         const params = new URLSearchParams({ page: "1", limit: "24", sort: sortOption });
         if (activeTag) params.set("tag", activeTag);
@@ -96,8 +135,12 @@ export default function ExplorePage() {
           throw new Error("Failed to fetch animations");
         }
         const json: ExploreResponse = await res.json();
-        setData(json);
-        setPage(1);
+        setAnimations(json.animations);
+        setTotal(json.total);
+        setTotalPages(json.totalPages);
+        setTagCounts(json.tagCounts);
+        setPage(json.page);
+        setHasMore(json.page < json.totalPages);
       } catch {
         if (!cancelled) setError("Failed to load animations. Please try again.");
       } finally {
@@ -107,28 +150,55 @@ export default function ExplorePage() {
 
     load();
     return () => { cancelled = true; };
-  }, [sortOption, activeTag]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasMore && !fetchingRef.current) {
+          fetchAnimations(page + 1, searchQuery, sortOption, activeTag, "append");
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    const sentinel = sentinelRef.current;
+    if (sentinel) {
+      observerRef.current.observe(sentinel);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasMore, page, searchQuery, sortOption, activeTag, fetchAnimations]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      setAnimations([]);
       setPage(1);
-      fetchAnimations(1, value, sortOption, activeTag);
+      setHasMore(false);
+      fetchAnimations(1, value, sortOption, activeTag, "reset");
     }, 300);
   };
 
   const handleSortChange = (value: SortOption) => {
     setSortOption(value);
-    setPage(1);
-    fetchAnimations(1, searchQuery, value, activeTag);
+    fetchAnimations(1, searchQuery, value, activeTag, "reset");
   };
 
   const handleTagChange = (tag: string) => {
     const newTag = tag === activeTag ? "" : tag;
     setActiveTag(newTag);
-    setPage(1);
-    fetchAnimations(1, searchQuery, sortOption, newTag);
+    fetchAnimations(1, searchQuery, sortOption, newTag, "reset");
     // URL sync
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -253,7 +323,7 @@ export default function ExplorePage() {
         </div>
 
         {/* Category filter chips */}
-        {data?.tagCounts && Object.keys(data.tagCounts).length > 0 && (
+        {Object.keys(tagCounts).length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
             <button
               onClick={() => handleTagChange("")}
@@ -265,7 +335,7 @@ export default function ExplorePage() {
             >
               All
             </button>
-            {TAG_ORDER.filter((t) => (data.tagCounts[t] ?? 0) > 0).map((tag) => (
+            {TAG_ORDER.filter((t) => (tagCounts[t] ?? 0) > 0).map((tag) => (
               <button
                 key={tag}
                 onClick={() => handleTagChange(tag)}
@@ -275,13 +345,20 @@ export default function ExplorePage() {
                     : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                 }`}
               >
-                {tag.charAt(0).toUpperCase() + tag.slice(1)} ({data.tagCounts[tag]})
+                {tag.charAt(0).toUpperCase() + tag.slice(1)} ({tagCounts[tag]})
               </button>
             ))}
           </div>
         )}
 
-        {/* Loading skeleton */}
+        {/* Total count */}
+        {!loading && !error && animations.length > 0 && (
+          <p className="text-xs text-zinc-500 mb-4">
+            Showing {animations.length} of {total} animations
+          </p>
+        )}
+
+        {/* Loading skeleton (initial load only) */}
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -304,7 +381,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(page, searchQuery, sortOption, activeTag)}
+              onClick={() => fetchAnimations(page, searchQuery, sortOption, activeTag, "append")}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               Retry
@@ -313,7 +390,7 @@ export default function ExplorePage() {
         )}
 
         {/* Empty state */}
-        {!loading && !error && data && data.animations.length === 0 && (
+        {!loading && !error && animations.length === 0 && (
           <div className="text-center py-16">
             <div className="text-zinc-500 mb-4">
               <svg
@@ -359,12 +436,12 @@ export default function ExplorePage() {
         )}
 
         {/* Animation grid */}
-        {!loading && !error && data && data.animations.length > 0 && (
+        {!loading && !error && animations.length > 0 && (
           <>
             {(() => {
               const displayedAnimations = showFavoritesOnly
-                ? data.animations.filter((anim) => isFavorite(anim.id))
-                : data.animations;
+                ? animations.filter((anim) => isFavorite(anim.id))
+                : animations;
 
               if (displayedAnimations.length === 0) {
                 return (
@@ -384,7 +461,7 @@ export default function ExplorePage() {
                       />
                     </svg>
                     <h2 className="text-lg font-medium text-zinc-300 mb-2">
-                      No favorites on this page
+                      No favorites yet
                     </h2>
                     <p className="text-sm text-zinc-500">
                       Click the heart icon on animations to add them to your favorites
@@ -407,28 +484,41 @@ export default function ExplorePage() {
               );
             })()}
 
-            {/* Pagination */}
-            {data.totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-4">
-                <button
-                  onClick={() => fetchAnimations(page - 1, searchQuery, sortOption, activeTag)}
-                  disabled={page <= 1}
-                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            {/* Loading more spinner */}
+            {loadingMore && (
+              <div className="flex justify-center py-8">
+                <svg
+                  className="animate-spin h-6 w-6 text-zinc-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                 >
-                  Previous
-                </button>
-                <span className="text-sm text-zinc-400">
-                  Page {page} of {data.totalPages}
-                </span>
-                <button
-                  onClick={() => fetchAnimations(page + 1, searchQuery, sortOption, activeTag)}
-                  disabled={page >= data.totalPages}
-                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
               </div>
             )}
+
+            {/* End of results */}
+            {!hasMore && !loadingMore && totalPages > 1 && (
+              <p className="text-center text-sm text-zinc-500 py-8">
+                No more animations
+              </p>
+            )}
+
+            {/* Sentinel for IntersectionObserver */}
+            <div ref={sentinelRef} aria-hidden="true" />
           </>
         )}
       </div>
