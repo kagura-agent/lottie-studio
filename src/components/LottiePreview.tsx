@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import type { CanvasBackground } from "./BackgroundPicker";
 import type { LoopConfig } from "@/types/loopConfig";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface LottiePreviewProps {
   animationData: object | null;
@@ -14,6 +15,7 @@ interface LottiePreviewProps {
   seekToFrame?: number;
   background?: CanvasBackground;
   placeholder?: boolean;
+  ariaLabel?: string;
 }
 
 const MIN_ZOOM = 0.25;
@@ -50,6 +52,7 @@ export default function LottiePreview({
   seekToFrame,
   background = "checkered",
   placeholder = false,
+  ariaLabel = "Animated illustration",
 }: LottiePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
@@ -57,6 +60,8 @@ export default function LottiePreview({
   const loopConfigRef = useRef(loopConfig);
   const directionRef = useRef<1 | -1>(1);
   const loopCountRef = useRef(0);
+
+  const prefersReducedMotion = useReducedMotion();
 
   // Sync refs via effect to avoid updating during render
   useEffect(() => {
@@ -286,7 +291,7 @@ export default function LottiePreview({
         container: containerRef.current,
         renderer: "svg",
         loop: needsLoop,
-        autoplay: isPlaying,
+        autoplay: isPlaying && !prefersReducedMotion,
         animationData,
       });
 
@@ -331,12 +336,16 @@ export default function LottiePreview({
 
   useEffect(() => {
     if (!animRef.current) return;
+    if (prefersReducedMotion) {
+      animRef.current.goToAndStop(0, true);
+      return;
+    }
     if (isPlaying) {
       animRef.current.play();
     } else {
       animRef.current.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, prefersReducedMotion]);
 
   useEffect(() => {
     if (animRef.current) {
@@ -375,6 +384,13 @@ export default function LottiePreview({
     }
   }, [seekToFrame]);
 
+  // Auto-pause and show first frame when reduced motion is preferred
+  useEffect(() => {
+    if (prefersReducedMotion && animRef.current) {
+      animRef.current.goToAndStop(0, true);
+    }
+  }, [prefersReducedMotion]);
+
   const bgProps = getBackgroundStyle(background);
 
   const isZoomed = scale !== 1 || translate.x !== 0 || translate.y !== 0;
@@ -384,6 +400,8 @@ export default function LottiePreview({
   return (
     <div
       ref={areaRef}
+      role="img"
+      aria-label={ariaLabel}
       className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden ${bgProps.className} ${cursorStyle}`}
       style={bgProps.style}
       onMouseEnter={() => setIsHovered(true)}

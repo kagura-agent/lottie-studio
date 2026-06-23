@@ -7,6 +7,7 @@ import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
 import FullscreenPreview from "./FullscreenPreview";
 import { exportDotLottie } from "@/lib/dotlottieExporter";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -25,14 +26,14 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
   const [tab, setTab] = useState<"iframe" | "lottie-web">("iframe");
 
   const iframeSnippet = useMemo(() => {
-    return `<iframe src="${BASE_URL}/share/${id}?embed=true" width="${width}" height="${height}" frameborder="0" allowtransparency="true"></iframe>`;
+    return `<iframe src="${BASE_URL}/share/${id}?embed=true" width="${width}" height="${height}" frameborder="0" allowtransparency="true" title="Lottie animation"></iframe>`;
   }, [id, width, height]);
 
   const lottieWebSnippet = useMemo(() => {
     const loopStr = loop ? "true" : "false";
     const autoplayStr = autoplay ? "true" : "false";
     return `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
-<div id="lottie-${id}" style="width: ${width}px; height: ${height}px;"></div>
+<div id="lottie-${id}" style="width: ${width}px; height: ${height}px;" role="img" aria-label="Lottie animation"></div>
 <script>
   lottie.loadAnimation({
     container: document.getElementById('lottie-${id}'),
@@ -258,6 +259,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEmbed = searchParams.get("embed") === "true";
+  const prefersReducedMotion = useReducedMotion();
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
   const [loopConfig, setLoopConfig] = useState<LoopConfig>({ mode: "loop" });
@@ -349,9 +351,10 @@ export default function ShareView({ id, name, animationData, messages, viewCount
       <div className="w-screen h-screen" style={{ background: "transparent" }}>
         <LottiePreview
           animationData={animationData}
-          isPlaying={true}
+          isPlaying={!prefersReducedMotion}
           speed={1}
           loopConfig={{ mode: "loop" }}
+          ariaLabel={name}
         />
       </div>
     );
@@ -459,6 +462,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
               loopConfig={loopConfig}
               onFrameChange={handleFrameChange}
               seekToFrame={seekFrame}
+              ariaLabel={name}
             />
           </div>
           <Controls

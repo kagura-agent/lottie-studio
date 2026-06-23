@@ -43,8 +43,8 @@ export default function EmbedDialog({
   if (!open) return null;
 
   const snippets: Record<Tab, string> = {
-    player: `<script src="https://unpkg.com/@dotlottie/player-component@2/dist/dotlottie-player.mjs" type="module"></script>\n<dotlottie-player src="${BASE_URL}/api/animations/${animationId}/json" autoplay loop style="width:300px;height:300px"></dotlottie-player>`,
-    iframe: `<iframe src="${BASE_URL}/share/${animationId}" width="400" height="400" frameborder="0" allowtransparency="true"></iframe>`,
+    player: `<script src="https://unpkg.com/@dotlottie/player-component@2/dist/dotlottie-player.mjs" type="module"></script>\n<dotlottie-player src="${BASE_URL}/api/animations/${animationId}/json" autoplay loop style="width:300px;height:300px" aria-label="Lottie animation"></dotlottie-player>`,
+    iframe: `<iframe src="${BASE_URL}/share/${animationId}" width="400" height="400" frameborder="0" allowtransparency="true" title="Lottie animation"></iframe>`,
     json: `${BASE_URL}/api/animations/${animationId}/json`,
   };
 
