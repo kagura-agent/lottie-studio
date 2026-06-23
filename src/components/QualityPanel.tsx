@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import type { CheckStatus } from "@/lib/quality";
 import { analyzeQuality } from "@/lib/quality";
+import { useTranslations } from 'next-intl';
 
 interface QualityPanelProps {
   animationData: object | null;
@@ -29,6 +30,7 @@ const statusIcons: Record<CheckStatus, string> = {
 
 export default function QualityPanel({ animationData, onSuggestionClick }: QualityPanelProps) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations('qualityPanel');
 
   const result = useMemo(() => {
     if (!animationData) return null;
@@ -47,7 +49,7 @@ export default function QualityPanel({ animationData, onSuggestionClick }: Quali
       {/* Badge */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        title={`Quality: ${result.score}/100`}
+        title={t('score', { score: result.score })}
         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${statusBgColors[result.status]} hover:opacity-80`}
       >
         <span className={statusColors[result.status]}>{statusIcons[result.status]}</span>
@@ -63,7 +65,7 @@ export default function QualityPanel({ animationData, onSuggestionClick }: Quali
               <span className={`text-lg font-bold ${statusColors[result.status]}`}>
                 {result.score}
               </span>
-              <span className="text-xs text-zinc-400">/100 Quality Score</span>
+              <span className="text-xs text-zinc-400">{t('title')}</span>
             </div>
             <button
               onClick={() => setExpanded(false)}

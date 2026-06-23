@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 
 interface TemplateCardProps {
   id: string;
@@ -27,6 +28,7 @@ export default function TemplateCard({
   const [creating, setCreating] = useState(false);
   const animDataRef = useRef<object | null>(null);
   const router = useRouter();
+  const t = useTranslations();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -111,7 +113,7 @@ export default function TemplateCard({
       {/* Template badge */}
       <div className="absolute top-2 left-2 z-10">
         <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-zinc-700/80 text-zinc-300 rounded backdrop-blur-sm">
-          Template
+          {t('templateCard.template')}
         </span>
       </div>
 
@@ -133,7 +135,7 @@ export default function TemplateCard({
         )}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
-            Failed to load
+            {t('common.failedToLoad')}
           </div>
         )}
       </div>
@@ -162,7 +164,7 @@ export default function TemplateCard({
           {creating ? (
             <>
               <div className="w-3 h-3 border-2 border-zinc-400 border-t-zinc-900 rounded-full animate-spin" />
-              Creating…
+              {t('common.creating')}
             </>
           ) : (
             <>
@@ -179,7 +181,7 @@ export default function TemplateCard({
                   d="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               </svg>
-              Use as starter
+              {t('templateCard.useAsStarter')}
             </>
           )}
         </button>

@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useTranslations } from 'next-intl';
 import lottie, { AnimationItem } from "lottie-web";
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 // --- Types ---
 
@@ -359,6 +361,7 @@ function TryItPanel() {
 // --- Main Page ---
 
 export default function DocsPage() {
+  const t = useTranslations();
   const baseUrl = "https://lottie.kagura-agent.com";
 
   return (
@@ -377,20 +380,21 @@ export default function DocsPage() {
               href="/explore"
               className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              Explore
+              {t('gallery.explore')}
             </Link>
             <Link
               href="/docs"
               className="text-sm text-indigo-400 font-medium"
             >
-              API Docs
+              {t('gallery.apiDocs')}
             </Link>
             <Link
               href="/editor/new"
               className="px-3 py-1.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
             >
-              Create
+              {t('gallery.createAnimation')}
             </Link>
+            <LanguageSwitcher />
           </nav>
         </div>
       </header>
@@ -400,12 +404,10 @@ export default function DocsPage() {
         {/* Title */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-zinc-100 tracking-tight">
-            API Documentation
+            {t('docs.title')}
           </h1>
           <p className="mt-3 text-zinc-400 text-lg">
-            Integrate Lottie Studio into your apps. Generate animations
-            programmatically, browse community creations, and embed them
-            anywhere.
+            {t('docs.description')}
           </p>
         </div>
 
@@ -413,7 +415,7 @@ export default function DocsPage() {
         <div className="mb-8 rounded-xl border border-zinc-800 bg-zinc-900/50 px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-              Base URL
+              {t('docs.baseUrl')}
             </span>
             <code className="text-sm font-mono text-zinc-200 bg-zinc-800 px-3 py-1 rounded-md">
               {baseUrl}
@@ -469,7 +471,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Request Body
+                {t('docs.request')}
               </h4>
               <JsonHighlight
                 code={JSON.stringify(
@@ -525,7 +527,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Success Response
+                {t('docs.response')}
               </h4>
               <JsonHighlight
                 code={JSON.stringify(
@@ -542,7 +544,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Error Response
+                {t('docs.response')}
               </h4>
               <JsonHighlight
                 code={JSON.stringify(
@@ -573,7 +575,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Query Parameters
+                {t('docs.parameters')}
               </h4>
               <div className="space-y-2">
                 <div className="flex items-start gap-2 text-sm">
@@ -624,7 +626,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Example Request
+                {t('docs.example')}
               </h4>
               <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">
                 GET /api/animations/explore?page=1&amp;limit=10&amp;sort=popular
@@ -633,7 +635,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Response
+                {t('docs.response')}
               </h4>
               <JsonHighlight
                 code={JSON.stringify(
@@ -671,7 +673,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Path Parameters
+                {t('docs.parameters')}
               </h4>
               <div className="flex items-start gap-2 text-sm">
                 <code className="text-indigo-400 font-mono shrink-0">id</code>
@@ -684,7 +686,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Example Usage (lottie-web)
+                {t('docs.example')}
               </h4>
               <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">
                 {`lottie.loadAnimation({
@@ -699,7 +701,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Response
+                {t('docs.response')}
               </h4>
               <p className="text-sm text-zinc-400 mb-2">
                 Returns the full Lottie JSON object directly (Content-Type:
@@ -735,7 +737,7 @@ export default function DocsPage() {
 
             <div>
               <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
-                Response
+                {t('docs.response')}
               </h4>
               <JsonHighlight
                 code={JSON.stringify(

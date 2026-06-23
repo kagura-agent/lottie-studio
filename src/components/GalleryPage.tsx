@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
 import HeroWelcome from "@/components/HeroWelcome";
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import Link from "next/link";
 import { parseLottieFile } from "@/lib/importLottie";
 
@@ -52,6 +54,7 @@ export default function GalleryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
   const router = useRouter();
+  const t = useTranslations();
 
   const handleHeroDismiss = useCallback(() => {
     localStorage.setItem("lottie-hero-dismissed", "true");
@@ -107,10 +110,10 @@ export default function GalleryPage() {
       if (!res.ok) throw new Error("Failed to delete");
       setAnimations((prev) => prev.filter((a) => a.id !== id));
     } catch {
-      setImportError("Failed to delete animation");
+      setImportError(t('gallery.failedToDelete'));
       setTimeout(() => setImportError(null), 5000);
     }
-  }, []);
+  }, [t]);
 
   const handleDuplicate = useCallback(async (id: string) => {
     try {
@@ -126,10 +129,10 @@ export default function GalleryPage() {
       const newAnim = await createRes.json();
       router.push(`/editor/${newAnim.id}`);
     } catch {
-      setImportError("Failed to duplicate animation");
+      setImportError(t('gallery.failedToDuplicate'));
       setTimeout(() => setImportError(null), 5000);
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleImport = useCallback(async (file: File) => {
     setImportError(null);
@@ -243,12 +246,11 @@ export default function GalleryPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-semibold text-zinc-100">
-                {animations.length > 0 ? "Animations" : "Get Started"}
+                {animations.length > 0 ? t('gallery.title') : t('gallery.getStarted')}
               </h1>
               {animations.length > 0 && (
                 <p className="text-sm text-zinc-400 mt-1">
-                  {animations.length} animation
-                  {animations.length !== 1 ? "s" : ""}
+                  {t('gallery.animationCount', { count: animations.length })}
                 </p>
               )}
             </div>
@@ -260,24 +262,25 @@ export default function GalleryPage() {
                 className="hidden"
                 onChange={handleFileChange}
               />
+              <LanguageSwitcher />
               <Link
                 href="/explore"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
-                Explore
+                {t('gallery.explore')}
               </Link>
               <Link
                 href="/docs"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
-                API Docs
+                {t('gallery.apiDocs')}
               </Link>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importing}
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
               >
-                {importing ? "Importing..." : "Import"}
+                {importing ? t('common.importing') : t('common.import')}
               </button>
               <button
                 onClick={() => {
@@ -289,13 +292,13 @@ export default function GalleryPage() {
                 }}
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
-                Import URL
+                {t('gallery.importUrl')}
               </button>
               <Link
                 href="/editor/new"
                 className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
               >
-                Create Animation
+                {t('gallery.createAnimation')}
               </Link>
             </div>
           </div>
@@ -313,7 +316,7 @@ export default function GalleryPage() {
                       handleUrlImport();
                     }
                   }}
-                  placeholder="https://example.com/animation.json"
+                  placeholder={t('gallery.urlPlaceholder')}
                   disabled={importingUrl}
                   className="flex-1 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-50"
                   autoFocus
@@ -323,7 +326,7 @@ export default function GalleryPage() {
                   disabled={!urlInput.trim() || importingUrl}
                   className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {importingUrl ? "Importing..." : "Import"}
+                  {importingUrl ? t('common.importing') : t('common.import')}
                 </button>
               </div>
             </div>
@@ -349,11 +352,11 @@ export default function GalleryPage() {
                   />
                 </svg>
                 <h2 className="text-lg font-medium text-zinc-200">
-                  Templates
+                  {t('gallery.templates')}
                 </h2>
               </div>
               <span className="text-xs text-zinc-500">
-                Pick a starter and remix it with chat
+                {t('gallery.templateHint')}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -379,7 +382,7 @@ export default function GalleryPage() {
             )}
             <div className="mb-4">
               <h2 className="text-lg font-medium text-zinc-200">
-                Your Animations
+                {t('gallery.yourAnimations')}
               </h2>
             </div>
             {/* Search and Sort Controls */}
@@ -402,7 +405,7 @@ export default function GalleryPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search animations..."
+                  placeholder={t('gallery.searchPlaceholder')}
                   className="w-full pl-9 pr-8 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
                 />
                 {searchQuery && (
@@ -421,10 +424,10 @@ export default function GalleryPage() {
                 onChange={(e) => handleSortChange(e.target.value as SortOption)}
                 className="px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
               >
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="name-asc">Name A–Z</option>
-                <option value="name-desc">Name Z–A</option>
+                <option value="newest">{t('gallery.sortNewest')}</option>
+                <option value="oldest">{t('gallery.sortOldest')}</option>
+                <option value="name-asc">{t('gallery.sortNameAsc')}</option>
+                <option value="name-desc">{t('gallery.sortNameDesc')}</option>
               </select>
             </div>
             {filteredAndSortedAnimations.length > 0 ? (
@@ -444,7 +447,7 @@ export default function GalleryPage() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-sm text-zinc-500">
-                  No animations match your search
+                  {t('gallery.noMatch')}
                 </p>
               </div>
             )}
@@ -457,12 +460,12 @@ export default function GalleryPage() {
             <div className="border-t border-zinc-800 my-8" />
             <div className="text-center py-8">
               <p className="text-sm text-zinc-500">
-                Pick a template above to get started, or{" "}
+                {t('gallery.emptyStateHint')}{" "}
                 <Link
                   href="/editor/new"
                   className="text-zinc-300 underline hover:text-white transition-colors"
                 >
-                  create from scratch
+                  {t('gallery.createFromScratch')}
                 </Link>
               </p>
             </div>
@@ -489,18 +492,17 @@ export default function GalleryPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-zinc-100">
-                No animations yet
+                {t('gallery.noAnimationsYet')}
               </h2>
               <p className="text-sm text-zinc-400 max-w-sm">
-                Get started by creating your first Lottie animation in the
-                editor.
+                {t('gallery.noAnimationsDescription')}
               </p>
             </div>
             <Link
               href="/editor/new"
               className="px-5 py-2.5 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
             >
-              Create Animation
+              {t('gallery.createAnimation')}
             </Link>
           </div>
         )}
@@ -524,10 +526,10 @@ export default function GalleryPage() {
               />
             </svg>
             <p className="text-lg font-medium text-zinc-200">
-              Drop .json or .lottie file to import
+              {t('gallery.dropToImport')}
             </p>
             <p className="text-sm text-zinc-500 mt-1">
-              Lottie animation files only
+              {t('gallery.lottieFilesOnly')}
             </p>
           </div>
         </div>

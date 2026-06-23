@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useTranslations } from 'next-intl';
 import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
@@ -30,6 +31,7 @@ const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
+  const t = useTranslations('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -579,11 +581,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
   const processImageFile = useCallback((file: File) => {
     if (!SUPPORTED_TYPES.includes(file.type)) {
-      setError("Unsupported image format. Use PNG, JPEG, GIF, or WebP.");
+      setError(t('unsupportedType'));
       return;
     }
     if (file.size > MAX_IMAGE_SIZE) {
-      setError("Image too large (max 4MB).");
+      setError(t('imageTooBig'));
       return;
     }
     const reader = new FileReader();
@@ -754,7 +756,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                   <button
                     onClick={() => handleRetry(msg.id)}
                     className="absolute top-1.5 -right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-600"
-                    aria-label="Retry this response"
+                    aria-label={t('retry')}
                     title="Regenerate response"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
@@ -806,7 +808,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                   </svg>
-                  Auto-repairing...
+                  {t('repairing')}
                 </span>
               ) : (
                 <span className="inline-flex gap-1">
@@ -878,7 +880,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             onClick={() => fileInputRef.current?.click()}
             disabled={isThinking || isStreaming}
             className="shrink-0 px-2 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Attach image"
+            aria-label={t('attachImage')}
             title="Attach image (or paste / drag-drop)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
@@ -891,7 +893,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your animation..."
+            placeholder={currentAnimationId ? t('placeholderWithAnimation') : t('placeholder')}
             disabled={isThinking || isStreaming}
             enterKeyHint="send"
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50 resize-none overflow-y-auto"
@@ -900,8 +902,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             <button
               onClick={handleStop}
               className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors flex items-center justify-center"
-              aria-label="Stop generation"
-              title="Stop generation"
+              aria-label={t('stop')}
+              title={t('stop')}
             >
               <span className="inline-block w-3 h-3 bg-white rounded-sm" />
             </button>
@@ -911,7 +913,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
               disabled={!input.trim()}
               className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send
+              {t('send')}
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useMemo } from "react";
+import { useTranslations } from 'next-intl';
 
 interface ShortcutsHelpProps {
   open: boolean;
@@ -36,6 +37,7 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const isMac = useIsMac();
   const mod = isMac ? "⌘" : "Ctrl";
+  const t = useTranslations();
 
   useEffect(() => {
     if (!open) return;
@@ -53,28 +55,23 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
 
   const groups: ShortcutGroup[] = [
     {
-      title: "General",
+      title: t('shortcutsHelp.general'),
       shortcuts: [
-        { keys: [mod, "S"], description: "Save" },
-        { keys: [mod, "Z"], description: "Undo" },
-        { keys: [mod, "Shift", "Z"], description: "Redo" },
-        { keys: [mod, "/"], description: "Toggle this help" },
+        { keys: [mod, "S"], description: t('shortcutsHelp.save') },
+        { keys: [mod, "Z"], description: t('shortcutsHelp.undo') },
+        { keys: [mod, "Shift", "Z"], description: t('shortcutsHelp.redo') },
+        { keys: [mod, "/"], description: t('shortcutsHelp.showShortcuts') },
       ],
     },
     {
-      title: "Playback",
+      title: t('shortcutsHelp.playback'),
       shortcuts: [
-        { keys: ["Space"], description: "Play / Pause" },
-        { keys: ["["], description: "Decrease speed" },
-        { keys: ["]"], description: "Increase speed" },
-        { keys: ["F"], description: "Toggle fullscreen preview" },
-      ],
-    },
-    {
-      title: "Navigation",
-      shortcuts: [
-        { keys: ["←"], description: "Previous frame" },
-        { keys: ["→"], description: "Next frame" },
+        { keys: ["Space"], description: t('shortcutsHelp.togglePlay') },
+        { keys: ["["], description: t('shortcutsHelp.speedDown') },
+        { keys: ["]"], description: t('shortcutsHelp.speedUp') },
+        { keys: ["F"], description: t('shortcutsHelp.toggleFullscreen') },
+        { keys: ["←"], description: t('shortcutsHelp.prevFrame') },
+        { keys: ["→"], description: t('shortcutsHelp.nextFrame') },
         { keys: ["Home"], description: "Jump to start" },
         { keys: ["End"], description: "Jump to end" },
       ],
@@ -92,11 +89,11 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-          <h2 className="text-zinc-100 text-base font-semibold">Keyboard Shortcuts</h2>
+          <h2 className="text-zinc-100 text-base font-semibold">{t('shortcutsHelp.title')}</h2>
           <button
             onClick={onClose}
             className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -141,7 +138,7 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
         {/* Footer hint */}
         <div className="px-5 py-3 border-t border-zinc-800">
           <p className="text-zinc-500 text-xs text-center">
-            Playback shortcuts are disabled when typing in text fields
+            {"Playback shortcuts are disabled when typing in text fields"}
           </p>
         </div>
       </div>

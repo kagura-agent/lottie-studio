@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import lottie, { AnimationItem } from "lottie-web";
+import { useTranslations } from 'next-intl';
 
 interface Version {
   id: number;
@@ -160,6 +161,7 @@ export default function VersionHistory({
   open,
   onClose,
 }: VersionHistoryProps) {
+  const t = useTranslations();
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState<number | null>(null);
@@ -226,7 +228,7 @@ export default function VersionHistory({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-100">
-            Version History
+            {t('versionHistory.title')}
           </h2>
           <button
             onClick={onClose}
@@ -250,12 +252,11 @@ export default function VersionHistory({
         <div className="flex-1 overflow-y-auto min-h-0">
           {loading && versions.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-zinc-500 text-sm">
-              Loading...
+              {t('common.loading')}
             </div>
           ) : versions.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-zinc-500 text-sm px-4 text-center">
-              No versions yet. Versions are created when the AI modifies your
-              animation.
+              {t('versionHistory.noVersions')}
             </div>
           ) : (
             <div className="divide-y divide-zinc-800">
@@ -281,7 +282,7 @@ export default function VersionHistory({
                           </span>
                           {idx === 0 && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">
-                              Latest
+                              {t('versionHistory.current')}
                             </span>
                           )}
                         </div>
@@ -300,7 +301,7 @@ export default function VersionHistory({
                           disabled={restoring !== null}
                           className="shrink-0 px-2.5 py-1 rounded text-xs font-medium border border-zinc-600 text-zinc-300 hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {restoring === v.version_num ? "..." : "Restore"}
+                          {restoring === v.version_num ? "..." : t('versionHistory.restore')}
                         </button>
                       )}
                     </div>

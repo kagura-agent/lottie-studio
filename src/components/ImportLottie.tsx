@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useTranslations } from 'next-intl';
 
 interface ImportLottieProps {
   onImported: (id: string, data: object) => void;
@@ -31,6 +32,7 @@ function validateLottieJson(data: unknown): { valid: true; data: Record<string, 
 }
 
 export default function ImportLottie({ onImported }: ImportLottieProps) {
+  const t = useTranslations('importLottie');
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -45,13 +47,13 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       const isJson = file.name.toLowerCase().endsWith(".json");
 
       if (!isJson && !isSvg) {
-        setError("Please select a .json or .svg file");
+        setError(t('invalidFormat'));
         setImporting(false);
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        setError("File too large (max 5MB)");
+        setError(t('tooLarge'));
         setImporting(false);
         return;
       }
@@ -84,7 +86,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       try {
         parsed = JSON.parse(text);
       } catch {
-        setError("File is not valid JSON");
+        setError(t('invalidJson'));
         setImporting(false);
         return;
       }
@@ -183,10 +185,10 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
 
       <div className="text-center">
         <p className="text-sm text-zinc-300 font-medium">
-          {importing ? "Converting..." : "Import Lottie JSON or SVG"}
+          {importing ? t('converting') : t('title')}
         </p>
         <p className="text-xs text-zinc-500 mt-1">
-          Drop a .json or .svg file here or click to browse
+          {t('hint')}
         </p>
       </div>
 
@@ -195,7 +197,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
         disabled={importing}
         className="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 hover:bg-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {importing ? "Converting..." : "Choose File"}
+        {t(importing ? 'converting' : 'chooseFile')}
       </button>
 
       {error && (

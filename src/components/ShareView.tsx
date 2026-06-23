@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from 'next-intl';
 import Link from "next/link";
 import LottiePreview from "./LottiePreview";
 import Controls from "./Controls";
@@ -18,6 +19,7 @@ interface EmbedModalProps {
 }
 
 function EmbedModal({ id, onClose }: EmbedModalProps) {
+  const t = useTranslations();
   const [width, setWidth] = useState(300);
   const [height, setHeight] = useState(300);
   const [autoplay, setAutoplay] = useState(true);
@@ -75,7 +77,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-zinc-100 text-lg font-semibold">Embed Code</h2>
+          <h2 className="text-zinc-100 text-lg font-semibold">{t('share.embedAnimation')}</h2>
           <button
             onClick={onClose}
             className="text-zinc-400 hover:text-zinc-200 transition-colors text-xl leading-none"
@@ -93,7 +95,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            iframe
+            {t('share.tabIframe')}
           </button>
           <button
             onClick={() => { setTab("lottie-web"); setCopied(false); }}
@@ -103,13 +105,13 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            lottie-web
+            {t('share.tabPlayer')}
           </button>
         </div>
 
         <div className="flex gap-4 mb-4">
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-400 text-xs">Width (px)</span>
+            <span className="text-zinc-400 text-xs">{t('share.width')}</span>
             <input
               type="number"
               value={width}
@@ -118,7 +120,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-400 text-xs">Height (px)</span>
+            <span className="text-zinc-400 text-xs">{t('share.height')}</span>
             <input
               type="number"
               value={height}
@@ -136,7 +138,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
               onChange={(e) => setAutoplay(e.target.checked)}
               className="rounded bg-zinc-800 border-zinc-600"
             />
-            Autoplay
+            {t('share.autoplay')}
           </label>
           <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
             <input
@@ -159,7 +161,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
           onClick={handleCopy}
           className="mt-4 w-full px-4 py-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors"
         >
-          {copied ? "✓ Copied!" : "Copy to Clipboard"}
+          {copied ? t('common.copied') : t('common.copy')}
         </button>
       </div>
     </div>
@@ -258,6 +260,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
 export default function ShareView({ id, name, animationData, messages, viewCount: initialViewCount }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations();
   const isEmbed = searchParams.get("embed") === "true";
   const prefersReducedMotion = useReducedMotion();
   const [isPlaying, setIsPlaying] = useState(true);
@@ -384,7 +387,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
           className="px-4 py-1.5 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
           title="Get embed code"
         >
-          &lt;/&gt; Embed
+          &lt;/&gt; {t('share.embed')}
         </button>
         <div className="relative" ref={downloadRef}>
           <button
@@ -409,7 +412,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Download JSON
+                {t('share.downloadJson')}
               </button>
               <button
                 onClick={handleDownloadDotLottie}
@@ -420,7 +423,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Download .lottie
+                {t('share.downloadDotLottie')}
               </button>
             </div>
           )}
@@ -442,13 +445,13 @@ export default function ShareView({ id, name, animationData, messages, viewCount
           disabled={isRemixing}
           className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium hover:from-purple-400 hover:to-pink-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isRemixing ? "Remixing…" : "✨ Remix"}
+          {isRemixing ? t('explore.remixing') : "✨ " + t('explore.remix')}
         </button>
         <Link
           href={`/editor/${id}`}
           className="px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors"
         >
-          Open in Editor
+          {t('share.openInEditor')}
         </Link>
       </header>
 

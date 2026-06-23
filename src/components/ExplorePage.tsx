@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useTranslations } from 'next-intl';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ExploreCard from "@/components/ExploreCard";
 import { useFavorites } from "@/hooks/useFavorites";
 
@@ -36,6 +38,7 @@ const TAG_ORDER = [
 ];
 
 export default function ExplorePage() {
+  const t = useTranslations();
   const [animations, setAnimations] = useState<ExploreAnimation[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -87,7 +90,7 @@ export default function ExplorePage() {
       const res = await fetch(`/api/animations/explore?${params}`);
       if (!res.ok) {
         if (res.status === 429) {
-          setError("Too many requests. Please wait a moment and try again.");
+          setError("Too many requests. Please try again later.");
           return;
         }
         throw new Error("Failed to fetch animations");
@@ -106,7 +109,7 @@ export default function ExplorePage() {
       setPage(json.page);
       setHasMore(json.page < json.totalPages);
     } catch {
-      setError("Failed to load animations. Please try again.");
+      setError("Failed to load animations");
     } finally {
       if (mode === "reset") {
         setLoading(false);
@@ -129,7 +132,7 @@ export default function ExplorePage() {
         if (cancelled) return;
         if (!res.ok) {
           if (res.status === 429) {
-            setError("Too many requests. Please wait a moment and try again.");
+            setError("Too many requests. Please try again later.");
             return;
           }
           throw new Error("Failed to fetch animations");
@@ -142,7 +145,7 @@ export default function ExplorePage() {
         setPage(json.page);
         setHasMore(json.page < json.totalPages);
       } catch {
-        if (!cancelled) setError("Failed to load animations. Please try again.");
+        if (!cancelled) setError("Failed to load animations");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -218,9 +221,9 @@ export default function ExplorePage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-2xl font-semibold text-zinc-100">Explore</h1>
+              <h1 className="text-2xl font-semibold text-zinc-100">{t('explore.title')}</h1>
               <p className="text-sm text-zinc-400 mt-1">
-                Discover animations created by the community
+                {t('explore.subtitle')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -228,20 +231,21 @@ export default function ExplorePage() {
                 href="/"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
-                Back to Gallery
+                {t('explore.backToGallery')}
               </Link>
               <Link
                 href="/docs"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
-                API Docs
+                {t('gallery.apiDocs')}
               </Link>
               <Link
                 href="/editor/new"
                 className="px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
               >
-                Create your own
+                {t('gallery.createAnimation')}
               </Link>
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
@@ -266,7 +270,7 @@ export default function ExplorePage() {
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search animations..."
+              placeholder={t('explore.searchPlaceholder')}
               className="w-full pl-9 pr-8 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
             />
             {searchQuery && (
@@ -285,11 +289,11 @@ export default function ExplorePage() {
             onChange={(e) => handleSortChange(e.target.value as SortOption)}
             className="px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
           >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="most-viewed">Most viewed</option>
-            <option value="name-asc">Name A–Z</option>
-            <option value="name-desc">Name Z–A</option>
+            <option value="newest">{t('explore.sortNewest')}</option>
+            <option value="oldest">{t('explore.sortOldest')}</option>
+            <option value="most-viewed">{t('explore.sortMostViewed')}</option>
+            <option value="name-asc">{t('explore.sortNameAsc')}</option>
+            <option value="name-desc">{t('explore.sortNameDesc')}</option>
           </select>
           <button
             onClick={() => setShowFavoritesOnly((v) => !v)}
@@ -313,7 +317,7 @@ export default function ExplorePage() {
                 d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
               />
             </svg>
-            Favorites
+            {t('explore.favorites')}
             {favoritesCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 bg-violet-600 text-white text-xs rounded-full leading-none">
                 {favoritesCount}
@@ -333,9 +337,9 @@ export default function ExplorePage() {
                   : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               }`}
             >
-              All
+              {t('explore.allTags')}
             </button>
-            {TAG_ORDER.filter((t) => (tagCounts[t] ?? 0) > 0).map((tag) => (
+            {TAG_ORDER.filter((tag) => (tagCounts[tag] ?? 0) > 0).map((tag) => (
               <button
                 key={tag}
                 onClick={() => handleTagChange(tag)}
@@ -354,7 +358,7 @@ export default function ExplorePage() {
         {/* Total count */}
         {!loading && !error && animations.length > 0 && (
           <p className="text-xs text-zinc-500 mb-4">
-            Showing {animations.length} of {total} animations
+            {`${animations.length} / ${total}`}
           </p>
         )}
 
@@ -384,7 +388,7 @@ export default function ExplorePage() {
               onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset")}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
-              Retry
+              {t('common.tryAgain')}
             </button>
           </div>
         )}
@@ -410,25 +414,25 @@ export default function ExplorePage() {
             {searchQuery ? (
               <>
                 <h2 className="text-lg font-medium text-zinc-300 mb-2">
-                  No results found
+                  {t('explore.noResults')}
                 </h2>
                 <p className="text-sm text-zinc-500 mb-6">
-                  Try a different search term
+                  {t('explore.noResultsHint')}
                 </p>
               </>
             ) : (
               <>
                 <h2 className="text-lg font-medium text-zinc-300 mb-2">
-                  No shared animations yet
+                  {t('explore.noResults')}
                 </h2>
                 <p className="text-sm text-zinc-500 mb-6">
-                  Be the first to share an animation with the community!
+                  {t('explore.noResultsHint')}
                 </p>
                 <Link
                   href="/editor/new"
                   className="inline-block px-4 py-2 rounded-lg bg-white text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition-colors"
                 >
-                  Create your own
+                  {t('gallery.createAnimation')}
                 </Link>
               </>
             )}
@@ -461,10 +465,10 @@ export default function ExplorePage() {
                       />
                     </svg>
                     <h2 className="text-lg font-medium text-zinc-300 mb-2">
-                      No favorites yet
+                      {t('explore.noResults')}
                     </h2>
                     <p className="text-sm text-zinc-500">
-                      Click the heart icon on animations to add them to your favorites
+                      {t('explore.noResultsHint')}
                     </p>
                   </div>
                 );
@@ -513,7 +517,7 @@ export default function ExplorePage() {
             {/* End of results */}
             {!hasMore && !loadingMore && totalPages > 1 && (
               <p className="text-center text-sm text-zinc-500 py-8">
-                No more animations
+                {"No more animations to load"}
               </p>
             )}
 

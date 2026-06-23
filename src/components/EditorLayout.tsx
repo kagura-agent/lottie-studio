@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 import type { LoopConfig } from "@/types/loopConfig";
 import type { Command } from "@/lib/commands";
 import Link from "next/link";
@@ -19,6 +20,7 @@ import EasingEditor from "./EasingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import LanguageSwitcher from "./LanguageSwitcher";
 import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
 import ErrorBoundary from "./ErrorBoundary";
 import VersionHistory from "./VersionHistory";
@@ -37,6 +39,7 @@ interface EditorPageProps {
 }
 
 export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
+  const t = useTranslations();
   const router = useRouter();
   const [currentId, setCurrentId] = useState<string | null>(id);
   const [duplicating, setDuplicating] = useState(false);
@@ -597,7 +600,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           className="px-2 md:px-3 py-1.5 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors shrink-0"
         >
           &larr;
-          <span className="hidden md:inline"> Gallery</span>
+          <span className="hidden md:inline"> {t('editor.back')}</span>
         </Link>
         <input
           type="text"
@@ -637,7 +640,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           disabled={isNewMode}
           className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Embed
+          {t('editor.embed')}
         </button>
         <button
           onClick={handleToggleShareChat}
@@ -659,13 +662,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           disabled={saving || animationData === null || isNewMode}
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          {saving ? "..." : "Save"}
+          {saving ? "..." : t('common.save')}
         </button>
         {saveStatus === "saved" && (
           <span className="text-emerald-400 text-sm shrink-0">✓</span>
         )}
         {saveStatus === "error" && (
-          <span className="text-red-400 text-sm shrink-0">Error</span>
+          <span className="text-red-400 text-sm shrink-0">{t('editor.saveError')}</span>
         )}
         {/* Mobile overflow menu */}
         <div className="relative md:hidden" ref={menuRef}>
@@ -710,7 +713,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 disabled={isNewMode}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Embed
+                {t('editor.embed')}
               </button>
               <button
                 onClick={() => { handleToggleShareChat(); setMobileMenuOpen(false); }}
@@ -738,11 +741,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 disabled={isNewMode || duplicating}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {duplicating ? "Duplicating..." : "Duplicate"}
+                {duplicating ? "Duplicating..." : t('common.duplicate')}
               </button>
             </div>
           )}
         </div>
+        <LanguageSwitcher />
       </header>
 
       {/* Mobile view toggle */}
@@ -755,7 +759,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               : "text-zinc-400"
           }`}
         >
-          Canvas
+          {t('editor.canvas')}
         </button>
         <button
           onClick={() => { setMobileView("chat"); setRightPanel("chat"); }}
@@ -765,7 +769,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               : "text-zinc-400"
           }`}
         >
-          Chat
+          {t('editor.chat')}
         </button>
         <button
           onClick={() => { setMobileView("layers"); setRightPanel("layers"); }}
@@ -775,12 +779,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               : "text-zinc-400"
           }`}
         >
-          Layers
+          {t('editor.layers')}
         </button>
       </div>
 
       {/* Main content */}
-      <ErrorBoundary fallbackMessage="The editor encountered an unexpected error.">
+      <ErrorBoundary fallbackMessage={t('common.error')}>
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Preview panel - hidden on mobile when chat is active */}
         <div className={`flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
@@ -789,7 +793,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           <div className="flex-1 p-4 min-h-0">
             <ErrorBoundary
               key={currentId ?? "new"}
-              fallbackMessage="The canvas ran into a problem rendering this animation."
+              fallbackMessage={t('common.error')}
               onReset={() => setAnimationData(animationData)}
             >
               <LottiePreview
@@ -869,7 +873,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
               <button
                 onClick={() => setFullscreenOpen(true)}
                 disabled={!animationData}
-                title="Fullscreen preview (F)"
+                title={t('editor.fullscreen')}
                 className="flex items-center justify-center w-8 h-8 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -920,7 +924,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Chat
+              {t('editor.chat')}
             </button>
             <button
               onClick={() => setRightPanel("json")}
@@ -930,7 +934,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              JSON
+              {t('editor.json')}
             </button>
             <button
               onClick={() => setRightPanel("layers")}
@@ -940,12 +944,12 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              Layers
+              {t('editor.layers')}
             </button>
             <div className="flex-1" />
             <button
               onClick={() => setShortcutsHelpOpen(true)}
-              title="Keyboard Shortcuts (Ctrl+/)"
+              title={t('editor.shortcuts')}
               className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors text-zinc-400 hover:text-zinc-200"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -956,7 +960,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             <button
               onClick={() => setVersionPanelOpen((v) => !v)}
               disabled={isNewMode}
-              title="Version History"
+              title={t('editor.versions')}
               className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 versionPanelOpen
                   ? "bg-zinc-700 text-zinc-100"
@@ -971,7 +975,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           </div>
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
-              <ErrorBoundary fallbackMessage="Chat ran into a problem.">
+              <ErrorBoundary fallbackMessage={t('common.error')}>
                 <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} />
               </ErrorBoundary>
             ) : rightPanel === "layers" ? (
