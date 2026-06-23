@@ -59,8 +59,9 @@ jobs:
           # Create target directory
           ssh $SSH_OPTS $SSH_TARGET "mkdir -p $DEPLOY_DIR"
 
-          # Sync deployment package
+          # Sync deployment package (exclude data/ to preserve SQLite DB and uploads across deploys)
           rsync -avz --delete \
+            --exclude 'data/' \
             -e "ssh $SSH_OPTS" \
             deploy/ $SSH_TARGET:$DEPLOY_DIR/
 
