@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslations } from 'next-intl';
 import LottiePreview from "./LottiePreview";
 import type { LoopConfig } from "@/types/loopConfig";
 
@@ -30,6 +31,7 @@ export default function FullscreenPreview({
   onSeek,
   onClose,
 }: FullscreenPreviewProps) {
+  const t = useTranslations('controls');
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -146,7 +148,7 @@ export default function FullscreenPreview({
             <button
               onClick={onTogglePlay}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-100 transition-colors"
-              title={isPlaying ? "Pause" : "Play"}
+              title={isPlaying ? t('pause') : t('play')}
             >
               {isPlaying ? (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -188,7 +190,7 @@ export default function FullscreenPreview({
             <button
               onClick={handleExitFullscreen}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-700/50 hover:bg-zinc-600/50 text-zinc-300 hover:text-zinc-100 transition-colors"
-              title="Exit fullscreen"
+              title={"Exit fullscreen"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -205,7 +207,7 @@ export default function FullscreenPreview({
         className={`absolute top-4 right-4 flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/60 backdrop-blur-sm border border-zinc-700/50 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 transition-all ${
           controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        title="Exit fullscreen (Esc)"
+        title={"Exit fullscreen (Esc)"}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />

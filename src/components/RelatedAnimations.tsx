@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import Link from "next/link";
+import { useTranslations } from 'next-intl';
 
 interface RelatedAnimation {
   id: string;
@@ -16,6 +17,7 @@ function RelatedCard({ animation }: { animation: RelatedAnimation }) {
   const animRef = useRef<AnimationItem | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const t = useTranslations('common');
 
   useEffect(() => {
     const el = containerRef.current;
@@ -78,7 +80,7 @@ function RelatedCard({ animation }: { animation: RelatedAnimation }) {
         )}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
-            Failed to load
+            {t('failedToLoad')}
           </div>
         )}
       </div>
@@ -110,6 +112,7 @@ function SkeletonCard() {
 
 export default function RelatedAnimations({ animationId }: { animationId: string }) {
   const [related, setRelated] = useState<RelatedAnimation[] | null>(null);
+  const t = useTranslations();
 
   useEffect(() => {
     fetch(`/api/animations/${animationId}/related`)
@@ -133,7 +136,7 @@ export default function RelatedAnimations({ animationId }: { animationId: string
   return (
     <section className="w-full max-w-6xl mx-auto px-4 py-8">
       <h2 className="text-lg font-semibold text-zinc-100 mb-4">
-        Related Animations
+        {t('relatedAnimations.title')}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {related === null

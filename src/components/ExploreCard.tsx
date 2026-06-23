@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from 'next-intl';
 
 interface ExploreCardProps {
   animation: {
@@ -38,6 +39,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [remixing, setRemixing] = useState(false);
+  const t = useTranslations();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -154,14 +156,14 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
   );
 
   const frames =
-    animation.frame_count != null ? `${animation.frame_count} frames` : null;
+    animation.frame_count != null ? t('animationCard.frames', { count: animation.frame_count }) : null;
   const layers =
     animation.layer_count != null
-      ? `${animation.layer_count} layer${animation.layer_count !== 1 ? "s" : ""}`
+      ? `${animation.layer_count} layer${animation.layer_count === 1 ? '' : 's'}`
       : null;
   const views =
     animation.view_count != null && animation.view_count > 0
-      ? `${formatViewCount(animation.view_count)} views`
+      ? t('explore.views', { count: formatViewCount(animation.view_count) })
       : null;
 
   return (
@@ -186,7 +188,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
         )}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
-            Failed to load
+            {t('common.failedToLoad')}
           </div>
         )}
 
@@ -223,7 +225,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
             <span aria-hidden="true">✨</span>
-            {remixing ? "Remixing…" : "Remix"}
+            {remixing ? t('explore.remixing') : t('explore.remix')}
           </button>
           <button
             onClick={handleDownload}
@@ -231,7 +233,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
             <span aria-hidden="true">⬇️</span>
-            Download
+            {"Download"}
           </button>
         </div>
       </div>

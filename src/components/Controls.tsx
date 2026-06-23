@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from 'next-intl';
 import type { LoopConfig, LoopMode } from "@/types/loopConfig";
 
 interface ControlsProps {
@@ -25,11 +26,11 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toFixed(1).padStart(4, "0")}`;
 }
 
-const LOOP_OPTIONS: { mode: LoopMode; label: string; icon: string }[] = [
-  { mode: "loop", label: "Loop", icon: "∞" },
-  { mode: "once", label: "Once", icon: "1" },
-  { mode: "bounce", label: "Bounce", icon: "↔" },
-  { mode: "count", label: "Count", icon: "#" },
+const LOOP_OPTIONS: { mode: LoopMode; icon: string }[] = [
+  { mode: "loop", icon: "∞" },
+  { mode: "once", icon: "1" },
+  { mode: "bounce", icon: "↔" },
+  { mode: "count", icon: "#" },
 ];
 
 function getLoopIcon(config: LoopConfig): string {
@@ -49,6 +50,7 @@ export default function Controls({
   onSeek,
   frameRate = 30,
 }: ControlsProps) {
+  const t = useTranslations('controls');
   const speeds = [0.5, 1, 2];
   const currentTime = currentFrame / frameRate;
   const totalDuration = totalFrames / frameRate;
@@ -138,12 +140,12 @@ export default function Controls({
                 }`}
               >
                 <span className="w-5 text-center font-mono">{opt.icon}</span>
-                <span>{opt.label}</span>
+                <span>{t(opt.mode)}</span>
               </button>
             ))}
             {loopConfig.mode === "count" && (
               <div className="px-4 py-2 border-t border-zinc-700 flex items-center gap-2">
-                <label className="text-xs text-zinc-400">Count:</label>
+                <label className="text-xs text-zinc-400">{t('loopCount')}</label>
                 <input
                   type="number"
                   min={1}
@@ -172,7 +174,7 @@ export default function Controls({
 
       <span
         className="text-xs text-zinc-400 font-mono whitespace-nowrap"
-        title={`${currentFrame} / ${totalFrames} frames`}
+        title={`Frame ${currentFrame} / ${totalFrames}`}
       >
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
@@ -181,23 +183,23 @@ export default function Controls({
         <button
           onClick={() => setShortcutsOpen((v) => !v)}
           className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm transition-colors"
-          title="Keyboard shortcuts"
+          title={t('shortcuts')}
         >
           ⌨
         </button>
         {shortcutsOpen && (
           <div className="absolute bottom-full right-0 mb-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 py-3 px-4 min-w-[220px]">
-            <p className="text-xs font-semibold text-zinc-200 mb-2">Keyboard Shortcuts</p>
+            <p className="text-xs font-semibold text-zinc-200 mb-2">{t('shortcuts')}</p>
             <div className="space-y-1.5 text-xs text-zinc-400">
-              <div className="flex justify-between"><span>Play / Pause</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Space</kbd></div>
-              <div className="flex justify-between"><span>Previous frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">←</kbd></div>
-              <div className="flex justify-between"><span>Next frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">→</kbd></div>
-              <div className="flex justify-between"><span>First frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Home</kbd></div>
-              <div className="flex justify-between"><span>Last frame</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">End</kbd></div>
-              <div className="flex justify-between"><span>Slower</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">[</kbd></div>
-              <div className="flex justify-between"><span>Faster</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">]</kbd></div>
-              <div className="flex justify-between"><span>Undo</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+Z</kbd></div>
-              <div className="flex justify-between"><span>Redo</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+⇧+Z</kbd></div>
+              <div className="flex justify-between"><span>{"Play / Pause"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Space</kbd></div>
+              <div className="flex justify-between"><span>{"Previous frame"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">←</kbd></div>
+              <div className="flex justify-between"><span>{"Next frame"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">→</kbd></div>
+              <div className="flex justify-between"><span>{"First frame"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Home</kbd></div>
+              <div className="flex justify-between"><span>{"Last frame"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">End</kbd></div>
+              <div className="flex justify-between"><span>{"Slower"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">[</kbd></div>
+              <div className="flex justify-between"><span>{"Faster"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">]</kbd></div>
+              <div className="flex justify-between"><span>{"Undo"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+Z</kbd></div>
+              <div className="flex justify-between"><span>{"Redo"}</span><kbd className="bg-zinc-700 text-zinc-200 px-1.5 py-0.5 rounded font-mono">Ctrl+⇧+Z</kbd></div>
             </div>
           </div>
         )}

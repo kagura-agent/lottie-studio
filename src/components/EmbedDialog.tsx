@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 
 interface EmbedDialogProps {
   animationId: string;
@@ -18,6 +19,7 @@ export default function EmbedDialog({
   open,
   onClose,
 }: EmbedDialogProps) {
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>("player");
   const [copied, setCopied] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
@@ -49,9 +51,9 @@ export default function EmbedDialog({
   };
 
   const tabLabels: Record<Tab, string> = {
-    player: "Player",
-    iframe: "Iframe",
-    json: "JSON URL",
+    player: t('share.tabPlayer'),
+    iframe: t('share.tabIframe'),
+    json: t('share.tabJsonUrl'),
   };
 
   const handleCopy = () => {
@@ -72,7 +74,7 @@ export default function EmbedDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="text-base font-semibold text-zinc-100">
-            Embed Animation
+            {t('share.embedAnimation')}
           </h2>
           <button
             onClick={onClose}
@@ -122,7 +124,7 @@ export default function EmbedDialog({
               onClick={handleCopy}
               className="absolute top-2 right-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-zinc-700 text-zinc-300 hover:bg-zinc-600 hover:text-zinc-100"
             >
-              {copied ? "Copied!" : "Copy"}
+              {copied ? t('common.copied') : t('common.copy')}
             </button>
           </div>
         </div>
