@@ -780,6 +780,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 seekToFrame={seekFrame}
                 background={canvasBg}
                 placeholder={isNewMode && animationData === null}
+                ariaLabel={name || "Animation preview"}
               />
             </ErrorBoundary>
             {isNewMode && animationData === null && (
