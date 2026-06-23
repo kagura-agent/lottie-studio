@@ -29,18 +29,48 @@ function llmHeaders(): Record<string, string> {
   return headers;
 }
 
+/**
+ * Build request body with system messages extracted to top-level `system` field.
+ * The Anthropic Messages API (and proxies like Floway) require system messages
+ * as a top-level parameter, not as messages with role "system".
+ */
+function buildRequestBody(
+  messages: ChatMessage[],
+  options: { temperature?: number; max_tokens?: number; stream?: boolean } = {}
+): Record<string, unknown> {
+  const systemMessages = messages.filter((m) => m.role === "system");
+  const nonSystemMessages = messages.filter((m) => m.role !== "system");
+
+  const systemText = systemMessages
+    .map((m) => (typeof m.content === "string" ? m.content : ""))
+    .filter(Boolean)
+    .join("\n\n");
+
+  const body: Record<string, unknown> = {
+    model: LLM_MODEL,
+    messages: nonSystemMessages,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.max_tokens ?? 16384,
+  };
+
+  if (systemText) {
+    body.system = systemText;
+  }
+
+  if (options.stream) {
+    body.stream = true;
+  }
+
+  return body;
+}
+
 export async function chatCompletion(messages: ChatMessage[]): Promise<LLMResponse> {
   const url = `${LLM_API_URL}/chat/completions`;
 
   const response = await fetch(url, {
     method: "POST",
     headers: llmHeaders(),
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      messages,
-      temperature: 0.7,
-      max_tokens: 16384,
-    }),
+    body: JSON.stringify(buildRequestBody(messages)),
     signal: AbortSignal.timeout(120_000),
   });
 
@@ -61,13 +91,7 @@ export async function chatCompletionStream(messages: ChatMessage[]): Promise<Res
   const response = await fetch(url, {
     method: "POST",
     headers: llmHeaders(),
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      messages,
-      temperature: 0.7,
-      max_tokens: 16384,
-      stream: true,
-    }),
+    body: JSON.stringify(buildRequestBody(messages, { stream: true })),
     signal: AbortSignal.timeout(120_000),
   });
 
@@ -106,13 +130,7 @@ export async function chatCompletionRepairStream(
   const response = await fetch(url, {
     method: "POST",
     headers: llmHeaders(),
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      messages: repairMessages,
-      temperature: 0.5,
-      max_tokens: 16384,
-      stream: true,
-    }),
+    body: JSON.stringify(buildRequestBody(repairMessages, { temperature: 0.5, stream: true })),
     signal: AbortSignal.timeout(120_000),
   });
 
