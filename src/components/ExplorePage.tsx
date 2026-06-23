@@ -381,7 +381,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(page, searchQuery, sortOption, activeTag, "append")}
+              onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset")}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               Retry
