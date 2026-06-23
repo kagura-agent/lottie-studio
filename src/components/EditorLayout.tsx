@@ -28,6 +28,7 @@ import EmbedDialog from "./EmbedDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
+import { optimizeLottie } from "@/lib/optimizer";
 
 interface EditorPageProps {
   id: string | null;
@@ -563,9 +564,29 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       case "fullscreen":
         setFullscreenOpen(true);
         break;
+      case "optimize":
+        if (animationData) {
+          const { optimized, stats } = optimizeLottie(animationData);
+          setAnimationData(optimized as object);
+          setJsonText(JSON.stringify(optimized, null, 2));
+          pushState(optimized as object);
+          const pct = stats.originalSize > 0
+            ? Math.round((1 - stats.optimizedSize / stats.originalSize) * 100)
+            : 0;
+          const parts: string[] = [];
+          if (stats.layersRemoved > 0) parts.push(`removed ${stats.layersRemoved} hidden layer${stats.layersRemoved > 1 ? "s" : ""}`);
+          if (stats.groupsSimplified > 0) parts.push(`simplified ${stats.groupsSimplified} group${stats.groupsSimplified > 1 ? "s" : ""}`);
+          if (stats.keyframesRemoved > 0) parts.push(`removed ${stats.keyframesRemoved} redundant keyframe${stats.keyframesRemoved > 1 ? "s" : ""}`);
+          const sizeStr = `${(stats.originalSize / 1024).toFixed(1)} KB → ${(stats.optimizedSize / 1024).toFixed(1)} KB`;
+          const summary = pct > 0
+            ? `✨ Optimized! ${sizeStr} (${pct}% smaller)${parts.length ? ". " + parts.join(", ") : ""}`
+            : `✨ Already optimized — no changes needed (${(stats.optimizedSize / 1024).toFixed(1)} KB)`;
+          setInsertText(summary);
+        }
+        break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange]);
+  }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange, animationData, pushState]);
 
   return (
     <div className="flex flex-col h-[100dvh]">

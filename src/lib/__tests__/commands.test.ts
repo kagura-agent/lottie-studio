@@ -200,6 +200,17 @@ describe("parseCommand", () => {
     });
   });
 
+  describe("/optimize", () => {
+    it("parses /optimize", () => {
+      expect(parseCommand("/optimize")).toEqual({ type: "optimize" });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/OPTIMIZE")).toEqual({ type: "optimize" });
+      expect(parseCommand("/Optimize")).toEqual({ type: "optimize" });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles extra whitespace between command and args", () => {
       expect(parseCommand("/speed    2x")).toEqual({ type: "speed", speed: 2 });
