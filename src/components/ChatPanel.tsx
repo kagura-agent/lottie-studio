@@ -421,6 +421,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         case "resize": feedback = `\ud83d\udd32 Resized to ${command.width}x${command.height}`; break;
         case "background": feedback = `\ud83c\udfa8 Background set to ${command.color}`; break;
         case "fullscreen": feedback = "\u26f6 Fullscreen toggled"; break;
+        case "optimize": feedback = "\u2728 Optimizing..."; break;
         case "error": feedback = `\u26a0\ufe0f ${command.message}`; break;
       }
 

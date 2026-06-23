@@ -20,6 +20,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/resize", description: "Resize canvas (e.g. /resize 800x600)", hasParams: true },
   { command: "/bg", description: "Set background color (e.g. /bg #ff0000)", hasParams: true },
   { command: "/fullscreen", description: "Toggle fullscreen", hasParams: false },
+  { command: "/optimize", description: "Optimize animation (reduce file size)", hasParams: false },
 ];
 
 export function filterCommands(query: string): CommandDef[] {
