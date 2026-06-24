@@ -1,6 +1,9 @@
 import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
+import { templates } from "@/data/templates";
+import { inferTags, serializeTags } from "@/lib/tag-inference";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const ANIMATIONS_DIR = path.join(DATA_DIR, "animations");
@@ -103,5 +106,103 @@ db.exec(`
   WHERE frame_count IS NULL
     AND id NOT IN (SELECT DISTINCT animation_id FROM messages)
 `);
+
+// --- Gallery Seeding ---
+// Seeds the explore gallery with template animations when DB has no shared content.
+
+const TEMPLATES_DIR = path.join(process.cwd(), "public", "templates");
+
+/**
+ * Generate a deterministic UUID-like ID from a template filename.
+ * Uses SHA-256 hash with a fixed namespace to ensure idempotency.
+ */
+function deterministicId(filename: string): string {
+  const NAMESPACE = "lottie-studio:seed-gallery";
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${NAMESPACE}:${filename}`)
+    .digest("hex");
+  // Format as UUID-like: 8-4-4-4-12
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    hash.slice(12, 16),
+    hash.slice(16, 20),
+    hash.slice(20, 32),
+  ].join("-");
+}
+
+function seedGallery(): void {
+  // Check if gallery already has shared content
+  const existing = db
+    .prepare("SELECT COUNT(*) as count FROM animations WHERE share_chat = 1")
+    .get() as { count: number };
+
+  if (existing.count > 0) {
+    return; // Gallery already has content
+  }
+
+  // Build a lookup map from filename to template metadata
+  const metadataByFilename = new Map(
+    templates.map((t) => [t.filename, t])
+  );
+
+  // Get all template JSON files (excluding index.json)
+  const templateFiles = fs
+    .readdirSync(TEMPLATES_DIR)
+    .filter((f) => f.endsWith(".json") && f !== "index.json");
+
+  const insertStmt = db.prepare(`
+    INSERT OR IGNORE INTO animations
+      (id, name, description, share_chat, template_source, frame_count, duration_seconds, tags, created_at, updated_at)
+    VALUES
+      (@id, @name, @description, 1, @template_source, @frame_count, @duration_seconds, @tags, datetime('now'), datetime('now'))
+  `);
+
+  const seedAll = db.transaction(() => {
+    for (const filename of templateFiles) {
+      const id = deterministicId(filename);
+      const templatePath = path.join(TEMPLATES_DIR, filename);
+      const jsonContent = fs.readFileSync(templatePath, "utf-8");
+      const lottie = JSON.parse(jsonContent);
+
+      // Extract animation properties
+      const op = lottie.op ?? 0;
+      const fr = lottie.fr ?? 30;
+      const frameCount = op;
+      const durationSeconds = fr > 0 ? op / fr : 0;
+
+      // Get metadata from templates index, or fall back to filename
+      const meta = metadataByFilename.get(filename);
+      const name = meta?.name ?? filename.replace(/\.json$/, "").replace(/[-_]/g, " ");
+      const description = meta?.description ?? null;
+
+      // Infer tags from name + description
+      const tagInput = [name, description ?? ""].join(" ");
+      const tags = serializeTags(inferTags(tagInput));
+
+      // Copy JSON to animations directory
+      const destPath = path.join(ANIMATIONS_DIR, `${id}.json`);
+      if (!fs.existsSync(destPath)) {
+        fs.copyFileSync(templatePath, destPath);
+      }
+
+      // Insert DB row (OR IGNORE ensures idempotency via PRIMARY KEY)
+      insertStmt.run({
+        id,
+        name,
+        description,
+        template_source: filename,
+        frame_count: frameCount,
+        duration_seconds: durationSeconds,
+        tags: tags || null,
+      });
+    }
+  });
+
+  seedAll();
+}
+
+seedGallery();
 
 export { db, ANIMATIONS_DIR };
