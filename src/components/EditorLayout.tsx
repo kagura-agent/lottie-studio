@@ -31,6 +31,7 @@ import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import { optimizeLottie } from "@/lib/optimizer";
+import { useToast } from "@/contexts/ToastContext";
 
 interface EditorPageProps {
   id: string | null;
@@ -40,6 +41,7 @@ interface EditorPageProps {
 
 export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
   const t = useTranslations();
+  const { toast } = useToast();
   const router = useRouter();
   const [currentId, setCurrentId] = useState<string | null>(id);
   const [duplicating, setDuplicating] = useState(false);
@@ -284,7 +286,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("GIF export failed:", err);
-      alert("GIF export failed. Please try again.");
+      toast({ message: "GIF export failed. Please try again.", type: "error" });
     } finally {
       setGifExporting(false);
       setGifProgress(0);
@@ -312,7 +314,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Video export failed:", err);
-      alert("Video export failed. Please try again.");
+      toast({ message: "Video export failed. Please try again.", type: "error" });
     } finally {
       setVideoExporting(false);
       setVideoProgress(0);
@@ -356,7 +358,7 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       }
     } catch (err) {
       console.error("Duplicate failed:", err);
-      alert("Failed to duplicate animation. Please try again.");
+      toast({ message: "Failed to duplicate animation. Please try again.", type: "error" });
     } finally {
       setDuplicating(false);
     }
