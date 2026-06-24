@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   const tagParam = url.searchParams.get("tag")?.trim() ?? "";
 
   // Build WHERE clauses
-  const conditions: string[] = ["share_chat = 1"];
+  const conditions: string[] = ["share_chat = 1", "frame_count IS NOT NULL"];
   const params: (string | number)[] = [];
 
   if (q) {
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
   // Compute tag counts for all shared animations (for filter chip counts)
   const tagCountRows = db
     .prepare(
-      `SELECT tags FROM animations WHERE share_chat = 1 AND tags IS NOT NULL AND tags != ''`
+      `SELECT tags FROM animations WHERE share_chat = 1 AND frame_count IS NOT NULL AND tags IS NOT NULL AND tags != ''`
     )
     .all() as { tags: string }[];
 

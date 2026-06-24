@@ -96,4 +96,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_versions_animation ON versions(animation_id, version_num)
 `);
 
+// Startup cleanup: remove orphaned animation rows (no frames AND no messages)
+// These are stale entries from failed LLM generations
+db.exec(`
+  DELETE FROM animations
+  WHERE frame_count IS NULL
+    AND id NOT IN (SELECT DISTINCT animation_id FROM messages)
+`);
+
 export { db, ANIMATIONS_DIR };

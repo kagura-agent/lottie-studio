@@ -6,7 +6,7 @@ import path from "node:path";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const rows = db.prepare("SELECT id, name, description, created_at, updated_at, frame_count, duration_seconds FROM animations ORDER BY created_at DESC").all();
+  const rows = db.prepare("SELECT id, name, description, created_at, updated_at, frame_count, duration_seconds FROM animations WHERE frame_count IS NOT NULL ORDER BY created_at DESC").all();
   return Response.json(rows);
 }
 
