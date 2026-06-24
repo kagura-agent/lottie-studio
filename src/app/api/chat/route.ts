@@ -7,6 +7,7 @@ import { animationEvents } from "@/lib/events";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import { extractIp, checkRate } from "@/lib/rateLimit";
+import { roundDecimals, removeEmptyGroups, removeHiddenLayers } from "@/lib/optimizer";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -413,6 +414,13 @@ export async function POST(request: Request) {
 
         // Save animation file and update DB if we got Lottie JSON
         if (lottieJson) {
+          // Auto-optimize: clean up LLM numerical noise and redundancies
+          lottieJson = removeHiddenLayers(
+            removeEmptyGroups(
+              roundDecimals(lottieJson, 3)
+            )
+          ) as object;
+
           fs.writeFileSync(animationFile, JSON.stringify(lottieJson));
 
           const lottie = lottieJson as Record<string, unknown>;
