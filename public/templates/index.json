@@ -31,7 +31,7 @@
     "id": "fade-text",
     "name": "Fade In Text",
     "description": "Sequential text lines fading in with slide",
-    "category": "Opacity",
+    "category": "Text",
     "file": "fade-text.json"
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "toggle-switch",
     "name": "Toggle Switch",
-    "description": "Smooth on/off toggle with sliding knob",
+    "description": "Smooth toggle switch with color transition and bounce",
     "category": "UI",
     "file": "toggle-switch.json"
   },
@@ -54,6 +54,13 @@
     "description": "Animated checkmark with drawing circle",
     "category": "UI",
     "file": "checkmark-success.json"
+  },
+  {
+    "id": "success-checkmark",
+    "name": "Success Checkmark",
+    "description": "Circle draws in then checkmark appears with burst",
+    "category": "UI",
+    "file": "success-checkmark.json"
   },
   {
     "id": "confetti-burst",
@@ -68,5 +75,75 @@
     "description": "Gentle animated wave shapes for backgrounds",
     "category": "Decorative",
     "file": "wave-background.json"
+  },
+  {
+    "id": "wave-motion",
+    "name": "Wave Motion",
+    "description": "Flowing wave with smooth path animation",
+    "category": "Motion",
+    "file": "wave-motion.json"
+  },
+  {
+    "id": "notification-bell",
+    "name": "Notification Bell",
+    "description": "Bell shakes and rings with notification dot pop",
+    "category": "UI",
+    "file": "notification-bell.json"
+  },
+  {
+    "id": "typewriter-text",
+    "name": "Typewriter Text",
+    "description": "Text appears letter by letter with blinking cursor",
+    "category": "Text",
+    "file": "typewriter-text.json"
+  },
+  {
+    "id": "text-slide-in",
+    "name": "Text Slide In",
+    "description": "Text lines slide up with staggered fade-in",
+    "category": "Text",
+    "file": "text-slide-in.json"
+  },
+  {
+    "id": "sunrise",
+    "name": "Sunrise",
+    "description": "Sun rising over horizon with expanding rays",
+    "category": "Nature",
+    "file": "sunrise.json"
+  },
+  {
+    "id": "falling-leaves",
+    "name": "Falling Leaves",
+    "description": "Colorful leaves drifting down with rotation",
+    "category": "Nature",
+    "file": "falling-leaves.json"
+  },
+  {
+    "id": "geometric-morph",
+    "name": "Geometric Morph",
+    "description": "Shapes morphing between circle, diamond, and square",
+    "category": "Abstract",
+    "file": "geometric-morph.json"
+  },
+  {
+    "id": "gradient-orb",
+    "name": "Gradient Orb",
+    "description": "Pulsing sphere with color-shifting glow effect",
+    "category": "Abstract",
+    "file": "gradient-orb.json"
+  },
+  {
+    "id": "pulsing-heart",
+    "name": "Pulsing Heart",
+    "description": "Rhythmic heart with scale pulse",
+    "category": "Scale",
+    "file": "pulsing-heart.json"
+  },
+  {
+    "id": "pie-chart-reveal",
+    "name": "Pie Chart Reveal",
+    "description": "Animated donut chart drawing segments sequentially",
+    "category": "Data",
+    "file": "pie-chart-reveal.json"
   }
 ]
