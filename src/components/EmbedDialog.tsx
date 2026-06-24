@@ -46,7 +46,7 @@ export default function EmbedDialog({
 
   const snippets: Record<Tab, string> = {
     player: `<script src="https://unpkg.com/@dotlottie/player-component@2/dist/dotlottie-player.mjs" type="module"></script>\n<dotlottie-player src="${BASE_URL}/api/animations/${animationId}/json" autoplay loop style="width:300px;height:300px" aria-label="Lottie animation"></dotlottie-player>`,
-    iframe: `<iframe src="${BASE_URL}/share/${animationId}" width="400" height="400" frameborder="0" allowtransparency="true" title="Lottie animation"></iframe>`,
+    iframe: `<iframe src="${BASE_URL}/embed/${animationId}" width="400" height="400" style="border:none" allowtransparency="true" title="Lottie animation"></iframe>`,
     json: `${BASE_URL}/api/animations/${animationId}/json`,
   };
 
