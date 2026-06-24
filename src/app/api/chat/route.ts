@@ -187,6 +187,7 @@ export async function POST(request: Request) {
     return handleUndo(animationId, message);
   }
 
+  let isNewAnimation = false;
   if (animationId) {
     const existing = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
     if (!existing) {
@@ -198,6 +199,7 @@ export async function POST(request: Request) {
     db.prepare(
       "INSERT INTO animations (id, name) VALUES (?, ?)"
     ).run(animationId, name);
+    isNewAnimation = true;
   }
 
   let currentAnimation: object | null = null;
@@ -272,6 +274,7 @@ export async function POST(request: Request) {
 
   // Capture animationId in closure for the stream
   const capturedAnimationId = animationId;
+  const capturedIsNew = isNewAnimation;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -458,6 +461,13 @@ export async function POST(request: Request) {
           ).run(capturedAnimationId, nextVersion, JSON.stringify(lottieJson), message);
 
           animationEvents.emit("updated", { animationId: capturedAnimationId });
+        }
+
+        // Cleanup: if this was a new animation and no Lottie JSON was produced,
+        // remove the orphaned DB row to prevent empty entries in the gallery
+        if (!lottieJson && capturedIsNew) {
+          db.prepare("DELETE FROM messages WHERE animation_id = ?").run(capturedAnimationId);
+          db.prepare("DELETE FROM animations WHERE id = ?").run(capturedAnimationId);
         }
 
         // Emit final done event
