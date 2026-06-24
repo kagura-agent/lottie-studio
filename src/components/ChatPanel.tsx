@@ -143,7 +143,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
-  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string) => {
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string, regenerate?: boolean) => {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -151,6 +151,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         animationId: currentAnimationId,
         message: text,
         ...(imageDataUrl ? { image: imageDataUrl } : {}),
+        ...(regenerate ? { regenerate: true } : {}),
       }),
       signal,
     });
@@ -507,7 +508,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     abortControllerRef.current = controller;
 
     try {
-      await streamResponse(userText, assistantMsgId, controller.signal);
+      await streamResponse(userText, assistantMsgId, controller.signal, undefined, true);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         // User cancelled — not an error
@@ -661,6 +662,16 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     return shuffled.slice(0, 5);
   });
 
+  // Find the last assistant message id (for showing regenerate button only on the last one)
+  const lastAssistantMsgId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") {
+        return messages[i].id;
+      }
+    }
+    return null;
+  }, [messages]);
+
   // Find the last assistant message with suggestions (only show chips on the most recent one)
   const lastSuggestionMsgId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -752,7 +763,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                     </>
                   )}
                 </div>
-                {msg.role === "assistant" && !isThinking && !isStreaming && (
+                {msg.role === "assistant" && msg.id === lastAssistantMsgId && !isThinking && !isStreaming && (
                   <button
                     onClick={() => handleRetry(msg.id)}
                     className="absolute top-1.5 -right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-600"

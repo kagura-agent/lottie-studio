@@ -55,7 +55,7 @@ export async function chatCompletion(messages: ChatMessage[]): Promise<LLMRespon
   return parseResponse(content);
 }
 
-export async function chatCompletionStream(messages: ChatMessage[]): Promise<Response> {
+export async function chatCompletionStream(messages: ChatMessage[], options?: { temperature?: number }): Promise<Response> {
   const url = `${LLM_API_URL}/chat/completions`;
 
   const response = await fetch(url, {
@@ -64,7 +64,7 @@ export async function chatCompletionStream(messages: ChatMessage[]): Promise<Res
     body: JSON.stringify({
       model: LLM_MODEL,
       messages,
-      temperature: 0.7,
+      temperature: options?.temperature ?? 0.7,
       max_tokens: 16384,
       stream: true,
     }),

@@ -18,6 +18,7 @@ interface ChatRequest {
   animationId?: string;
   message: string;
   image?: string; // base64 data URL for image attachment
+  regenerate?: boolean; // true when regenerating the last assistant response
 }
 
 /**
@@ -152,7 +153,7 @@ export async function POST(request: Request) {
   }
 
   const body: ChatRequest = await request.json();
-  const { message, image } = body;
+  const { message, image, regenerate } = body;
   let { animationId } = body;
 
   if (!message?.trim()) {
@@ -200,6 +201,25 @@ export async function POST(request: Request) {
       "INSERT INTO animations (id, name) VALUES (?, ?)"
     ).run(animationId, name);
     isNewAnimation = true;
+  }
+
+  // When regenerating, delete the previous user + assistant messages for this turn
+  // BEFORE loading history so the LLM won't see the old response in its context
+  if (regenerate && animationId) {
+    // Delete the last assistant message
+    const lastAssistant = db.prepare(
+      "SELECT id FROM messages WHERE animation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1"
+    ).get(animationId) as { id: string } | undefined;
+    if (lastAssistant) {
+      db.prepare("DELETE FROM messages WHERE id = ?").run(lastAssistant.id);
+    }
+    // Delete the last user message (the one being re-sent)
+    const lastUser = db.prepare(
+      "SELECT id FROM messages WHERE animation_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 1"
+    ).get(animationId) as { id: string } | undefined;
+    if (lastUser) {
+      db.prepare("DELETE FROM messages WHERE id = ?").run(lastUser.id);
+    }
   }
 
   let currentAnimation: object | null = null;
@@ -259,9 +279,12 @@ export async function POST(request: Request) {
     llmMessages.push({ role: "user", content: message });
   }
 
+  // Use higher temperature for regeneration to get more variety
+  const llmTemperature = regenerate ? 0.9 : undefined;
+
   let llmResponse: Response;
   try {
-    llmResponse = await chatCompletionStream(llmMessages);
+    llmResponse = await chatCompletionStream(llmMessages, { temperature: llmTemperature });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Unknown error";
     return Response.json({ error: `LLM request failed: ${errMsg}` }, { status: 502 });
