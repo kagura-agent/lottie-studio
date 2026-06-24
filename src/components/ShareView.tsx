@@ -9,6 +9,7 @@ import Controls from "./Controls";
 import FullscreenPreview from "./FullscreenPreview";
 import { exportDotLottie } from "@/lib/dotlottieExporter";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useToast } from "@/contexts/ToastContext";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -261,6 +262,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
+  const { toast } = useToast();
   const isEmbed = searchParams.get("embed") === "true";
   const prefersReducedMotion = useReducedMotion();
   const [isPlaying, setIsPlaying] = useState(true);
@@ -345,7 +347,7 @@ export default function ShareView({ id, name, animationData, messages, viewCount
       router.push(`/editor/${data.id}`);
     } catch {
       setIsRemixing(false);
-      alert("Failed to remix animation. Please try again.");
+      toast({ message: "Failed to remix animation. Please try again.", type: "error" });
     }
   }, [id, router]);
 

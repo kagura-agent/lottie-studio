@@ -5,6 +5,7 @@ import lottie, { AnimationItem } from "lottie-web";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
+import { useToast } from "@/contexts/ToastContext";
 
 interface ExploreCardProps {
   animation: {
@@ -40,6 +41,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
   const [error, setError] = useState(false);
   const [remixing, setRemixing] = useState(false);
   const t = useTranslations();
+  const { toast } = useToast();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -112,7 +114,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
         const data = await res.json();
         router.push(`/editor/${data.id}`);
       } catch {
-        alert("Failed to remix animation. Please try again.");
+        toast({ message: "Failed to remix animation. Please try again.", type: "error" });
       } finally {
         setRemixing(false);
       }
@@ -140,7 +142,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } catch {
-        alert("Failed to download animation. Please try again.");
+        toast({ message: "Failed to download animation. Please try again.", type: "error" });
       }
     },
     [animation.id, animation.name]
