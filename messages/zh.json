@@ -100,7 +100,10 @@
     "repairing": "修复中...",
     "imageTooBig": "图片过大（最大 4MB）",
     "unsupportedType": "不支持的图片类型",
-    "attachImage": "附加图片"
+    "attachImage": "附加图片",
+    "voiceInput": "语音输入",
+    "voiceListening": "正在听...",
+    "voiceNotSupported": "该浏览器不支持语音输入"
   },
   "explore": {
     "title": "探索",

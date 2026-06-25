@@ -100,7 +100,10 @@
     "repairing": "Repairing...",
     "imageTooBig": "Image too large (max 4MB)",
     "unsupportedType": "Unsupported image type",
-    "attachImage": "Attach image"
+    "attachImage": "Attach image",
+    "voiceInput": "Voice input",
+    "voiceListening": "Listening...",
+    "voiceNotSupported": "Voice input not supported in this browser"
   },
   "explore": {
     "title": "Explore",
