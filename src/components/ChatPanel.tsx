@@ -427,6 +427,32 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         case "background": feedback = `\ud83c\udfa8 Background set to ${command.color}`; break;
         case "fullscreen": feedback = "\u26f6 Fullscreen toggled"; break;
         case "optimize": feedback = "\u2728 Optimizing..."; break;
+        case "help": {
+          feedback = `**${t('helpTitle')}**\n\n`
+            + `**${t('helpPlayback')}**\n`
+            + `\`/play\` — ${t('helpPlay')}\n`
+            + `\`/pause\` — ${t('helpPause')}\n`
+            + `\`/speed <n>\` — ${t('helpSpeed')}\n`
+            + `\`/loop\` — ${t('helpLoop')}\n`
+            + `\`/once\` — ${t('helpOnce')}\n\n`
+            + `**${t('helpExport')}**\n`
+            + `\`/export gif\` — ${t('helpExportGif')}\n`
+            + `\`/export apng\` — ${t('helpExportApng')}\n`
+            + `\`/export video\` — ${t('helpExportVideo')}\n`
+            + `\`/export json\` — ${t('helpExportJson')}\n`
+            + `\`/export dotlottie\` — ${t('helpExportDotlottie')}\n\n`
+            + `**${t('helpCanvas')}**\n`
+            + `\`/resize <w>x<h>\` — ${t('helpResize')}\n`
+            + `\`/bg <color>\` — ${t('helpBg')}\n`
+            + `\`/fullscreen\` — ${t('helpFullscreen')}\n\n`
+            + `**${t('helpEdit')}**\n`
+            + `\`/undo\` — ${t('helpUndo')}\n`
+            + `\`/redo\` — ${t('helpRedo')}\n`
+            + `\`/optimize\` — ${t('helpOptimize')}\n\n`
+            + `**${t('helpHelpSection')}**\n`
+            + `\`/help\` — ${t('helpHelp')}`;
+          break;
+        }
         case "error": feedback = `\u26a0\ufe0f ${command.message}`; break;
       }
 
@@ -437,7 +463,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      if (command.type !== "error") {
+      if (command.type !== "error" && command.type !== "help") {
         onCommand?.(command);
       }
       return;
