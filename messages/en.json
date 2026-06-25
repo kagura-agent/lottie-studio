@@ -109,6 +109,8 @@
     "helpPlay": "Start playing the animation",
     "helpPause": "Pause the animation",
     "helpSpeed": "Set playback speed (e.g. /speed 2x)",
+    "helpDuration": "Set animation duration (e.g. /duration 2s, /duration 500ms)",
+    "durationSet": "Duration set to {duration}s",
     "helpLoop": "Enable loop mode",
     "helpOnce": "Play the animation once",
     "helpExport": "Export",

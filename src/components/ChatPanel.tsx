@@ -427,12 +427,14 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         case "background": feedback = `\ud83c\udfa8 Background set to ${command.color}`; break;
         case "fullscreen": feedback = "\u26f6 Fullscreen toggled"; break;
         case "optimize": feedback = "\u2728 Optimizing..."; break;
+        case "duration": feedback = `\u23f1\ufe0f ${t('durationSet', { duration: (command.durationMs / 1000).toFixed(1) })}`; break;
         case "help": {
           feedback = `**${t('helpTitle')}**\n\n`
             + `**${t('helpPlayback')}**\n`
             + `\`/play\` — ${t('helpPlay')}\n`
             + `\`/pause\` — ${t('helpPause')}\n`
             + `\`/speed <n>\` — ${t('helpSpeed')}\n`
+            + `\`/duration <time>\` — ${t('helpDuration')}\n`
             + `\`/loop\` — ${t('helpLoop')}\n`
             + `\`/once\` — ${t('helpOnce')}\n\n`
             + `**${t('helpExport')}**\n`

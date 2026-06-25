@@ -13,6 +13,7 @@ export type Command =
   | { type: "export_dotlottie" }
   | { type: "undo" }
   | { type: "redo" }
+  | { type: "duration"; durationMs: number }
   | { type: "resize"; width: number; height: number }
   | { type: "background"; color: string }
   | { type: "fullscreen" }
@@ -79,6 +80,25 @@ export function parseCommand(input: string): Command | null {
 
     case "redo":
       return { type: "redo" };
+
+    case "duration": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /duration <time> (e.g. /duration 2s, /duration 500ms)" };
+      }
+      const raw = args[0].toLowerCase();
+      let ms: number;
+      if (raw.endsWith("ms")) {
+        ms = parseFloat(raw.slice(0, -2));
+      } else if (raw.endsWith("s")) {
+        ms = parseFloat(raw.slice(0, -1)) * 1000;
+      } else {
+        ms = parseFloat(raw) * 1000; // bare number treated as seconds
+      }
+      if (isNaN(ms) || ms <= 0) {
+        return { type: "error", message: `Invalid duration: "${args[0]}". Use a positive value like 2s or 500ms.` };
+      }
+      return { type: "duration", durationMs: ms };
+    }
 
     case "resize": {
       if (args.length === 0) {

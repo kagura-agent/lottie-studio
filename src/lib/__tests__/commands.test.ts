@@ -224,4 +224,56 @@ describe("parseCommand", () => {
       expect(parseCommand("/")).toBeNull();
     });
   });
+
+  describe("/duration", () => {
+    it("parses /duration 2s", () => {
+      expect(parseCommand("/duration 2s")).toEqual({ type: "duration", durationMs: 2000 });
+    });
+
+    it("parses /duration 500ms", () => {
+      expect(parseCommand("/duration 500ms")).toEqual({ type: "duration", durationMs: 500 });
+    });
+
+    it("parses /duration 1.5s", () => {
+      expect(parseCommand("/duration 1.5s")).toEqual({ type: "duration", durationMs: 1500 });
+    });
+
+    it("parses /duration 0.5s", () => {
+      expect(parseCommand("/duration 0.5s")).toEqual({ type: "duration", durationMs: 500 });
+    });
+
+    it("parses /duration 2500ms", () => {
+      expect(parseCommand("/duration 2500ms")).toEqual({ type: "duration", durationMs: 2500 });
+    });
+
+    it("parses bare number as seconds", () => {
+      expect(parseCommand("/duration 3")).toEqual({ type: "duration", durationMs: 3000 });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/DURATION 2s")).toEqual({ type: "duration", durationMs: 2000 });
+      expect(parseCommand("/Duration 1S")).toEqual({ type: "duration", durationMs: 1000 });
+      expect(parseCommand("/duration 500MS")).toEqual({ type: "duration", durationMs: 500 });
+    });
+
+    it("returns error for missing arg", () => {
+      const result = parseCommand("/duration");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for invalid format", () => {
+      const result = parseCommand("/duration abc");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+
+    it("returns error for zero duration", () => {
+      const result = parseCommand("/duration 0s");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+
+    it("returns error for negative duration", () => {
+      const result = parseCommand("/duration -1s");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+  });
 });

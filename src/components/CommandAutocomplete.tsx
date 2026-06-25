@@ -12,6 +12,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/play", description: "Resume playback", hasParams: false },
   { command: "/pause", description: "Pause playback", hasParams: false },
   { command: "/speed", description: "Set playback speed (e.g. /speed 2x)", hasParams: true },
+  { command: "/duration", description: "Set animation duration (e.g. /duration 2s)", hasParams: true },
   { command: "/loop", description: "Loop mode", hasParams: false },
   { command: "/once", description: "Play once", hasParams: false },
   { command: "/export", description: "Export (gif, video, json, dotlottie)", hasParams: true },
