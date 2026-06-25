@@ -31,6 +31,7 @@ import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import { optimizeLottie } from "@/lib/optimizer";
+import { rescaleDuration } from "@/lib/rescaleDuration";
 import { useToast } from "@/contexts/ToastContext";
 
 interface EditorPageProps {
@@ -619,6 +620,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
             ? `✨ Optimized! ${sizeStr} (${pct}% smaller)${parts.length ? ". " + parts.join(", ") : ""}`
             : `✨ Already optimized — no changes needed (${(stats.optimizedSize / 1024).toFixed(1)} KB)`;
           setInsertText(summary);
+        }
+        break;
+      case "duration":
+        if (animationData) {
+          const rescaled = rescaleDuration(animationData, command.durationMs);
+          setAnimationData(rescaled as object);
+          setJsonText(JSON.stringify(rescaled, null, 2));
+          pushState(rescaled as object);
+          const secs = (command.durationMs / 1000).toFixed(1);
+          setInsertText(`⏱️ Duration set to ${secs}s`);
         }
         break;
     }
