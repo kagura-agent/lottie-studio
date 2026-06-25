@@ -138,7 +138,9 @@
     "autoplay": "Autoplay",
     "tabPlayer": "Player",
     "tabIframe": "Iframe",
-    "tabJsonUrl": "JSON URL"
+    "tabJsonUrl": "JSON URL",
+    "shareOnX": "Share on X",
+    "nativeShare": "Share"
   },
   "importLottie": {
     "title": "Import Lottie JSON or SVG",
