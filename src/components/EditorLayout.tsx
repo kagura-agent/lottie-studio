@@ -632,6 +632,33 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           setInsertText(`⏱️ Duration set to ${secs}s`);
         }
         break;
+      case "goto": {
+        const fr = (animationData as Record<string, unknown>)?.fr as number ?? 30;
+        const ip = (animationData as Record<string, unknown>)?.ip as number ?? 0;
+        const op = (animationData as Record<string, unknown>)?.op as number ?? totalFrames;
+        const animTotalFrames = op - ip;
+        let targetFrame: number;
+        switch (command.target.unit) {
+          case "frame":
+            targetFrame = command.target.value;
+            break;
+          case "seconds":
+            targetFrame = Math.round(command.target.value * fr);
+            break;
+          case "ms":
+            targetFrame = Math.round((command.target.value / 1000) * fr);
+            break;
+          case "percent":
+            targetFrame = Math.round((command.target.value / 100) * animTotalFrames);
+            break;
+        }
+        targetFrame = Math.max(0, Math.min(targetFrame, animTotalFrames - 1));
+        setSeekFrame(targetFrame);
+        setIsPlaying(false);
+        const timeAtFrame = (targetFrame / fr).toFixed(2);
+        setInsertText(`⏭️ Seeked to frame ${targetFrame} (${timeAtFrame}s)`);
+        break;
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange, animationData, pushState]);

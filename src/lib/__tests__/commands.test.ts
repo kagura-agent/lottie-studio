@@ -225,6 +225,102 @@ describe("parseCommand", () => {
     });
   });
 
+  describe("/goto", () => {
+    it("parses /goto 30 as frame", () => {
+      expect(parseCommand("/goto 30")).toEqual({
+        type: "goto",
+        target: { value: 30, unit: "frame" },
+      });
+    });
+
+    it("parses /goto 0 as frame 0", () => {
+      expect(parseCommand("/goto 0")).toEqual({
+        type: "goto",
+        target: { value: 0, unit: "frame" },
+      });
+    });
+
+    it("parses /goto 1.5s as seconds", () => {
+      expect(parseCommand("/goto 1.5s")).toEqual({
+        type: "goto",
+        target: { value: 1.5, unit: "seconds" },
+      });
+    });
+
+    it("parses /goto 500ms as milliseconds", () => {
+      expect(parseCommand("/goto 500ms")).toEqual({
+        type: "goto",
+        target: { value: 500, unit: "ms" },
+      });
+    });
+
+    it("parses /goto 50% as percent", () => {
+      expect(parseCommand("/goto 50%")).toEqual({
+        type: "goto",
+        target: { value: 50, unit: "percent" },
+      });
+    });
+
+    it("parses /goto 0% as percent", () => {
+      expect(parseCommand("/goto 0%")).toEqual({
+        type: "goto",
+        target: { value: 0, unit: "percent" },
+      });
+    });
+
+    it("parses /goto 100% as percent", () => {
+      expect(parseCommand("/goto 100%")).toEqual({
+        type: "goto",
+        target: { value: 100, unit: "percent" },
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/GOTO 10")).toEqual({
+        type: "goto",
+        target: { value: 10, unit: "frame" },
+      });
+      expect(parseCommand("/Goto 2S")).toEqual({
+        type: "goto",
+        target: { value: 2, unit: "seconds" },
+      });
+      expect(parseCommand("/goto 300MS")).toEqual({
+        type: "goto",
+        target: { value: 300, unit: "ms" },
+      });
+    });
+
+    it("returns error for missing arg", () => {
+      const result = parseCommand("/goto");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for non-numeric value", () => {
+      const result = parseCommand("/goto abc");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+
+    it("returns error for negative frame", () => {
+      const result = parseCommand("/goto -5");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+
+    it("returns error for negative seconds", () => {
+      const result = parseCommand("/goto -1s");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+
+    it("returns error for percentage over 100", () => {
+      const result = parseCommand("/goto 150%");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+
+    it("returns error for negative percentage", () => {
+      const result = parseCommand("/goto -10%");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+  });
+
   describe("/duration", () => {
     it("parses /duration 2s", () => {
       expect(parseCommand("/duration 2s")).toEqual({ type: "duration", durationMs: 2000 });

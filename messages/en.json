@@ -110,6 +110,8 @@
     "helpPause": "Pause the animation",
     "helpSpeed": "Set playback speed (e.g. /speed 2x)",
     "helpDuration": "Set animation duration (e.g. /duration 2s, /duration 500ms)",
+    "helpGoto": "Seek to frame/time (e.g. /goto 30, /goto 1.5s, /goto 50%)",
+    "gotoFrame": "Seeked to {target}",
     "durationSet": "Duration set to {duration}s",
     "helpLoop": "Enable loop mode",
     "helpOnce": "Play the animation once",
