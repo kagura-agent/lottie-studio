@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useTranslations } from 'next-intl';
+import { parseLottieFile } from "@/lib/importLottie";
 
 interface ImportLottieProps {
   onImported: (id: string, data: object) => void;
@@ -45,8 +46,9 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
     try {
       const isSvg = file.name.toLowerCase().endsWith(".svg");
       const isJson = file.name.toLowerCase().endsWith(".json");
+      const isDotLottie = file.name.toLowerCase().endsWith(".lottie");
 
-      if (!isJson && !isSvg) {
+      if (!isJson && !isSvg && !isDotLottie) {
         setError(t('invalidFormat'));
         setImporting(false);
         return;
@@ -80,26 +82,35 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
         return;
       }
 
-      // JSON files: validate client-side and create animation
-      const text = await file.text();
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        setError(t('invalidJson'));
-        setImporting(false);
-        return;
-      }
+      // JSON and .lottie files: validate client-side and create animation
+      let lottieData: Record<string, unknown>;
+      let name: string;
 
-      const validation = validateLottieJson(parsed);
-      if (!validation.valid) {
-        setError(validation.error);
-        setImporting(false);
-        return;
-      }
+      if (isDotLottie) {
+        const parsed = await parseLottieFile(file);
+        lottieData = parsed.data as Record<string, unknown>;
+        name = parsed.name;
+      } else {
+        const text = await file.text();
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          setError(t('invalidJson'));
+          setImporting(false);
+          return;
+        }
 
-      const lottieData = validation.data;
-      const name = (lottieData.nm as string) || file.name.replace(/\.json$/i, "") || "Imported Animation";
+        const validation = validateLottieJson(parsed);
+        if (!validation.valid) {
+          setError(validation.error);
+          setImporting(false);
+          return;
+        }
+
+        lottieData = validation.data;
+        name = (lottieData.nm as string) || file.name.replace(/\.json$/i, "") || "Imported Animation";
+      }
 
       // Build import description for the chat seed message
       const layers = lottieData.layers as unknown[];
@@ -169,7 +180,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json,.svg"
+        accept=".json,.svg,.lottie"
         onChange={handleFileSelect}
         className="hidden"
       />

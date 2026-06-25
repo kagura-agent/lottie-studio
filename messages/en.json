@@ -146,12 +146,12 @@
     "nativeShare": "Share"
   },
   "importLottie": {
-    "title": "Import Lottie JSON or SVG",
-    "hint": "Drop a .json or .svg file here or click to browse",
+    "title": "Import Lottie JSON, SVG, or dotLottie",
+    "hint": "Drop a .json, .svg, or .lottie file here or click to browse",
     "chooseFile": "Choose File",
     "converting": "Converting...",
     "invalidJson": "File is not valid JSON",
-    "invalidFormat": "Please select a .json or .svg file",
+    "invalidFormat": "Please select a .json, .svg, or .lottie file",
     "tooLarge": "File too large (max 5MB)"
   },
   "exportDropdown": {
