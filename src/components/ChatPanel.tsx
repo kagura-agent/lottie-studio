@@ -674,18 +674,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   }, [currentAnimationId, messages.length]);
 
   const [starterChips] = useState(() => {
-    const allPrompts = [
-      "A bouncing ball with squash and stretch",
-      "A smooth toggle switch animation",
-      "Sakura petals falling gently",
-      "Hello World text fading in letter by letter",
-      "A logo spinning and settling into place",
-      "A creative loading animation with dots",
-      "Colorful waves flowing across the screen",
-      "A simple character waving hello",
-      "A glowing neon sign flickering on",
-      "Confetti bursting from the center",
-    ];
+    const allPrompts = Array.from({ length: 10 }, (_, i) =>
+      t(`starterChips.${i}`)
+    );
     const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
   });

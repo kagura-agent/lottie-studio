@@ -126,7 +126,19 @@
     "helpRedo": "Redo the last undone change",
     "helpOptimize": "Optimize the animation file size",
     "helpHelpSection": "Help",
-    "helpHelp": "Show this help message"
+    "helpHelp": "Show this help message",
+    "starterChips": {
+      "0": "A bouncing ball with squash and stretch",
+      "1": "A smooth toggle switch animation",
+      "2": "Sakura petals falling gently",
+      "3": "Hello World text fading in letter by letter",
+      "4": "A logo spinning and settling into place",
+      "5": "A creative loading animation with dots",
+      "6": "Colorful waves flowing across the screen",
+      "7": "A simple character waving hello",
+      "8": "A glowing neon sign flickering on",
+      "9": "Confetti bursting from the center"
+    }
   },
   "explore": {
     "title": "Explore",
