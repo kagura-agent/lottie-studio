@@ -181,6 +181,183 @@ function countGroups(data: LottieData): number {
   return count;
 }
 
+export interface ValidationResult {
+  fixed: LottieData;
+  warnings: string[];
+  fixesApplied: string[];
+}
+
+export function validateAndFix(data: unknown): ValidationResult {
+  const fixed = JSON.parse(JSON.stringify(data)) as LottieData;
+  const warnings: string[] = [];
+  const fixesApplied: string[] = [];
+
+  const rootIp = (fixed.ip as number) ?? 0;
+  const rootOp = (fixed.op as number) ?? 60;
+  const rootW = (fixed.w as number) ?? 512;
+  const rootH = (fixed.h as number) ?? 512;
+
+  // --- Helper: fix color values 0-255 → 0-1 ---
+  function fixColor(colorProp: LottieData, context: string) {
+    const k = colorProp.k;
+    if (!Array.isArray(k)) return;
+    // Check if ANY of the first 3 (RGB) values are > 1
+    const rgb = k.slice(0, 3) as number[];
+    if (rgb.some((v) => typeof v === "number" && v > 1)) {
+      for (let i = 0; i < 3 && i < k.length; i++) {
+        if (typeof k[i] === "number") {
+          k[i] = (k[i] as number) / 255;
+        }
+      }
+      fixesApplied.push(`Normalized color values (0-255 → 0-1) in ${context}`);
+    }
+  }
+
+  // --- Helper: walk shapes recursively to fix colors and check for warnings ---
+  function walkShapes(shapes: LottieData[], layerName: string) {
+    for (const shape of shapes) {
+      if (shape.ty === "fl" || shape.ty === "st") {
+        const c = shape.c as LottieData | undefined;
+        if (c && (c.a === 0 || c.a === undefined)) {
+          fixColor(c, `${layerName} ${shape.ty === "fl" ? "fill" : "stroke"}`);
+        }
+      }
+      if (shape.ty === "gr" && Array.isArray(shape.it)) {
+        const items = shape.it as LottieData[];
+        // Warn: group with no fill/stroke
+        const hasFillOrStroke = items.some(
+          (item) => item.ty === "fl" || item.ty === "st" || item.ty === "gf" || item.ty === "gs"
+        );
+        if (!hasFillOrStroke) {
+          warnings.push(`Shape group in "${layerName}" has no fill or stroke and may be invisible`);
+        }
+        walkShapes(items, layerName);
+      }
+      // Warn: zero-sized shapes
+      if (shape.s && typeof shape.s === "object") {
+        const s = shape.s as LottieData;
+        if (s.a === 0 && Array.isArray(s.k)) {
+          const dims = s.k as number[];
+          if (dims.length >= 2 && dims[0] < 1 && dims[1] < 1) {
+            warnings.push(`Zero-sized shape in "${layerName}" (${dims[0]}x${dims[1]})`);
+          }
+        }
+      }
+    }
+  }
+
+  // --- Helper: walk animated properties to check keyframe ranges ---
+  function walkAnimatedProps(obj: unknown, layerName: string, op: number) {
+    if (!obj || typeof obj !== "object") return;
+    const record = obj as LottieData;
+    if (record.a === 1 && Array.isArray(record.k)) {
+      for (const kf of record.k as LottieData[]) {
+        if (typeof kf.t === "number" && kf.t > op) {
+          warnings.push(`Keyframe at t=${kf.t} in "${layerName}" is beyond animation end (op=${op})`);
+          break; // One warning per property is enough
+        }
+      }
+      return;
+    }
+    for (const value of Object.values(record)) {
+      if (value && typeof value === "object") {
+        walkAnimatedProps(value, layerName, op);
+      }
+    }
+  }
+
+  if (Array.isArray(fixed.layers)) {
+    const layers = fixed.layers as LottieData[];
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      const layerName = (layer.nm as string) || `layer ${i}`;
+
+      // Auto-fix: missing ind
+      if (layer.ind === undefined || layer.ind === null) {
+        layer.ind = i;
+        fixesApplied.push(`Auto-assigned index ${i} to "${layerName}"`);
+      }
+
+      // Auto-fix: missing ip/op
+      if (layer.ip === undefined || layer.ip === null) {
+        layer.ip = rootIp;
+        fixesApplied.push(`Set missing ip=${rootIp} on "${layerName}"`);
+      }
+      if (layer.op === undefined || layer.op === null) {
+        layer.op = rootOp;
+        fixesApplied.push(`Set missing op=${rootOp} on "${layerName}"`);
+      }
+
+      // Auto-fix: clamp ip/op to root range
+      if (typeof layer.ip === "number" && layer.ip < rootIp) {
+        layer.ip = rootIp;
+        fixesApplied.push(`Clamped ip to ${rootIp} on "${layerName}"`);
+      }
+      if (typeof layer.op === "number" && layer.op > rootOp) {
+        layer.op = rootOp;
+        fixesApplied.push(`Clamped op to ${rootOp} on "${layerName}"`);
+      }
+
+      // Auto-fix: missing ks (transform)
+      if (!layer.ks) {
+        layer.ks = {
+          p: { a: 0, k: [rootW / 2, rootH / 2] },
+          s: { a: 0, k: [100, 100] },
+          r: { a: 0, k: 0 },
+          o: { a: 0, k: 100 },
+          a: { a: 0, k: [0, 0] },
+        };
+        fixesApplied.push(`Added default transform to "${layerName}"`);
+      }
+
+      // Fix colors in shapes
+      if (Array.isArray(layer.shapes)) {
+        walkShapes(layer.shapes as LottieData[], layerName);
+      }
+
+      // Fix colors in text layers (fc/sc in document data)
+      if (layer.t && typeof layer.t === "object") {
+        const textData = layer.t as LottieData;
+        if (textData.d && typeof textData.d === "object") {
+          const d = textData.d as LottieData;
+          if (Array.isArray(d.k)) {
+            for (const textKf of d.k as LottieData[]) {
+              const s = textKf.s as LottieData | undefined;
+              if (s) {
+                if (s.fc && Array.isArray(s.fc)) {
+                  const fc = s.fc as number[];
+                  if (fc.slice(0, 3).some((v) => v > 1)) {
+                    for (let j = 0; j < 3 && j < fc.length; j++) {
+                      fc[j] = fc[j] / 255;
+                    }
+                    fixesApplied.push(`Normalized text fill color in "${layerName}"`);
+                  }
+                }
+                if (s.sc && Array.isArray(s.sc)) {
+                  const sc = s.sc as number[];
+                  if (sc.slice(0, 3).some((v) => v > 1)) {
+                    for (let j = 0; j < 3 && j < sc.length; j++) {
+                      sc[j] = sc[j] / 255;
+                    }
+                    fixesApplied.push(`Normalized text stroke color in "${layerName}"`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Warn: keyframes outside range
+      const layerOp = (layer.op as number) ?? rootOp;
+      walkAnimatedProps(layer, layerName, layerOp);
+    }
+  }
+
+  return { fixed, warnings, fixesApplied };
+}
+
 export function optimizeLottie(data: unknown): { optimized: LottieData; stats: OptimizeStats } {
   const input = data as LottieData;
   const originalSize = JSON.stringify(input).length;
