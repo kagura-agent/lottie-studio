@@ -428,6 +428,12 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         case "fullscreen": feedback = "\u26f6 Fullscreen toggled"; break;
         case "optimize": feedback = "\u2728 Optimizing..."; break;
         case "duration": feedback = `\u23f1\ufe0f ${t('durationSet', { duration: (command.durationMs / 1000).toFixed(1) })}`; break;
+        case "goto": {
+          const { value, unit } = command.target;
+          const label = unit === "frame" ? `frame ${value}` : unit === "seconds" ? `${value}s` : unit === "ms" ? `${value}ms` : `${value}%`;
+          feedback = `\u23ed\ufe0f ${t('gotoFrame', { target: label })}`;
+          break;
+        }
         case "help": {
           feedback = `**${t('helpTitle')}**\n\n`
             + `**${t('helpPlayback')}**\n`
@@ -435,6 +441,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/pause\` — ${t('helpPause')}\n`
             + `\`/speed <n>\` — ${t('helpSpeed')}\n`
             + `\`/duration <time>\` — ${t('helpDuration')}\n`
+            + `\`/goto <target>\` — ${t('helpGoto')}\n`
             + `\`/loop\` — ${t('helpLoop')}\n`
             + `\`/once\` — ${t('helpOnce')}\n\n`
             + `**${t('helpExport')}**\n`

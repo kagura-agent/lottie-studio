@@ -110,6 +110,8 @@
     "helpPause": "暂停动画",
     "helpSpeed": "设置播放速度（例如 /speed 2x）",
     "helpDuration": "设置动画时长（例如 /duration 2s、/duration 500ms）",
+    "helpGoto": "跳转到指定帧/时间（例如 /goto 30、/goto 1.5s、/goto 50%）",
+    "gotoFrame": "已跳转到 {target}",
     "durationSet": "时长已设为 {duration}s",
     "helpLoop": "开启循环播放",
     "helpOnce": "播放一次",

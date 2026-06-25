@@ -18,6 +18,7 @@ export type Command =
   | { type: "background"; color: string }
   | { type: "fullscreen" }
   | { type: "optimize" }
+  | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -129,6 +130,41 @@ export function parseCommand(input: string): Command | null {
 
     case "optimize":
       return { type: "optimize" };
+
+    case "goto": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /goto <target> (e.g. /goto 30, /goto 1.5s, /goto 50%)" };
+      }
+      const raw = args[0].toLowerCase();
+      let value: number;
+      let unit: "frame" | "seconds" | "ms" | "percent";
+      if (raw.endsWith("%")) {
+        value = parseFloat(raw.slice(0, -1));
+        unit = "percent";
+        if (isNaN(value) || value < 0 || value > 100) {
+          return { type: "error", message: `Invalid goto target: "${args[0]}". Percentage must be 0-100.` };
+        }
+      } else if (raw.endsWith("ms")) {
+        value = parseFloat(raw.slice(0, -2));
+        unit = "ms";
+        if (isNaN(value) || value < 0) {
+          return { type: "error", message: `Invalid goto target: "${args[0]}". Time must be non-negative.` };
+        }
+      } else if (raw.endsWith("s")) {
+        value = parseFloat(raw.slice(0, -1));
+        unit = "seconds";
+        if (isNaN(value) || value < 0) {
+          return { type: "error", message: `Invalid goto target: "${args[0]}". Time must be non-negative.` };
+        }
+      } else {
+        value = parseFloat(raw);
+        unit = "frame";
+        if (isNaN(value) || value < 0 || !Number.isFinite(value)) {
+          return { type: "error", message: `Invalid goto target: "${args[0]}". Frame must be a non-negative number.` };
+        }
+      }
+      return { type: "goto", target: { value, unit } };
+    }
 
     case "help":
     case "commands":
