@@ -69,6 +69,8 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
   const [gifExporting, setGifExporting] = useState(false);
   const [gifProgress, setGifProgress] = useState(0);
+  const [apngExporting, setApngExporting] = useState(false);
+  const [apngProgress, setApngProgress] = useState(0);
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -290,6 +292,33 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
     } finally {
       setGifExporting(false);
       setGifProgress(0);
+    }
+  };
+
+  const handleExportApng = async (e: MouseEvent) => {
+    e.preventDefault();
+    if (!animationData || apngExporting) return;
+    setApngExporting(true);
+    setApngProgress(0);
+    try {
+      const { exportToApng } = await import("@/lib/apngExporter");
+      const blob = await exportToApng({
+        animationData,
+        onProgress: setApngProgress,
+      });
+      const url = URL.createObjectURL(blob);
+      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sanitized}.apng`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("APNG export failed:", err);
+      toast({ message: "APNG export failed. Please try again.", type: "error" });
+    } finally {
+      setApngExporting(false);
+      setApngProgress(0);
     }
   };
 
@@ -545,6 +574,9 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
       case "export_gif":
         handleExportGif({ preventDefault: () => {} } as MouseEvent);
         break;
+      case "export_apng":
+        handleExportApng({ preventDefault: () => {} } as MouseEvent);
+        break;
       case "export_video":
         handleExportVideo({ preventDefault: () => {} } as MouseEvent);
         break;
@@ -617,10 +649,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           currentId={currentId}
           gifExporting={gifExporting}
           gifProgress={gifProgress}
+          apngExporting={apngExporting}
+          apngProgress={apngProgress}
           videoExporting={videoExporting}
           videoProgress={videoProgress}
           onExportJson={handleExport}
           onExportGif={handleExportGif}
+          onExportApng={handleExportApng}
           onExportDotLottie={handleExportDotLottie}
           onExportVideo={handleExportVideo}
           onDuplicate={handleDuplicate}
@@ -695,6 +730,13 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {gifExporting ? `Export GIF (${Math.round(gifProgress * 100)}%)` : "Export GIF"}
+              </button>
+              <button
+                onClick={(e) => { handleExportApng(e as unknown as MouseEvent); setMobileMenuOpen(false); }}
+                disabled={animationData === null || apngExporting}
+                className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {apngExporting ? `Export APNG (${Math.round(apngProgress * 100)}%)` : "Export APNG"}
               </button>
               <button
                 onClick={() => { handleExportDotLottie(); setMobileMenuOpen(false); }}

@@ -158,10 +158,12 @@
     "exportJson": "Export JSON",
     "exportDotLottie": "Export .lottie",
     "exportGif": "Export GIF",
+    "exportApng": "Export APNG",
     "exportVideo": "Export Video",
     "duplicate": "Duplicate",
     "duplicating": "Duplicating...",
     "gifProgress": "GIF {progress}%",
+    "apngProgress": "APNG {progress}%",
     "videoProgress": "Video {progress}%"
   },
   "animationCard": {

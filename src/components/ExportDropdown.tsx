@@ -9,10 +9,13 @@ interface ExportDropdownProps {
   currentId: string | null;
   gifExporting: boolean;
   gifProgress: number;
+  apngExporting: boolean;
+  apngProgress: number;
   videoExporting: boolean;
   videoProgress: number;
   onExportJson: () => void;
   onExportGif: (e: React.MouseEvent) => void;
+  onExportApng: (e: React.MouseEvent) => void;
   onExportDotLottie: () => void;
   onExportVideo: (e: React.MouseEvent) => void;
   onDuplicate: () => void;
@@ -25,10 +28,13 @@ export default function ExportDropdown({
   currentId,
   gifExporting,
   gifProgress,
+  apngExporting,
+  apngProgress,
   videoExporting,
   videoProgress,
   onExportJson,
   onExportGif,
+  onExportApng,
   onExportDotLottie,
   onExportVideo,
   onDuplicate,
@@ -109,6 +115,20 @@ export default function ExportDropdown({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             {gifExporting ? t('exportDropdown.gifProgress', { progress: Math.round(gifProgress * 100) }) : t('exportDropdown.exportGif')}
+          </button>
+
+          {/* Download APNG */}
+          <button
+            onClick={(e) => { onExportApng(e); setOpen(false); }}
+            disabled={noData || apngExporting}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {apngExporting ? t('exportDropdown.apngProgress', { progress: Math.round(apngProgress * 100) }) : t('exportDropdown.exportApng')}
           </button>
 
           {/* Download .lottie */}
