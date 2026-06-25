@@ -17,6 +17,7 @@ export type Command =
   | { type: "background"; color: string }
   | { type: "fullscreen" }
   | { type: "optimize" }
+  | { type: "help" }
   | { type: "error"; message: string };
 
 export function parseCommand(input: string): Command | null {
@@ -108,6 +109,11 @@ export function parseCommand(input: string): Command | null {
 
     case "optimize":
       return { type: "optimize" };
+
+    case "help":
+    case "commands":
+    case "?":
+      return { type: "help" };
 
     default:
       return null;
