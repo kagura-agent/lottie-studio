@@ -158,10 +158,12 @@
     "exportJson": "导出 JSON",
     "exportDotLottie": "导出 .lottie",
     "exportGif": "导出 GIF",
+    "exportApng": "导出 APNG",
     "exportVideo": "导出视频",
     "duplicate": "复制",
     "duplicating": "复制中...",
     "gifProgress": "GIF {progress}%",
+    "apngProgress": "APNG {progress}%",
     "videoProgress": "视频 {progress}%"
   },
   "animationCard": {

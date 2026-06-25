@@ -417,6 +417,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         case "loop": feedback = "\ud83d\udd01 Loop mode"; break;
         case "once": feedback = "1\ufe0f\u20e3 Play once"; break;
         case "export_gif": feedback = "\ud83d\udce6 Exporting GIF..."; break;
+        case "export_apng": feedback = "\ud83d\udce6 Exporting APNG..."; break;
         case "export_video": feedback = "\ud83d\udce6 Exporting video..."; break;
         case "export_json": feedback = "\ud83d\udce6 Exporting JSON..."; break;
         case "export_dotlottie": feedback = "\ud83d\udce6 Exporting dotLottie..."; break;

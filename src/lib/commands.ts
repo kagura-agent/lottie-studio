@@ -7,6 +7,7 @@ export type Command =
   | { type: "loop" }
   | { type: "once" }
   | { type: "export_gif" }
+  | { type: "export_apng" }
   | { type: "export_video" }
   | { type: "export_json" }
   | { type: "export_dotlottie" }
@@ -59,6 +60,8 @@ export function parseCommand(input: string): Command | null {
       switch (format) {
         case "gif":
           return { type: "export_gif" };
+        case "apng":
+          return { type: "export_apng" };
         case "video":
           return { type: "export_video" };
         case "json":
@@ -66,7 +69,7 @@ export function parseCommand(input: string): Command | null {
         case "dotlottie":
           return { type: "export_dotlottie" };
         default:
-          return { type: "error", message: `Unknown export format: "${args[0]}". Use gif, video, json, or dotlottie.` };
+          return { type: "error", message: `Unknown export format: "${args[0]}". Use gif, apng, video, json, or dotlottie.` };
       }
     }
 
