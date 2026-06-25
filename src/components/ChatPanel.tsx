@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
+import VoiceInput from "./VoiceInput";
 import { parseCommand, type Command } from "@/lib/commands";
 
 interface Message {
@@ -909,6 +910,13 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             enterKeyHint="send"
             className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50 resize-none overflow-y-auto"
           />
+          {!(isThinking || isStreaming) && (
+            <VoiceInput
+              onTranscript={(text) => setInput(text)}
+              onFinalTranscript={(text) => setInput(text)}
+              disabled={isThinking || isStreaming}
+            />
+          )}
           {isThinking || isStreaming ? (
             <button
               onClick={handleStop}
