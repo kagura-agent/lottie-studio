@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from 'next-intl';
 import Link from "next/link";
@@ -172,6 +172,7 @@ function EmbedModal({ id, onClose }: EmbedModalProps) {
 interface ShareViewProps {
   id: string;
   name: string;
+  description?: string;
   animationData: object;
   messages?: { role: string; content: string; imageUrl?: string }[];
   viewCount?: number;
@@ -258,7 +259,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
   );
 }
 
-export default function ShareView({ id, name, animationData, messages, viewCount: initialViewCount }: ShareViewProps) {
+export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -276,7 +277,36 @@ export default function ShareView({ id, name, animationData, messages, viewCount
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
+  const supportsNativeShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== "undefined" && typeof navigator.share === "function",
+    () => false
+  );
   const downloadRef = useRef<HTMLDivElement>(null);
+
+  const shareUrl = `${BASE_URL}/share/${id}`;
+
+  const handleShareTwitter = useCallback(() => {
+    const text = encodeURIComponent(`${name} — created with Lottie Studio`);
+    const url = encodeURIComponent(shareUrl);
+    window.open(
+      `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }, [name, shareUrl]);
+
+  const handleNativeShare = useCallback(async () => {
+    try {
+      await navigator.share({
+        title: name,
+        text: description || "",
+        url: shareUrl,
+      });
+    } catch {
+      // User cancelled or share failed — no action needed
+    }
+  }, [name, description, shareUrl]);
 
   // Record a view on page load
   useEffect(() => {
@@ -384,6 +414,32 @@ export default function ShareView({ id, name, animationData, messages, viewCount
           </svg>
           {formatViewCount(viewCount)}
         </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleShareTwitter}
+            className="px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+            aria-label={t('share.shareOnX')}
+            title={t('share.shareOnX')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </button>
+          {supportsNativeShare && (
+            <button
+              onClick={handleNativeShare}
+              className="px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+              aria-label={t('share.nativeShare')}
+              title={t('share.nativeShare')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setShowEmbed(true)}
           className="px-4 py-1.5 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
