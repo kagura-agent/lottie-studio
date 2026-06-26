@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ExploreCard from "@/components/ExploreCard";
 import { useFavorites } from "@/hooks/useFavorites";
+import FeaturedSpotlight from "@/components/FeaturedSpotlight";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed" | "most-liked";
 
@@ -356,6 +357,9 @@ export default function ExplorePage() {
             ))}
           </div>
         )}
+
+        {/* Featured Spotlight — only when not searching/filtering */}
+        {!searchQuery && !activeTag && <FeaturedSpotlight />}
 
         {/* Total count */}
         {!loading && !error && animations.length > 0 && (
