@@ -203,7 +203,8 @@
     "duplicating": "Duplicating...",
     "gifProgress": "GIF {progress}%",
     "apngProgress": "APNG {progress}%",
-    "videoProgress": "Video {progress}%"
+    "videoProgress": "Video {progress}%",
+    "codeSnippets": "</> Code"
   },
   "animationCard": {
     "deleteTitle": "Delete animation?",
@@ -269,5 +270,16 @@
   "language": {
     "en": "EN",
     "zh": "中文"
+  },
+  "codeSnippets": {
+    "title": "Integration Code",
+    "tabHtml": "HTML",
+    "tabReact": "React",
+    "tabVue": "Vue",
+    "tabReactNative": "React Native",
+    "tabDotLottie": "dotLottie",
+    "install": "Install",
+    "usage": "Usage",
+    "copied": "Code copied to clipboard!"
   }
 }
