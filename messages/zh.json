@@ -171,7 +171,10 @@
     "remix": "混音",
     "remixing": "混音中...",
     "viewDetails": "查看详情",
-    "backToGallery": "返回画廊"
+    "backToGallery": "返回画廊",
+    "featured": "今日推荐",
+    "featuredView": "查看",
+    "featuredRemix": "混音"
   },
   "share": {
     "title": "分享动画",
