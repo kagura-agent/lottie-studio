@@ -6,6 +6,7 @@ import {
   removeRedundantKeyframes,
   collapseSingleItemGroups,
   optimizeLottie,
+  validateAndFix,
 } from "../optimizer";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -314,5 +315,206 @@ describe("optimizeLottie", () => {
     expect(stats.layersRemoved).toBe(0);
     const layers = optimized.layers as any[];
     expect(layers).toHaveLength(1);
+  });
+});
+
+describe("validateAndFix", () => {
+  it("normalizes color values > 1 to 0-1 range", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "test", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: { p: { a: 0, k: [256, 256] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{
+          ty: "fl",
+          c: { a: 0, k: [255, 128, 0] },
+        }],
+      }],
+    };
+    const result = validateAndFix(input);
+    const fill = (result.fixed.layers as any[])[0].shapes[0];
+    expect(fill.c.k[0]).toBeCloseTo(1, 2);
+    expect(fill.c.k[1]).toBeCloseTo(0.502, 2);
+    expect(fill.c.k[2]).toBeCloseTo(0, 2);
+    expect(result.fixesApplied.length).toBeGreaterThan(0);
+  });
+
+  it("defaults missing ip/op to root values", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "no-timing", ty: 4, ind: 0,
+        ks: { p: { a: 0, k: [256, 256] } },
+        shapes: [],
+      }],
+    };
+    const result = validateAndFix(input);
+    const layer = (result.fixed.layers as any[])[0];
+    expect(layer.ip).toBe(0);
+    expect(layer.op).toBe(60);
+    expect(result.fixesApplied.some((f: string) => f.includes("ip"))).toBe(true);
+  });
+
+  it("adds default transform when ks is missing", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 400, h: 300, fr: 30,
+      layers: [{
+        nm: "no-transform", ty: 4, ind: 0, ip: 0, op: 60,
+        shapes: [],
+      }],
+    };
+    const result = validateAndFix(input);
+    const layer = (result.fixed.layers as any[])[0];
+    expect(layer.ks).toBeDefined();
+    expect(layer.ks.p.k).toEqual([200, 150]);
+    expect(layer.ks.s.k).toEqual([100, 100]);
+    expect(result.fixesApplied.some((f: string) => f.includes("transform"))).toBe(true);
+  });
+
+  it("clamps layer ip/op to root range", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "out-of-range", ty: 4, ind: 0, ip: -10, op: 200,
+        ks: { p: { a: 0, k: [256, 256] } },
+        shapes: [],
+      }],
+    };
+    const result = validateAndFix(input);
+    const layer = (result.fixed.layers as any[])[0];
+    expect(layer.ip).toBe(0);
+    expect(layer.op).toBe(60);
+    expect(result.fixesApplied.some((f: string) => f.includes("Clamped"))).toBe(true);
+  });
+
+  it("auto-assigns missing ind values", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [
+        { nm: "a", ty: 4, ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] } }, shapes: [] },
+        { nm: "b", ty: 4, ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] } }, shapes: [] },
+      ],
+    };
+    const result = validateAndFix(input);
+    const layers = result.fixed.layers as any[];
+    expect(layers[0].ind).toBe(0);
+    expect(layers[1].ind).toBe(1);
+    expect(result.fixesApplied.some((f: string) => f.includes("index"))).toBe(true);
+  });
+
+  it("warns about keyframes outside animation range", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "over-range", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: {
+          p: { a: 1, k: [{ t: 0, s: [0, 0] }, { t: 90, s: [100, 100] }] },
+        },
+        shapes: [],
+      }],
+    };
+    const result = validateAndFix(input);
+    expect(result.warnings.some((w: string) => w.includes("Keyframe"))).toBe(true);
+  });
+
+  it("warns about zero-sized shapes", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "tiny", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: { p: { a: 0, k: [0, 0] } },
+        shapes: [{
+          ty: "rc",
+          s: { a: 0, k: [0, 0] },
+        }],
+      }],
+    };
+    const result = validateAndFix(input);
+    expect(result.warnings.some((w: string) => w.includes("Zero-sized"))).toBe(true);
+  });
+
+  it("warns about shape groups without fill or stroke", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "invisible", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: { p: { a: 0, k: [0, 0] } },
+        shapes: [{
+          ty: "gr",
+          it: [
+            { ty: "rc", s: { a: 0, k: [100, 100] } },
+            { ty: "tr", p: { k: [0, 0] } },
+          ],
+        }],
+      }],
+    };
+    const result = validateAndFix(input);
+    expect(result.warnings.some((w: string) => w.includes("no fill or stroke"))).toBe(true);
+  });
+
+  it("passes valid animation through with no warnings or fixes", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "valid", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: { p: { a: 0, k: [256, 256] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{
+          ty: "gr",
+          it: [
+            { ty: "rc", s: { a: 0, k: [100, 100] } },
+            { ty: "fl", c: { a: 0, k: [1, 0, 0] } },
+            { ty: "tr", p: { k: [0, 0] } },
+          ],
+        }],
+      }],
+    };
+    const result = validateAndFix(input);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.fixesApplied).toHaveLength(0);
+  });
+
+  it("walks nested groups to fix colors", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "nested", ty: 4, ind: 0, ip: 0, op: 60,
+        ks: { p: { a: 0, k: [256, 256] } },
+        shapes: [{
+          ty: "gr",
+          it: [
+            {
+              ty: "gr",
+              it: [
+                { ty: "rc", s: { a: 0, k: [50, 50] } },
+                { ty: "fl", c: { a: 0, k: [255, 0, 0] } },
+                { ty: "tr" },
+              ],
+            },
+            { ty: "fl", c: { a: 0, k: [0, 255, 0] } },
+            { ty: "tr" },
+          ],
+        }],
+      }],
+    };
+    const result = validateAndFix(input);
+    const outerGroup = (result.fixed.layers as any[])[0].shapes[0];
+    const innerFill = outerGroup.it[0].it[1];
+    const outerFill = outerGroup.it[1];
+    expect(innerFill.c.k[0]).toBeCloseTo(1, 2);
+    expect(outerFill.c.k[1]).toBeCloseTo(1, 2);
+    expect(result.fixesApplied.filter((f: string) => f.includes("Normalized")).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does not mutate the input", () => {
+    const input = {
+      v: "5.5.7", ip: 0, op: 60, w: 512, h: 512, fr: 30,
+      layers: [{
+        nm: "test", ty: 4,
+        shapes: [{ ty: "fl", c: { a: 0, k: [255, 128, 0] } }],
+      }],
+    };
+    const original = JSON.parse(JSON.stringify(input));
+    validateAndFix(input);
+    expect(input).toEqual(original);
   });
 });
