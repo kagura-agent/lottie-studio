@@ -277,6 +277,14 @@ export default function ShareView({ id, name, description, animationData, messag
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
+  const [liked, setLiked] = useState(() => {
+    if (typeof window !== "undefined") {
+      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
+      return likedIds.includes(id);
+    }
+    return false;
+  });
+  const [likeCount, setLikeCount] = useState(0);
   const supportsNativeShare = useSyncExternalStore(
     () => () => {},
     () => typeof navigator !== "undefined" && typeof navigator.share === "function",
@@ -317,6 +325,39 @@ export default function ShareView({ id, name, description, animationData, messag
       })
       .catch(() => { /* ignore */ });
   }, [id]);
+
+  // Fetch like count on page load
+  useEffect(() => {
+    fetch(`/api/animations/${id}/like`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) {
+          setLikeCount(data.like_count);
+          if (data.liked) setLiked(true);
+        }
+      })
+      .catch(() => { /* ignore */ });
+  }, [id]);
+
+  const handleLike = useCallback(async () => {
+    if (liked) return;
+    setLiked(true);
+    setLikeCount((c) => c + 1);
+    const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
+    if (!likedIds.includes(id)) {
+      likedIds.push(id);
+      localStorage.setItem("likedAnimations", JSON.stringify(likedIds));
+    }
+    try {
+      const res = await fetch(`/api/animations/${id}/like`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setLikeCount(data.like_count);
+      }
+    } catch {
+      // Keep optimistic UI state
+    }
+  }, [id, liked]);
 
   // Close download dropdown on outside click
   useEffect(() => {
@@ -414,6 +455,17 @@ export default function ShareView({ id, name, description, animationData, messag
           </svg>
           {formatViewCount(viewCount)}
         </span>
+        <button
+          onClick={handleLike}
+          className={`flex items-center gap-1 text-sm shrink-0 transition-colors ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"}`}
+          aria-label={liked ? t('explore.liked') : t('explore.like')}
+          title={liked ? t('explore.liked') : t('explore.like')}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+          </svg>
+          {formatViewCount(likeCount)}
+        </button>
         <div className="flex items-center gap-1">
           <button
             onClick={handleShareTwitter}

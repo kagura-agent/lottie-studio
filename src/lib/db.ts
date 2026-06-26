@@ -82,6 +82,24 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add like_count column to track animation likes
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN like_count INTEGER DEFAULT 0`);
+} catch {
+  // Column already exists — ignore
+}
+
+// Likes table for IP-based deduplication
+db.exec(`
+  CREATE TABLE IF NOT EXISTS likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    animation_id TEXT NOT NULL,
+    ip TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(animation_id, ip)
+  )
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
