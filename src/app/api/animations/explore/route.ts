@@ -28,24 +28,14 @@ export async function GET(request: Request) {
   const sort = url.searchParams.get("sort") ?? "newest";
   const tagParam = url.searchParams.get("tag")?.trim() ?? "";
 
-  // Build WHERE clauses
-  const conditions: string[] = ["share_chat = 1", "frame_count IS NOT NULL"];
-  const params: (string | number)[] = [];
-
+  // Transform search query for FTS5: quote each token to handle special chars
+  let ftsQuery = "";
   if (q) {
-    conditions.push("name LIKE ?");
-    params.push(`%${q}%`);
+    const tokens = q.split(/\s+/).filter(Boolean);
+    ftsQuery = tokens.map((t) => `"${t.replace(/"/g, '""')}"`).join(" ");
   }
 
-  if (tagParam && TAG_VOCABULARY.includes(tagParam as AnimationTag)) {
-    // Match tag in comma-separated tags column
-    // Handles: exact match, start of string, end of string, or middle
-    conditions.push("(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)");
-    params.push(tagParam, `${tagParam},%`, `%,${tagParam}`, `%,${tagParam},%`);
-  }
-
-  const whereClause = "WHERE " + conditions.join(" AND ");
-
+  // Determine sort order
   let orderBy: string;
   switch (sort) {
     case "oldest":
@@ -67,20 +57,16 @@ export async function GET(request: Request) {
       orderBy = "created_at DESC";
   }
 
-  const totalRow = db
-    .prepare(`SELECT COUNT(*) as count FROM animations ${whereClause}`)
-    .get(...params) as { count: number };
-  const total = totalRow.count;
+  // Build tag filter conditions (shared between FTS and non-FTS paths)
+  const tagConditions: string[] = [];
+  const tagParams: (string | number)[] = [];
+  if (tagParam && TAG_VOCABULARY.includes(tagParam as AnimationTag)) {
+    tagConditions.push("(animations.tags = ? OR animations.tags LIKE ? OR animations.tags LIKE ? OR animations.tags LIKE ?)");
+    tagParams.push(tagParam, `${tagParam},%`, `%,${tagParam}`, `%,${tagParam},%`);
+  }
 
-  const rows = db
-    .prepare(
-      `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count
-       FROM animations
-       ${whereClause}
-       ORDER BY ${orderBy}
-       LIMIT ? OFFSET ?`
-    )
-    .all(...params, limit, offset) as {
+  let total = 0;
+  let rows: {
     id: string;
     name: string;
     description: string | null;
@@ -89,7 +75,84 @@ export async function GET(request: Request) {
     tags: string | null;
     view_count: number;
     like_count: number;
-  }[];
+  }[] = [];
+
+  // Use FTS5 when a search query is provided
+  if (ftsQuery) {
+    let useFts = true;
+    try {
+      const ftsConditions = ["animations_fts MATCH ?", "animations.share_chat = 1", "animations.frame_count IS NOT NULL", ...tagConditions];
+      const ftsWhere = "WHERE " + ftsConditions.join(" AND ");
+      const ftsParams = [ftsQuery, ...tagParams];
+
+      // Use bm25 relevance ranking for default sort, otherwise respect user's sort choice
+      const ftsOrderBy = sort === "newest" ? "bm25(animations_fts)" : orderBy;
+
+      const countRow = db
+        .prepare(
+          `SELECT COUNT(*) as count FROM animations
+           INNER JOIN animations_fts ON animations.rowid = animations_fts.rowid
+           ${ftsWhere}`
+        )
+        .get(...ftsParams) as { count: number };
+      total = countRow.count;
+
+      rows = db
+        .prepare(
+          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count
+           FROM animations
+           INNER JOIN animations_fts ON animations.rowid = animations_fts.rowid
+           ${ftsWhere}
+           ORDER BY ${ftsOrderBy}
+           LIMIT ? OFFSET ?`
+        )
+        .all(...ftsParams, limit, offset) as typeof rows;
+    } catch {
+      // FTS MATCH failed (e.g. special chars) — fall back to LIKE
+      useFts = false;
+    }
+
+    if (!useFts) {
+      const conditions = ["name LIKE ?", "share_chat = 1", "frame_count IS NOT NULL", ...tagConditions];
+      const params = [`%${q}%`, ...tagParams];
+      const whereClause = "WHERE " + conditions.join(" AND ");
+
+      const totalRow = db
+        .prepare(`SELECT COUNT(*) as count FROM animations ${whereClause}`)
+        .get(...params) as { count: number };
+      total = totalRow.count;
+
+      rows = db
+        .prepare(
+          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count
+           FROM animations
+           ${whereClause}
+           ORDER BY ${orderBy}
+           LIMIT ? OFFSET ?`
+        )
+        .all(...params, limit, offset) as typeof rows;
+    }
+  } else {
+    // No search query — standard query
+    const conditions = ["share_chat = 1", "frame_count IS NOT NULL", ...tagConditions];
+    const params = [...tagParams];
+    const whereClause = "WHERE " + conditions.join(" AND ");
+
+    const totalRow = db
+      .prepare(`SELECT COUNT(*) as count FROM animations ${whereClause}`)
+      .get(...params) as { count: number };
+    total = totalRow.count;
+
+    rows = db
+      .prepare(
+        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count
+         FROM animations
+         ${whereClause}
+         ORDER BY ${orderBy}
+         LIMIT ? OFFSET ?`
+      )
+      .all(...params, limit, offset) as typeof rows;
+  }
 
   // Enrich with layer_count, w, h from the animation JSON files
   const animations = rows.map((row) => {
