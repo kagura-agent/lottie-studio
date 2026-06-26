@@ -75,7 +75,8 @@
     "fullscreen": "全屏",
     "optimize": "优化",
     "quality": "质量",
-    "importFile": "导入文件"
+    "importFile": "导入文件",
+    "remixedFrom": "混音自 {name}"
   },
   "controls": {
     "play": "播放",
