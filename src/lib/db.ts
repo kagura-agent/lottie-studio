@@ -125,6 +125,39 @@ db.exec(`
     AND id NOT IN (SELECT DISTINCT animation_id FROM messages)
 `);
 
+// --- FTS5 Full-Text Search ---
+
+db.exec(`
+  CREATE VIRTUAL TABLE IF NOT EXISTS animations_fts USING fts5(
+    name, description, tags,
+    content='animations',
+    content_rowid='rowid'
+  )
+`);
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS animations_fts_ai AFTER INSERT ON animations BEGIN
+    INSERT INTO animations_fts(rowid, name, description, tags)
+    VALUES (new.rowid, new.name, COALESCE(new.description, ''), COALESCE(new.tags, ''));
+  END
+`);
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS animations_fts_ad AFTER DELETE ON animations BEGIN
+    INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+    VALUES ('delete', old.rowid, old.name, COALESCE(old.description, ''), COALESCE(old.tags, ''));
+  END
+`);
+
+db.exec(`
+  CREATE TRIGGER IF NOT EXISTS animations_fts_au AFTER UPDATE ON animations BEGIN
+    INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+    VALUES ('delete', old.rowid, old.name, COALESCE(old.description, ''), COALESCE(old.tags, ''));
+    INSERT INTO animations_fts(rowid, name, description, tags)
+    VALUES (new.rowid, new.name, COALESCE(new.description, ''), COALESCE(new.tags, ''));
+  END
+`);
+
 // --- Gallery Seeding ---
 // Seeds the explore gallery with template animations when DB has no shared content.
 
@@ -222,5 +255,12 @@ function seedGallery(): void {
 }
 
 seedGallery();
+
+// Populate FTS index on startup if empty but animations exist
+const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
+const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;
+if (ftsCount === 0 && animCount > 0) {
+  db.exec("INSERT INTO animations_fts(rowid, name, description, tags) SELECT rowid, name, COALESCE(description, ''), COALESCE(tags, '') FROM animations");
+}
 
 export { db, ANIMATIONS_DIR };
