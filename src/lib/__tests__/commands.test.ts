@@ -372,4 +372,63 @@ describe("parseCommand", () => {
       expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
     });
   });
+
+  describe("/style", () => {
+    it("parses /style neon", () => {
+      expect(parseCommand("/style neon")).toEqual({ type: "style", style: "neon" });
+    });
+
+    it("parses /style pastel", () => {
+      expect(parseCommand("/style pastel")).toEqual({ type: "style", style: "pastel" });
+    });
+
+    it("parses /style monochrome", () => {
+      expect(parseCommand("/style monochrome")).toEqual({ type: "style", style: "monochrome" });
+    });
+
+    it("parses /style gradient", () => {
+      expect(parseCommand("/style gradient")).toEqual({ type: "style", style: "gradient" });
+    });
+
+    it("parses /style retro", () => {
+      expect(parseCommand("/style retro")).toEqual({ type: "style", style: "retro" });
+    });
+
+    it("parses /style minimal", () => {
+      expect(parseCommand("/style minimal")).toEqual({ type: "style", style: "minimal" });
+    });
+
+    it("parses /style bold", () => {
+      expect(parseCommand("/style bold")).toEqual({ type: "style", style: "bold" });
+    });
+
+    it("parses /style nature", () => {
+      expect(parseCommand("/style nature")).toEqual({ type: "style", style: "nature" });
+    });
+
+    it("is case-insensitive for style name", () => {
+      expect(parseCommand("/style NEON")).toEqual({ type: "style", style: "neon" });
+      expect(parseCommand("/style Pastel")).toEqual({ type: "style", style: "pastel" });
+      expect(parseCommand("/STYLE bold")).toEqual({ type: "style", style: "bold" });
+    });
+
+    it("returns error for invalid style", () => {
+      const result = parseCommand("/style foo");
+      expect(result).toEqual({
+        type: "error",
+        message: expect.stringContaining("Unknown style"),
+      });
+      expect((result as { message: string }).message).toContain("neon");
+      expect((result as { message: string }).message).toContain("nature");
+    });
+
+    it("returns error for missing argument", () => {
+      const result = parseCommand("/style");
+      expect(result).toEqual({
+        type: "error",
+        message: expect.stringContaining("Usage"),
+      });
+      expect((result as { message: string }).message).toContain("neon");
+    });
+  });
 });

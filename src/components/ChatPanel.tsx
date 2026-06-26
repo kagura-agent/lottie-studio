@@ -6,7 +6,7 @@ import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
-import { parseCommand, type Command } from "@/lib/commands";
+import { parseCommand, type Command, VALID_STYLES, type StyleName } from "@/lib/commands";
 
 interface Message {
   id: string;
@@ -30,6 +30,18 @@ interface ChatPanelProps {
 // Image upload constraints (module-level to avoid recreating on each render)
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+// Style command descriptions for LLM instructions
+const STYLE_INSTRUCTIONS: Record<StyleName, string> = {
+  neon: "Apply the neon visual style to the current animation. Keep all motion/keyframes intact but change colors, strokes, fills to match the neon aesthetic (glowing edges, electric colors like cyan/magenta/purple, dark background).",
+  pastel: "Apply the pastel visual style to the current animation. Keep all motion/keyframes intact but change colors to soft muted pastels (light pink, baby blue, lavender, mint), gentle fills, low saturation.",
+  monochrome: "Apply the monochrome visual style to the current animation. Keep all motion/keyframes intact but change to a single-color palette with varying shades and opacities for depth.",
+  gradient: "Apply the gradient visual style to the current animation. Keep all motion/keyframes intact but add gradient fills where possible, using smooth color transitions.",
+  retro: "Apply the retro visual style to the current animation. Keep all motion/keyframes intact but change to warm tones (amber, burnt orange, mustard), slightly rounded shapes, vintage feel.",
+  minimal: "Apply the minimal visual style to the current animation. Keep all motion/keyframes intact but reduce to essential shapes, thin strokes, ample white space, muted colors.",
+  bold: "Apply the bold visual style to the current animation. Keep all motion/keyframes intact but use thick strokes, highly saturated colors, high contrast between elements.",
+  nature: "Apply the nature visual style to the current animation. Keep all motion/keyframes intact but change to earth tones (forest green, sky blue, terracotta, sand), organic curves feel.",
+};
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
   const t = useTranslations('chat');
@@ -400,6 +412,41 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     // Slash command handling — intercept before API call
     const command = parseCommand(text);
     if (command) {
+      // Style command is special: it sends a message to the LLM for processing
+      if (command.type === "style") {
+        const styleMessage = `[STYLE: ${command.style}] ${STYLE_INSTRUCTIONS[command.style]}`;
+
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(styleMessage, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -458,6 +505,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/undo\` — ${t('helpUndo')}\n`
             + `\`/redo\` — ${t('helpRedo')}\n`
             + `\`/optimize\` — ${t('helpOptimize')}\n\n`
+            + `**${t('helpStyle')}**\n`
+            + `\`/style <name>\` — ${t('helpStyleCmd')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;
