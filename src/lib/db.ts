@@ -89,6 +89,20 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add remixed_from column to track remix provenance
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN remixed_from TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
+// Migration: add remixed_from column to track remix lineage
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN remixed_from TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 // Likes table for IP-based deduplication
 db.exec(`
   CREATE TABLE IF NOT EXISTS likes (

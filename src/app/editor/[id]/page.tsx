@@ -29,11 +29,23 @@ export default async function EditorPage({
     notFound();
   }
 
+  // Look up remix provenance
+  let remixedFrom: { id: string; name: string } | undefined;
+  if (row.remixed_from) {
+    const original = db
+      .prepare("SELECT id, name FROM animations WHERE id = ?")
+      .get(row.remixed_from as string) as { id: string; name: string } | undefined;
+    if (original) {
+      remixedFrom = { id: original.id, name: original.name };
+    }
+  }
+
   return (
     <EditorLayout
       id={id}
       initialName={(row.name as string) ?? "Untitled"}
       initialData={data}
+      remixedFrom={remixedFrom}
     />
   );
 }

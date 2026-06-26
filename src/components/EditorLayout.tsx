@@ -38,9 +38,10 @@ interface EditorPageProps {
   id: string | null;
   initialName: string;
   initialData: object | null;
+  remixedFrom?: { id: string; name: string };
 }
 
-export default function EditorPage({ id, initialName, initialData }: EditorPageProps) {
+export default function EditorPage({ id, initialName, initialData, remixedFrom }: EditorPageProps) {
   const t = useTranslations();
   const { toast } = useToast();
   const router = useRouter();
@@ -680,6 +681,16 @@ export default function EditorPage({ id, initialName, initialData }: EditorPageP
           onChange={(e) => setName(e.target.value)}
           className="bg-transparent border-b border-zinc-700 text-zinc-100 text-base md:text-lg font-semibold px-1 py-0.5 focus:outline-none focus:border-zinc-400 transition-colors flex-1 min-w-0"
         />
+        {remixedFrom && (
+          <Link
+            href={`/share/${remixedFrom.id}`}
+            className="hidden md:flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300 hover:bg-purple-500/20 transition-colors shrink-0"
+            title={t('editor.remixedFrom', { name: remixedFrom.name })}
+          >
+            <span aria-hidden="true">✨</span>
+            <span className="max-w-[150px] truncate">{t('editor.remixedFrom', { name: remixedFrom.name })}</span>
+          </Link>
+        )}
         {/* Desktop export dropdown */}
         <ExportDropdown
           animationData={animationData}

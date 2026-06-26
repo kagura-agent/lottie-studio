@@ -75,7 +75,8 @@
     "fullscreen": "Fullscreen",
     "optimize": "Optimize",
     "quality": "Quality",
-    "importFile": "Import file"
+    "importFile": "Import file",
+    "remixedFrom": "Remixed from {name}"
   },
   "controls": {
     "play": "Play",
