@@ -5,7 +5,7 @@ describe("filterCommands", () => {
   it("returns all commands for '/'", () => {
     const result = filterCommands("/");
     expect(result).toEqual(COMMANDS);
-    expect(result.length).toBe(15);
+    expect(result.length).toBe(16);
   });
 
   it("filters by prefix '/sp'", () => {
@@ -66,5 +66,19 @@ describe("filterCommands", () => {
     expect(result).toHaveLength(1);
     expect(result[0].command).toBe("/loop");
     expect(result[0].description).toBe("Loop mode");
+  });
+
+  it("filters '/an' to animate", () => {
+    const result = filterCommands("/an");
+    expect(result).toHaveLength(1);
+    expect(result[0].command).toBe("/animate");
+    expect(result[0].hasParams).toBe(true);
+  });
+
+  it("includes /animate in full command list", () => {
+    const animate = COMMANDS.find((c) => c.command === "/animate");
+    expect(animate).toBeDefined();
+    expect(animate?.hasParams).toBe(true);
+    expect(animate?.description).toContain("motion preset");
   });
 });

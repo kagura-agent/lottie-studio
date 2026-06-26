@@ -131,6 +131,8 @@
     "helpOptimize": "Optimize the animation file size",
     "helpStyle": "Style",
     "helpStyleCmd": "Apply a visual style preset (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)",
+    "helpAnimate": "Animate",
+    "helpAnimateCmd": "Apply a motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)",
     "helpHelpSection": "Help",
     "helpHelp": "Show this help message",
     "starterChips": {

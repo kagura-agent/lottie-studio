@@ -257,6 +257,12 @@ export async function POST(request: Request) {
     systemPrompt += `\n\nIMPORTANT STYLE INSTRUCTION: The user is applying a visual style preset. You MUST preserve ALL existing motion, keyframes, timing, easing, and animation structure exactly as-is. Only modify visual properties: colors (fill/stroke), gradients, opacity values, stroke widths, and background. Do NOT add, remove, or reorder layers. Do NOT change any position/rotation/scale keyframes or timing.`;
   }
 
+  // Animate command: add extra instructions to preserve visual properties
+  const animateMatch = message.match(/^\[ANIMATE:\s*([\w-]+)\]/);
+  if (animateMatch && currentAnimation) {
+    systemPrompt += `\n\nIMPORTANT MOTION INSTRUCTION: The user is applying a motion preset. You MUST preserve ALL existing visual properties (colors, fills, strokes, gradients, opacity). Only modify or add keyframes, timing, and easing. You may add new layers if the effect requires it (e.g., confetti overlay).`;
+  }
+
   const llmMessages: LLMMessage[] = [
     { role: "system", content: systemPrompt },
     ...history.map((m) => {

@@ -6,7 +6,7 @@ import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
-import { parseCommand, type Command, VALID_STYLES, type StyleName } from "@/lib/commands";
+import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
 
 interface Message {
   id: string;
@@ -41,6 +41,20 @@ const STYLE_INSTRUCTIONS: Record<StyleName, string> = {
   minimal: "Apply the minimal visual style to the current animation. Keep all motion/keyframes intact but reduce to essential shapes, thin strokes, ample white space, muted colors.",
   bold: "Apply the bold visual style to the current animation. Keep all motion/keyframes intact but use thick strokes, highly saturated colors, high contrast between elements.",
   nature: "Apply the nature visual style to the current animation. Keep all motion/keyframes intact but change to earth tones (forest green, sky blue, terracotta, sand), organic curves feel.",
+};
+
+// Animation preset descriptions for LLM instructions
+const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
+  bounce: "Apply a bounce entrance effect. Add scale keyframes: start at [0,0], overshoot to [110,110] at 60% duration, settle back to [100,100]. Use ease-out back easing.",
+  pulse: "Apply a pulse/heartbeat effect. Add looping scale keyframes: [100,100] → [115,115] → [95,95] → [100,100]. Use smooth ease-in-out. Make it loop seamlessly.",
+  shake: "Apply a horizontal shake effect. Add rapid position x-offset keyframes: 0 → +8 → -8 → +4 → -4 → 0 over ~10 frames. Use linear easing for snappy feel.",
+  float: "Apply a floating/hovering effect. Add gentle vertical position oscillation: y offset -10px to +10px with smooth sine-like easing, looping seamlessly.",
+  spin: "Apply a continuous rotation. Add rotation keyframes from 0° to 360° over the full duration with linear easing for constant speed. Loop seamlessly.",
+  "slide-in": "Apply a slide-in from left entrance. Start position x far off-screen to the left, animate to final position with ease-out easing over first 30% of duration.",
+  "fade-in": "Apply a fade-in entrance. Start opacity at 0, animate to 100 with ease-in-out over the first 40% of duration.",
+  elastic: "Apply an elastic/spring entrance. Start scale at [0,0], overshoot to [120,120], undershoot to [90,90], overshoot to [105,105], settle at [100,100]. Use spring-like easing.",
+  wiggle: "Apply a subtle wiggle. Add small random-feeling rotation keyframes oscillating between -5° and +5° with varied timing, looping seamlessly.",
+  typewriter: "Apply a typewriter reveal effect. If there are text layers, reveal characters one by one using trim paths or opacity per character. If no text layers, apply a left-to-right reveal using a rectangular mask with animated position.",
 };
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
@@ -447,6 +461,41 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Animate command is special: it sends a message to the LLM for processing
+      if (command.type === "animate") {
+        const animateMessage = `[ANIMATE: ${command.animation}] ${ANIMATE_INSTRUCTIONS[command.animation]}`;
+
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(animateMessage, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -507,6 +556,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/optimize\` — ${t('helpOptimize')}\n\n`
             + `**${t('helpStyle')}**\n`
             + `\`/style <name>\` — ${t('helpStyleCmd')}\n\n`
+            + `**${t('helpAnimate')}**\n`
+            + `\`/animate <preset>\` — ${t('helpAnimateCmd')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

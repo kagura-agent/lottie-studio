@@ -24,6 +24,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/fullscreen", description: "Toggle fullscreen", hasParams: false },
   { command: "/optimize", description: "Optimize animation (reduce file size)", hasParams: false },
   { command: "/style", description: "Apply visual style (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)", hasParams: true },
+  { command: "/animate", description: "Apply motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)", hasParams: true },
 ];
 
 export function filterCommands(query: string): CommandDef[] {
