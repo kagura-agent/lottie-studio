@@ -1,5 +1,18 @@
 // Slash command parser for chat panel
 
+export const VALID_STYLES = [
+  "neon",
+  "pastel",
+  "monochrome",
+  "gradient",
+  "retro",
+  "minimal",
+  "bold",
+  "nature",
+] as const;
+
+export type StyleName = (typeof VALID_STYLES)[number];
+
 export type Command =
   | { type: "play" }
   | { type: "pause" }
@@ -19,6 +32,7 @@ export type Command =
   | { type: "fullscreen" }
   | { type: "optimize" }
   | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
+  | { type: "style"; style: StyleName }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -164,6 +178,17 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "goto", target: { value, unit } };
+    }
+
+    case "style": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /style <name>. Available styles: ${VALID_STYLES.join(", ")}` };
+      }
+      const styleName = args[0].toLowerCase();
+      if (VALID_STYLES.includes(styleName as StyleName)) {
+        return { type: "style", style: styleName as StyleName };
+      }
+      return { type: "error", message: `Unknown style "${args[0]}". Available styles: ${VALID_STYLES.join(", ")}` };
     }
 
     case "help":

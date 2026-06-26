@@ -129,6 +129,8 @@
     "helpUndo": "撤销上一步操作",
     "helpRedo": "重做上一步撤销的操作",
     "helpOptimize": "优化动画文件大小",
+    "helpStyle": "样式",
+    "helpStyleCmd": "应用视觉样式预设（neon、pastel、monochrome、gradient、retro、minimal、bold、nature）",
     "helpHelpSection": "帮助",
     "helpHelp": "显示此帮助信息",
     "starterChips": {

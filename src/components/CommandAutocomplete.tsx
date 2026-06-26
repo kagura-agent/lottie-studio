@@ -23,6 +23,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/bg", description: "Set background color (e.g. /bg #ff0000)", hasParams: true },
   { command: "/fullscreen", description: "Toggle fullscreen", hasParams: false },
   { command: "/optimize", description: "Optimize animation (reduce file size)", hasParams: false },
+  { command: "/style", description: "Apply visual style (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)", hasParams: true },
 ];
 
 export function filterCommands(query: string): CommandDef[] {

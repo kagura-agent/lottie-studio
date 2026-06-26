@@ -251,6 +251,12 @@ export async function POST(request: Request) {
     systemPrompt += `\n\nThe user is working with a remix of the "${templateSource}" template.`;
   }
 
+  // Style command: add extra instructions to preserve motion/keyframes
+  const styleMatch = message.match(/^\[STYLE:\s*(\w+)\]/);
+  if (styleMatch && currentAnimation) {
+    systemPrompt += `\n\nIMPORTANT STYLE INSTRUCTION: The user is applying a visual style preset. You MUST preserve ALL existing motion, keyframes, timing, easing, and animation structure exactly as-is. Only modify visual properties: colors (fill/stroke), gradients, opacity values, stroke widths, and background. Do NOT add, remove, or reorder layers. Do NOT change any position/rotation/scale keyframes or timing.`;
+  }
+
   const llmMessages: LLMMessage[] = [
     { role: "system", content: systemPrompt },
     ...history.map((m) => {
