@@ -17,6 +17,7 @@ interface ExploreCardProps {
     w: number | null;
     h: number | null;
     view_count?: number;
+    like_count?: number;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
@@ -40,6 +41,14 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [remixing, setRemixing] = useState(false);
+  const [liked, setLiked] = useState(() => {
+    if (typeof window !== "undefined") {
+      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
+      return likedIds.includes(animation.id);
+    }
+    return false;
+  });
+  const [likeCount, setLikeCount] = useState(animation.like_count ?? 0);
   const t = useTranslations();
   const { toast } = useToast();
 
@@ -157,6 +166,32 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
     [animation.id, onToggleFavorite]
   );
 
+  const handleLike = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (liked) return;
+      setLiked(true);
+      setLikeCount((c) => c + 1);
+      // Persist to localStorage
+      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
+      if (!likedIds.includes(animation.id)) {
+        likedIds.push(animation.id);
+        localStorage.setItem("likedAnimations", JSON.stringify(likedIds));
+      }
+      try {
+        const res = await fetch(`/api/animations/${animation.id}/like`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          setLikeCount(data.like_count);
+        }
+      } catch {
+        // Keep optimistic UI state
+      }
+    },
+    [animation.id, liked]
+  );
+
   const frames =
     animation.frame_count != null ? t('animationCard.frames', { count: animation.frame_count }) : null;
   const layers =
@@ -167,6 +202,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
     animation.view_count != null && animation.view_count > 0
       ? t('explore.views', { count: formatViewCount(animation.view_count) })
       : null;
+  const likes = likeCount > 0 ? formatViewCount(likeCount) : null;
 
   return (
     <Link
@@ -248,10 +284,31 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
             {animation.description}
           </p>
         )}
-        <div className="mt-1 flex gap-3 text-xs text-zinc-500">
+        <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
           {frames && <span>{frames}</span>}
           {layers && <span>{layers}</span>}
           {views && <span>{views}</span>}
+          <button
+            onClick={handleLike}
+            aria-label={liked ? t('explore.liked') : t('explore.like')}
+            className={`ml-auto flex items-center gap-1 transition-colors ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"}`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={liked ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              className="w-3.5 h-3.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+              />
+            </svg>
+            {likes && <span>{likes}</span>}
+          </button>
         </div>
       </div>
     </Link>

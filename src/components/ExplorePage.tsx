@@ -7,7 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ExploreCard from "@/components/ExploreCard";
 import { useFavorites } from "@/hooks/useFavorites";
 
-type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed";
+type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed" | "most-liked";
 
 interface ExploreAnimation {
   id: string;
@@ -20,6 +20,7 @@ interface ExploreAnimation {
   h: number | null;
   tags: string | null;
   view_count?: number;
+  like_count?: number;
 }
 
 interface ExploreResponse {
@@ -292,6 +293,7 @@ export default function ExplorePage() {
             <option value="newest">{t('explore.sortNewest')}</option>
             <option value="oldest">{t('explore.sortOldest')}</option>
             <option value="most-viewed">{t('explore.sortMostViewed')}</option>
+            <option value="most-liked">{t('explore.sortMostLiked')}</option>
             <option value="name-asc">{t('explore.sortNameAsc')}</option>
             <option value="name-desc">{t('explore.sortNameDesc')}</option>
           </select>
