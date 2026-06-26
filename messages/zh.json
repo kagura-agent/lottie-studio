@@ -131,6 +131,8 @@
     "helpOptimize": "优化动画文件大小",
     "helpStyle": "样式",
     "helpStyleCmd": "应用视觉样式预设（neon、pastel、monochrome、gradient、retro、minimal、bold、nature）",
+    "helpAnimate": "动画",
+    "helpAnimateCmd": "应用动效预设（bounce、pulse、shake、float、spin、slide-in、fade-in、elastic、wiggle、typewriter）",
     "helpHelpSection": "帮助",
     "helpHelp": "显示此帮助信息",
     "starterChips": {

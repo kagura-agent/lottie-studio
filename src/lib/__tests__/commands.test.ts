@@ -431,4 +431,71 @@ describe("parseCommand", () => {
       expect((result as { message: string }).message).toContain("neon");
     });
   });
+
+  describe("/animate", () => {
+    it("parses /animate bounce", () => {
+      expect(parseCommand("/animate bounce")).toEqual({ type: "animate", animation: "bounce" });
+    });
+
+    it("parses /animate pulse", () => {
+      expect(parseCommand("/animate pulse")).toEqual({ type: "animate", animation: "pulse" });
+    });
+
+    it("parses /animate shake", () => {
+      expect(parseCommand("/animate shake")).toEqual({ type: "animate", animation: "shake" });
+    });
+
+    it("parses /animate float", () => {
+      expect(parseCommand("/animate float")).toEqual({ type: "animate", animation: "float" });
+    });
+
+    it("parses /animate spin", () => {
+      expect(parseCommand("/animate spin")).toEqual({ type: "animate", animation: "spin" });
+    });
+
+    it("parses /animate slide-in", () => {
+      expect(parseCommand("/animate slide-in")).toEqual({ type: "animate", animation: "slide-in" });
+    });
+
+    it("parses /animate fade-in", () => {
+      expect(parseCommand("/animate fade-in")).toEqual({ type: "animate", animation: "fade-in" });
+    });
+
+    it("parses /animate elastic", () => {
+      expect(parseCommand("/animate elastic")).toEqual({ type: "animate", animation: "elastic" });
+    });
+
+    it("parses /animate wiggle", () => {
+      expect(parseCommand("/animate wiggle")).toEqual({ type: "animate", animation: "wiggle" });
+    });
+
+    it("parses /animate typewriter", () => {
+      expect(parseCommand("/animate typewriter")).toEqual({ type: "animate", animation: "typewriter" });
+    });
+
+    it("is case-insensitive for preset name", () => {
+      expect(parseCommand("/animate BOUNCE")).toEqual({ type: "animate", animation: "bounce" });
+      expect(parseCommand("/animate Pulse")).toEqual({ type: "animate", animation: "pulse" });
+      expect(parseCommand("/ANIMATE shake")).toEqual({ type: "animate", animation: "shake" });
+    });
+
+    it("returns error for missing argument", () => {
+      const result = parseCommand("/animate");
+      expect(result).toEqual({
+        type: "error",
+        message: expect.stringContaining("Usage"),
+      });
+      expect((result as { message: string }).message).toContain("bounce");
+    });
+
+    it("returns error for invalid preset", () => {
+      const result = parseCommand("/animate invalid");
+      expect(result).toEqual({
+        type: "error",
+        message: expect.stringContaining("Unknown animation preset"),
+      });
+      expect((result as { message: string }).message).toContain("bounce");
+      expect((result as { message: string }).message).toContain("typewriter");
+    });
+  });
 });

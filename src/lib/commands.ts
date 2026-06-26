@@ -13,6 +13,21 @@ export const VALID_STYLES = [
 
 export type StyleName = (typeof VALID_STYLES)[number];
 
+export const VALID_ANIMATIONS = [
+  "bounce",
+  "pulse",
+  "shake",
+  "float",
+  "spin",
+  "slide-in",
+  "fade-in",
+  "elastic",
+  "wiggle",
+  "typewriter",
+] as const;
+
+export type AnimationPreset = (typeof VALID_ANIMATIONS)[number];
+
 export type Command =
   | { type: "play" }
   | { type: "pause" }
@@ -33,6 +48,7 @@ export type Command =
   | { type: "optimize" }
   | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
   | { type: "style"; style: StyleName }
+  | { type: "animate"; animation: AnimationPreset }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -189,6 +205,17 @@ export function parseCommand(input: string): Command | null {
         return { type: "style", style: styleName as StyleName };
       }
       return { type: "error", message: `Unknown style "${args[0]}". Available styles: ${VALID_STYLES.join(", ")}` };
+    }
+
+    case "animate": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /animate <preset>. Available presets: ${VALID_ANIMATIONS.join(", ")}` };
+      }
+      const animName = args[0].toLowerCase();
+      if (VALID_ANIMATIONS.includes(animName as AnimationPreset)) {
+        return { type: "animate", animation: animName as AnimationPreset };
+      }
+      return { type: "error", message: `Unknown animation preset "${args[0]}". Available presets: ${VALID_ANIMATIONS.join(", ")}` };
     }
 
     case "help":
