@@ -6,6 +6,7 @@ import type { MessageRow } from "@/lib/chat-utils";
 import { animationEvents } from "@/lib/events";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
+import extractTitle from "@/lib/titleExtractor";
 import { extractIp, checkRate } from "@/lib/rateLimit";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
 import { randomUUID } from "node:crypto";
@@ -196,7 +197,7 @@ export async function POST(request: Request) {
     }
   } else {
     animationId = randomUUID();
-    const name = message.slice(0, 80).trim() || "Untitled";
+    const name = extractTitle(message);
     db.prepare(
       "INSERT INTO animations (id, name) VALUES (?, ?)"
     ).run(animationId, name);
