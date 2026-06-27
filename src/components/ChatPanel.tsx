@@ -7,6 +7,7 @@ import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
 import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
+import { parseLottieFile } from "@/lib/importLottie";
 
 interface Message {
   id: string;
@@ -29,7 +30,10 @@ interface ChatPanelProps {
 
 // Image upload constraints (module-level to avoid recreating on each render)
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_ANIMATION_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+const ANIMATION_EXTENSIONS = [".json", ".svg", ".lottie"];
+const LOTTIE_REQUIRED_FIELDS = ["v", "fr", "ip", "op", "w", "h", "layers"] as const;
 
 // Style command descriptions for LLM instructions
 const STYLE_INSTRUCTIONS: Record<StyleName, string> = {
@@ -69,6 +73,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
+  const [isDragOver, setIsDragOver] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
@@ -747,20 +752,187 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     }
   }, [processImageFile]);
 
+  const processAnimationFile = useCallback(async (file: File) => {
+    const ext = file.name.toLowerCase().replace(/^.*\./, '.');
+
+    if (file.size > MAX_ANIMATION_FILE_SIZE) {
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: t('fileTooLarge'),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      return;
+    }
+
+    const isSvg = ext === '.svg';
+    const isJson = ext === '.json';
+    const isDotLottie = ext === '.lottie';
+
+    if (!isJson && !isSvg && !isDotLottie) {
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: t('invalidFileType'),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      return;
+    }
+
+    try {
+      if (isSvg) {
+        // SVG: send to conversion endpoint
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/import-svg", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errorMsg: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: t('importFailed', { error: errData.error || 'SVG conversion failed' }),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+          return;
+        }
+
+        const result = await res.json();
+        setCurrentAnimationId(result.id);
+        onAnimationCreated?.(result.id, result.data);
+        const successMsg: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: t('importSuccess'),
+        };
+        setMessages((prev) => [...prev, successMsg]);
+        return;
+      }
+
+      // JSON or .lottie
+      let lottieData: Record<string, unknown>;
+      let name: string;
+
+      if (isDotLottie) {
+        const parsed = await parseLottieFile(file);
+        lottieData = parsed.data as Record<string, unknown>;
+        name = parsed.name;
+      } else {
+        // JSON file
+        const text = await file.text();
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          const errorMsg: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: t('invalidJsonParse'),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+          return;
+        }
+
+        // Validate Lottie structure
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          const errorMsg: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: t('invalidLottieJson'),
+          };
+          setMessages((prev) => [...prev, errorMsg]);
+          return;
+        }
+        const obj = parsed as Record<string, unknown>;
+        for (const field of LOTTIE_REQUIRED_FIELDS) {
+          if (!(field in obj)) {
+            const errorMsg: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: t('invalidLottieJson'),
+            };
+            setMessages((prev) => [...prev, errorMsg]);
+            return;
+          }
+        }
+
+        lottieData = obj;
+        name = (lottieData.nm as string) || file.name.replace(/\.json$/i, "") || "Imported Animation";
+      }
+
+      // Save via API
+      const res = await fetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, data: lottieData }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const errorMsg: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: t('importFailed', { error: errData.error || 'Failed to save animation' }),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+        return;
+      }
+
+      const result = await res.json();
+      setCurrentAnimationId(result.id);
+      onAnimationCreated?.(result.id, lottieData as object);
+      const successMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: t('importSuccess'),
+      };
+      setMessages((prev) => [...prev, successMsg]);
+    } catch (err) {
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: t('importFailed', { error: err instanceof Error ? err.message : 'Unknown error' }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    }
+  }, [t, onAnimationCreated]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(false);
     const files = e.dataTransfer?.files;
     if (!files?.length) return;
+
+    // Check for animation files first (by extension)
+    for (let i = 0; i < files.length; i++) {
+      const ext = files[i].name.toLowerCase().replace(/^.*\./, '.');
+      if (ANIMATION_EXTENSIONS.includes(ext)) {
+        processAnimationFile(files[i]);
+        return;
+      }
+    }
+
+    // Fall back to image handling
     for (let i = 0; i < files.length; i++) {
       if (files[i].type.startsWith("image/")) {
         processImageFile(files[i]);
         return;
       }
     }
-  }, [processImageFile]);
+  }, [processImageFile, processAnimationFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -977,7 +1149,13 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       )}
 
       {/* Input area */}
-      <div ref={inputAreaRef} className="shrink-0 border-t border-zinc-800 p-3 bg-zinc-900 relative" onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver}>
+      <div ref={inputAreaRef} className={`shrink-0 border-t p-3 bg-zinc-900 relative transition-colors ${isDragOver ? 'border-indigo-500 bg-indigo-500/5' : 'border-zinc-800'}`} onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
+        {/* Drag-over overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-indigo-500/10 border-2 border-dashed border-indigo-500 rounded-lg pointer-events-none">
+            <span className="text-indigo-300 text-sm font-medium">{t('dropFileHere')}</span>
+          </div>
+        )}
         {/* Command autocomplete dropdown */}
         <CommandAutocomplete
           query={autocompleteQuery}
@@ -1007,11 +1185,18 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
+            accept="image/png,image/jpeg,image/gif,image/webp,.json,.svg,.lottie"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) processImageFile(file);
+              if (file) {
+                const ext = file.name.toLowerCase().replace(/^.*\./, '.');
+                if (ANIMATION_EXTENSIONS.includes(ext)) {
+                  processAnimationFile(file);
+                } else {
+                  processImageFile(file);
+                }
+              }
               e.target.value = "";
             }}
           />
@@ -1020,7 +1205,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             disabled={isThinking || isStreaming}
             className="shrink-0 px-2 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t('attachImage')}
-            title="Attach image (or paste / drag-drop)"
+            title={t('attachTooltip')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M15.621 4.379a3 3 0 0 0-4.242 0l-7 7a3 3 0 0 0 4.241 4.243h.001l.497-.5a.75.75 0 0 1 1.064 1.057l-.498.501a4.5 4.5 0 0 1-6.364-6.364l7-7a4.5 4.5 0 0 1 6.368 6.36l-3.455 3.553A2.625 2.625 0 1 1 9.52 9.52l3.45-3.451a.75.75 0 1 1 1.061 1.06l-3.45 3.451a1.125 1.125 0 0 0 1.587 1.595l3.454-3.553a3 3 0 0 0 0-4.242Z" clipRule="evenodd" />
