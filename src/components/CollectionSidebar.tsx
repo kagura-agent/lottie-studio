@@ -26,39 +26,39 @@ export default function CollectionSidebar({
   onCollectionsLoaded,
 }: CollectionSidebarProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!getCreatorId());
   const [collapsed, setCollapsed] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
 
-  const fetchCollections = useCallback(async () => {
-    const creatorId = getCreatorId();
-    if (!creatorId) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `/api/collections?creator_id=${encodeURIComponent(creatorId)}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setCollections(data);
-        onCollectionsLoaded?.(data);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, [onCollectionsLoaded]);
-
   useEffect(() => {
-    fetchCollections();
-  }, [fetchCollections]);
+    const creatorId = getCreatorId();
+    if (!creatorId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/collections?creator_id=${encodeURIComponent(creatorId)}`
+        );
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setCollections(data);
+          onCollectionsLoaded?.(data);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [onCollectionsLoaded, refreshKey]);
 
   const handleCreate = useCallback(async () => {
     if (!newName.trim()) return;
@@ -76,7 +76,7 @@ export default function CollectionSidebar({
         toast({ message: "Collection created", type: "success" });
         setNewName("");
         setShowCreate(false);
-        fetchCollections();
+        setRefreshKey((k) => k + 1);
       } else {
         const err = await res.json();
         toast({ message: err.error || "Failed to create", type: "error" });
@@ -86,7 +86,7 @@ export default function CollectionSidebar({
     } finally {
       setCreating(false);
     }
-  }, [newName, toast, fetchCollections]);
+  }, [newName, toast]);
 
   if (loading) {
     return (

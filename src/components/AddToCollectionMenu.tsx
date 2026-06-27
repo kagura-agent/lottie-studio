@@ -22,7 +22,7 @@ export default function AddToCollectionMenu({
 }: AddToCollectionMenuProps) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [memberOf, setMemberOf] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!getCreatorId());
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -44,7 +44,6 @@ export default function AddToCollectionMenu({
   useEffect(() => {
     const creatorId = getCreatorId();
     if (!creatorId) {
-      setLoading(false);
       return;
     }
 

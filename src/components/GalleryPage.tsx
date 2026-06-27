@@ -65,10 +65,16 @@ export default function GalleryPage() {
     setHeroDismissed(true);
   }, []);
 
+  const handleSelectCollection = useCallback((id: string | null) => {
+    setSelectedCollectionId(id);
+    if (!id) {
+      setCollectionAnimationIds(null);
+    }
+  }, []);
+
   // Fetch collection animations when a collection is selected
   useEffect(() => {
     if (!selectedCollectionId) {
-      setCollectionAnimationIds(null);
       return;
     }
 
@@ -251,7 +257,7 @@ export default function GalleryPage() {
     <div className="flex flex-1 overflow-hidden">
       <CollectionSidebar
         selectedCollectionId={selectedCollectionId}
-        onSelectCollection={setSelectedCollectionId}
+        onSelectCollection={handleSelectCollection}
       />
       <div
         className="flex-1 overflow-y-auto"
