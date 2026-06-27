@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
+import AddToCollectionMenu from "@/components/AddToCollectionMenu";
 
 interface AnimationCardProps {
   id: string;
@@ -29,6 +30,7 @@ export default function AnimationCard({
   const [error, setError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [showCollectionMenu, setShowCollectionMenu] = useState(false);
   const router = useRouter();
   const t = useTranslations();
 
@@ -129,6 +131,13 @@ export default function AnimationCard({
                 </svg>
               </button>
 
+              {showCollectionMenu && (
+                <AddToCollectionMenu
+                  animationId={id}
+                  onClose={() => setShowCollectionMenu(false)}
+                />
+              )}
+
               {menuOpen && (
                 <div className="absolute top-10 right-0 w-40 rounded-lg bg-zinc-800 border border-zinc-700 shadow-xl shadow-black/50 py-1 z-20">
                   {onDuplicate && (
@@ -146,6 +155,19 @@ export default function AnimationCard({
                       {t('common.duplicate')}
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      setShowCollectionMenu(true);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Add to Collection
+                  </button>
                   {onDelete && (
                     <button
                       onClick={(e) => {

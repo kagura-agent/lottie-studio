@@ -284,6 +284,36 @@ function seedGallery(): void {
 
 seedGallery();
 
+// --- Collections ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collections (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    creator_id TEXT NOT NULL,
+    is_public INTEGER DEFAULT 0,
+    cover_animation_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collection_items (
+    collection_id TEXT NOT NULL,
+    animation_id TEXT NOT NULL,
+    position INTEGER DEFAULT 0,
+    added_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (collection_id, animation_id),
+    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+    FOREIGN KEY (animation_id) REFERENCES animations(id) ON DELETE CASCADE
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_collections_creator ON collections(creator_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_collection_items_animation ON collection_items(animation_id)`);
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;
