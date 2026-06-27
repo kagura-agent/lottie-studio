@@ -8,6 +8,7 @@ import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
 import HeroWelcome from "@/components/HeroWelcome";
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import CollectionSidebar from "@/components/CollectionSidebar";
 import Link from "next/link";
 import { parseLottieFile } from "@/lib/importLottie";
 
@@ -52,6 +53,8 @@ export default function GalleryPage() {
     }
     return false;
   });
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [collectionAnimationIds, setCollectionAnimationIds] = useState<string[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
   const router = useRouter();
@@ -62,8 +65,31 @@ export default function GalleryPage() {
     setHeroDismissed(true);
   }, []);
 
+  // Fetch collection animations when a collection is selected
+  useEffect(() => {
+    if (!selectedCollectionId) {
+      setCollectionAnimationIds(null);
+      return;
+    }
+
+    fetch(`/api/collections/${selectedCollectionId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const ids = (data.animations || []).map((a: { id: string }) => a.id);
+        setCollectionAnimationIds(ids);
+      })
+      .catch(() => {
+        setCollectionAnimationIds([]);
+      });
+  }, [selectedCollectionId]);
+
   const filteredAndSortedAnimations = useMemo(() => {
     let result = animations;
+    // Filter by collection
+    if (collectionAnimationIds !== null) {
+      const idSet = new Set(collectionAnimationIds);
+      result = result.filter((a) => idSet.has(a.id));
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((a) => a.name.toLowerCase().includes(q));
@@ -82,7 +108,7 @@ export default function GalleryPage() {
       }
     });
     return result;
-  }, [animations, searchQuery, sortOption]);
+  }, [animations, searchQuery, sortOption, collectionAnimationIds]);
 
   const handleSortChange = useCallback((value: SortOption) => {
     setSortOption(value);
@@ -222,13 +248,18 @@ export default function GalleryPage() {
   }
 
   return (
-    <div
-      className="flex-1 overflow-y-auto"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
+    <div className="flex flex-1 overflow-hidden">
+      <CollectionSidebar
+        selectedCollectionId={selectedCollectionId}
+        onSelectCollection={setSelectedCollectionId}
+      />
+      <div
+        className="flex-1 overflow-y-auto"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Import error alert */}
         {importError && (
@@ -535,6 +566,7 @@ export default function GalleryPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
