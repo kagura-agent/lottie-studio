@@ -68,12 +68,9 @@ export default function ExplorePage() {
   const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showMyAnimations, setShowMyAnimations] = useState(false);
-  const myCreatorId = useRef<string>("");
-
-  // Get creator ID on mount (client-side only)
-  useEffect(() => {
-    myCreatorId.current = getCreatorId();
-  }, []);
+  const [myCreatorIdValue] = useState(() =>
+    typeof window !== 'undefined' ? getCreatorId() : ''
+  );
 
   const fetchAnimations = useCallback(async (
     p: number,
@@ -179,7 +176,7 @@ export default function ExplorePage() {
       (entries) => {
         const entry = entries[0];
         if (entry?.isIntersecting && hasMore && !fetchingRef.current) {
-          fetchAnimations(page + 1, searchQuery, sortOption, activeTag, "append", showMyAnimations ? myCreatorId.current : undefined);
+          fetchAnimations(page + 1, searchQuery, sortOption, activeTag, "append", showMyAnimations ? myCreatorIdValue : undefined);
         }
       },
       { rootMargin: "200px" },
@@ -202,19 +199,19 @@ export default function ExplorePage() {
       setAnimations([]);
       setPage(1);
       setHasMore(false);
-      fetchAnimations(1, value, sortOption, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
+      fetchAnimations(1, value, sortOption, activeTag, "reset", showMyAnimations ? myCreatorIdValue : undefined);
     }, 300);
   };
 
   const handleSortChange = (value: SortOption) => {
     setSortOption(value);
-    fetchAnimations(1, searchQuery, value, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
+    fetchAnimations(1, searchQuery, value, activeTag, "reset", showMyAnimations ? myCreatorIdValue : undefined);
   };
 
   const handleTagChange = (tag: string) => {
     const newTag = tag === activeTag ? "" : tag;
     setActiveTag(newTag);
-    fetchAnimations(1, searchQuery, sortOption, newTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
+    fetchAnimations(1, searchQuery, sortOption, newTag, "reset", showMyAnimations ? myCreatorIdValue : undefined);
     // URL sync
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -313,7 +310,7 @@ export default function ExplorePage() {
             onClick={() => {
               const next = !showMyAnimations;
               setShowMyAnimations(next);
-              fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", next ? myCreatorId.current : undefined);
+              fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", next ? myCreatorIdValue : undefined);
             }}
             className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
               showMyAnimations
@@ -431,7 +428,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined)}
+              onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", showMyAnimations ? myCreatorIdValue : undefined)}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               {t('common.tryAgain')}
@@ -528,7 +525,7 @@ export default function ExplorePage() {
                       animation={anim}
                       isFavorite={isFavorite(anim.id)}
                       onToggleFavorite={toggleFavorite}
-                      isOwnAnimation={!!anim.creator_id && anim.creator_id === myCreatorId.current}
+                      isOwnAnimation={!!anim.creator_id && anim.creator_id === myCreatorIdValue}
                     />
                   ))}
                 </div>

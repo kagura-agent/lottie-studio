@@ -261,7 +261,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
   );
 }
 
-export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName, creatorId }: ShareViewProps) {
+export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
