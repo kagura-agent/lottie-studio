@@ -147,7 +147,17 @@
       "7": "A simple character waving hello",
       "8": "A glowing neon sign flickering on",
       "9": "Confetti bursting from the center"
-    }
+    },
+    "attachFile": "Attach file",
+    "attachTooltip": "Attach image or animation (paste / drag-drop)",
+    "dropFileHere": "Drop file here",
+    "fileTooLarge": "File too large (max 5MB)",
+    "invalidLottieJson": "Not a valid Lottie JSON file",
+    "invalidJsonParse": "Could not parse JSON file",
+    "invalidFileType": "Unsupported file type. Use .json, .svg, .lottie, or an image",
+    "importingFile": "Importing file...",
+    "importSuccess": "✨ Imported your animation! What would you like to change?",
+    "importFailed": "Import failed: {error}"
   },
   "explore": {
     "title": "Explore",

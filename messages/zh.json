@@ -147,7 +147,17 @@
       "7": "一个可爱的小人在挥手",
       "8": "霓虹灯牌闪烁亮起",
       "9": "五彩纸屑从中心炸开"
-    }
+    },
+    "attachFile": "附加文件",
+    "attachTooltip": "附加图片或动画（粘贴 / 拖放）",
+    "dropFileHere": "拖放文件到此处",
+    "fileTooLarge": "文件过大（最大 5MB）",
+    "invalidLottieJson": "不是有效的 Lottie JSON 文件",
+    "invalidJsonParse": "无法解析 JSON 文件",
+    "invalidFileType": "不支持的文件类型，请使用 .json、.svg、.lottie 或图片",
+    "importingFile": "正在导入文件...",
+    "importSuccess": "✨ 已导入你的动画！你想做什么修改？",
+    "importFailed": "导入失败：{error}"
   },
   "explore": {
     "title": "探索",
