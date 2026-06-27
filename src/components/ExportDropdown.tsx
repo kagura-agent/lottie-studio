@@ -223,6 +223,7 @@ export default function ExportDropdown({
       {currentId && (
         <CodeSnippets
           animationId={currentId}
+          animationData={animationData ?? undefined}
           open={codeSnippetsOpen}
           onClose={() => setCodeSnippetsOpen(false)}
         />
