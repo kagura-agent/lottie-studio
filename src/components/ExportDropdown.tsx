@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslations } from 'next-intl';
 import CodeSnippets from "./CodeSnippets";
+import { SOCIAL_PRESETS, WEB_PRESETS, ExportPreset } from "@/lib/exportPresets";
 
 interface ExportDropdownProps {
   animationData: object | null;
@@ -14,11 +15,15 @@ interface ExportDropdownProps {
   apngProgress: number;
   videoExporting: boolean;
   videoProgress: number;
+  presetExporting: boolean;
+  presetProgress: number;
+  presetExportingId: string | null;
   onExportJson: () => void;
   onExportGif: (e: React.MouseEvent) => void;
   onExportApng: (e: React.MouseEvent) => void;
   onExportDotLottie: () => void;
   onExportVideo: (e: React.MouseEvent) => void;
+  onExportPreset: (preset: ExportPreset) => void;
   onDuplicate: () => void;
   isDuplicating: boolean;
 }
@@ -33,11 +38,15 @@ export default function ExportDropdown({
   apngProgress,
   videoExporting,
   videoProgress,
+  presetExporting,
+  presetProgress,
+  presetExportingId,
   onExportJson,
   onExportGif,
   onExportApng,
   onExportDotLottie,
   onExportVideo,
+  onExportPreset,
   onDuplicate,
   isDuplicating,
 }: ExportDropdownProps) {
@@ -45,6 +54,8 @@ export default function ExportDropdown({
   const [open, setOpen] = useState(false);
   const [copiedItem, setCopiedItem] = useState<"share" | "embed" | null>(null);
   const [codeSnippetsOpen, setCodeSnippetsOpen] = useState(false);
+  const [socialExpanded, setSocialExpanded] = useState(false);
+  const [webExpanded, setWebExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -78,6 +89,26 @@ export default function ExportDropdown({
 
   const noData = animationData === null;
 
+  const renderPresetButton = (preset: ExportPreset) => {
+    const isThisExporting = presetExporting && presetExportingId === preset.id;
+    return (
+      <button
+        key={preset.id}
+        onClick={() => { onExportPreset(preset); setOpen(false); }}
+        disabled={noData || presetExporting}
+        className="w-full px-6 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      >
+        <span className="text-xs">{preset.icon}</span>
+        {isThisExporting
+          ? t('exportPresets.exporting', { progress: Math.round(presetProgress * 100) })
+          : t(preset.nameKey)}
+        <span className="ml-auto text-xs text-zinc-500">
+          {preset.width}×{preset.height}
+        </span>
+      </button>
+    );
+  };
+
   return (
     <div className="relative hidden md:inline-flex" ref={dropdownRef}>
       <button
@@ -90,7 +121,7 @@ export default function ExportDropdown({
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[200px] py-1">
+        <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[260px] py-1 max-h-[70vh] overflow-y-auto">
           {/* Download JSON */}
           <button
             onClick={() => { onExportJson(); setOpen(false); }}
@@ -160,6 +191,63 @@ export default function ExportDropdown({
             </svg>
             {videoExporting ? t('exportDropdown.videoProgress', { progress: Math.round(videoProgress * 100) }) : t('exportDropdown.exportVideo')}
           </button>
+
+          {/* Separator */}
+          <div className="border-t border-zinc-700 my-1" />
+
+          {/* Social Presets Section */}
+          <button
+            onClick={() => setSocialExpanded((v) => !v)}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2 font-medium"
+          >
+            <span>📱</span>
+            {t('exportPresets.socialPresets')}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`ml-auto transition-transform ${socialExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M3 5l3 3 3-3" />
+            </svg>
+          </button>
+          {socialExpanded && (
+            <div>
+              {SOCIAL_PRESETS.map(renderPresetButton)}
+            </div>
+          )}
+
+          {/* Web Presets Section */}
+          <button
+            onClick={() => setWebExpanded((v) => !v)}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2 font-medium"
+          >
+            <span>🖥️</span>
+            {t('exportPresets.webPresets')}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`ml-auto transition-transform ${webExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M3 5l3 3 3-3" />
+            </svg>
+          </button>
+          {webExpanded && (
+            <div>
+              {WEB_PRESETS.map(renderPresetButton)}
+            </div>
+          )}
 
           {/* Separator */}
           <div className="border-t border-zinc-700 my-1" />

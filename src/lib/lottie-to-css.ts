@@ -170,6 +170,53 @@ function generateKeyframesCss(
   return { percentages };
 }
 
+/**
+ * Build a full HTML document for iframe srcdoc preview of CSS animation.
+ * Includes checkerboard background so transparent animations are visible.
+ */
+export function buildCssPreviewSrcdoc(
+  html: string,
+  css: string,
+  width: number,
+  height: number
+): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    background-image:
+      linear-gradient(45deg, #ccc 25%, transparent 25%),
+      linear-gradient(-45deg, #ccc 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #ccc 75%),
+      linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    overflow: hidden;
+  }
+  .lottie-animation {
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: ${width} / ${height};
+  }
+${css}
+</style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+}
+
 export function convertLottieToCss(animationData: object): CssExportResult {
   const anim = animationData as LottieAnimation;
 

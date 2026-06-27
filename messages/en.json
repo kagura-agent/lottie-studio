@@ -218,6 +218,21 @@
     "videoProgress": "Video {progress}%",
     "codeSnippets": "</> Code"
   },
+  "exportPresets": {
+    "socialPresets": "Social Presets",
+    "webPresets": "Web Presets",
+    "exporting": "Exporting {progress}%",
+    "instagramStory": "Instagram Story",
+    "instagramPost": "Instagram Post",
+    "twitterPost": "Twitter/X Post",
+    "tiktok": "TikTok",
+    "youtubeShorts": "YouTube Shorts",
+    "discordEmoji": "Discord Emoji",
+    "slackEmoji": "Slack Emoji",
+    "whatsappSticker": "WhatsApp Sticker",
+    "webBanner": "Web Banner",
+    "favicon": "Favicon"
+  },
   "animationCard": {
     "deleteTitle": "Delete animation?",
     "deleteMessage": "\"{name}\" and its chat history will be permanently deleted. This can't be undone.",
@@ -299,6 +314,10 @@
     "cssNotSupported": "This animation uses features that cannot be represented in pure CSS:",
     "cssHtml": "HTML Structure",
     "cssCss": "CSS Animation",
-    "cssNote": "Zero runtime — pure CSS animation, no JavaScript required."
+    "cssNote": "Zero runtime — pure CSS animation, no JavaScript required.",
+    "cssShowPreview": "Show Preview",
+    "cssHidePreview": "Hide Preview",
+    "cssOriginal": "Original (Lottie)",
+    "cssCssPreview": "CSS Animation"
   }
 }

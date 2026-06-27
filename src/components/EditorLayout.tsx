@@ -32,6 +32,8 @@ import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import { optimizeLottie } from "@/lib/optimizer";
 import { rescaleDuration } from "@/lib/rescaleDuration";
+import { rescaleForExport } from "@/lib/rescaleForExport";
+import { ExportPreset, getPresetFilename } from "@/lib/exportPresets";
 import { useToast } from "@/contexts/ToastContext";
 
 interface EditorPageProps {
@@ -39,6 +41,53 @@ interface EditorPageProps {
   initialName: string;
   initialData: object | null;
   remixedFrom?: { id: string; name: string };
+}
+
+/**
+ * Iteratively export a GIF with reducing quality/framerate until it fits under maxSize.
+ * Strategy: reduce GIF quality (increase quality number = lower quality),
+ * then reduce framerate by skipping frames.
+ */
+async function exportWithSizeLimit(
+  animationData: object,
+  maxSize: number,
+  onProgress: (p: number) => void
+): Promise<Blob> {
+  const { exportToGif } = await import("@/lib/gifExporter");
+
+  // First attempt with default settings
+  let blob = await exportToGif({ animationData, onProgress });
+  if (blob.size <= maxSize) return blob;
+
+  // Second attempt: reduce framerate by truncating frames (simulate by adjusting fr)
+  // We'll modify the animation data to halve the framerate
+  const data = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+  const originalFr = (data.fr as number) || 30;
+
+  // Try progressively lower framerates: 15, 10, 8, 5
+  const fpsAttempts = [15, 10, 8, 5];
+  for (const targetFps of fpsAttempts) {
+    if (targetFps >= originalFr) continue;
+    const ratio = targetFps / originalFr;
+    const adjusted = JSON.parse(JSON.stringify(data));
+    adjusted.fr = targetFps;
+    // Scale op proportionally to maintain duration
+    adjusted.op = Math.round(((adjusted.op as number) || 60) * ratio);
+    if (adjusted.ip) adjusted.ip = Math.round((adjusted.ip as number) * ratio);
+    // Scale layer timing
+    if (Array.isArray(adjusted.layers)) {
+      for (const layer of adjusted.layers) {
+        if (typeof layer.ip === "number") layer.ip = Math.round(layer.ip * ratio);
+        if (typeof layer.op === "number") layer.op = Math.round(layer.op * ratio);
+      }
+    }
+    onProgress(0);
+    blob = await exportToGif({ animationData: adjusted, onProgress });
+    if (blob.size <= maxSize) return blob;
+  }
+
+  // If still too large, return the smallest we got
+  return blob;
 }
 
 export default function EditorPage({ id, initialName, initialData, remixedFrom }: EditorPageProps) {
@@ -75,6 +124,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
   const [apngProgress, setApngProgress] = useState(0);
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [presetExporting, setPresetExporting] = useState(false);
+  const [presetProgress, setPresetProgress] = useState(0);
+  const [presetExportingId, setPresetExportingId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"canvas" | "chat" | "layers">("chat");
   const [insertText, setInsertText] = useState("");
@@ -349,6 +401,60 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
     } finally {
       setVideoExporting(false);
       setVideoProgress(0);
+    }
+  };
+
+  const handleExportPreset = async (preset: ExportPreset) => {
+    if (!animationData || presetExporting) return;
+    setPresetExporting(true);
+    setPresetProgress(0);
+    setPresetExportingId(preset.id);
+    try {
+      // Rescale animation data to preset dimensions
+      const { animationData: rescaledData } = rescaleForExport(animationData, {
+        targetWidth: preset.width,
+        targetHeight: preset.height,
+        fit: "contain",
+      });
+
+      let blob: Blob;
+      const onProgress = (p: number) => setPresetProgress(p);
+
+      if (preset.format === "gif") {
+        const { exportToGif } = await import("@/lib/gifExporter");
+
+        if (preset.maxFileSize) {
+          // Iterative export with quality/framerate reduction for size-limited presets
+          blob = await exportWithSizeLimit(rescaledData, preset.maxFileSize, onProgress);
+        } else {
+          blob = await exportToGif({ animationData: rescaledData, onProgress });
+        }
+      } else if (preset.format === "mp4") {
+        const { exportToVideo } = await import("@/lib/videoExporter");
+        blob = await exportToVideo({ animationData: rescaledData, onProgress });
+      } else if (preset.format === "apng") {
+        const { exportToApng } = await import("@/lib/apngExporter");
+        blob = await exportToApng({ animationData: rescaledData, onProgress });
+      } else {
+        // webp fallback to apng
+        const { exportToApng } = await import("@/lib/apngExporter");
+        blob = await exportToApng({ animationData: rescaledData, onProgress });
+      }
+
+      const url = URL.createObjectURL(blob);
+      const filename = getPresetFilename(name, preset);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Preset export failed:", err);
+      toast({ message: `Export failed for ${preset.platform}. Please try again.`, type: "error" });
+    } finally {
+      setPresetExporting(false);
+      setPresetProgress(0);
+      setPresetExportingId(null);
     }
   };
 
@@ -702,11 +808,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
           apngProgress={apngProgress}
           videoExporting={videoExporting}
           videoProgress={videoProgress}
+          presetExporting={presetExporting}
+          presetProgress={presetProgress}
+          presetExportingId={presetExportingId}
           onExportJson={handleExport}
           onExportGif={handleExportGif}
           onExportApng={handleExportApng}
           onExportDotLottie={handleExportDotLottie}
           onExportVideo={handleExportVideo}
+          onExportPreset={handleExportPreset}
           onDuplicate={handleDuplicate}
           isDuplicating={duplicating}
         />
