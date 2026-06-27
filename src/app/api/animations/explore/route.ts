@@ -27,6 +27,7 @@ export async function GET(request: Request) {
   const q = url.searchParams.get("q")?.trim() ?? "";
   const sort = url.searchParams.get("sort") ?? "newest";
   const tagParam = url.searchParams.get("tag")?.trim() ?? "";
+  const creatorParam = url.searchParams.get("creator")?.trim() ?? "";
 
   // Transform search query for FTS5: quote each token to handle special chars
   let ftsQuery = "";
@@ -65,6 +66,14 @@ export async function GET(request: Request) {
     tagParams.push(tagParam, `${tagParam},%`, `%,${tagParam}`, `%,${tagParam},%`);
   }
 
+  // Build creator filter conditions
+  const creatorConditions: string[] = [];
+  const creatorParams: (string | number)[] = [];
+  if (creatorParam) {
+    creatorConditions.push("animations.creator_id = ?");
+    creatorParams.push(creatorParam);
+  }
+
   let total = 0;
   let rows: {
     id: string;
@@ -75,15 +84,16 @@ export async function GET(request: Request) {
     tags: string | null;
     view_count: number;
     like_count: number;
+    creator_id: string | null;
   }[] = [];
 
   // Use FTS5 when a search query is provided
   if (ftsQuery) {
     let useFts = true;
     try {
-      const ftsConditions = ["animations_fts MATCH ?", "animations.share_chat = 1", "animations.frame_count IS NOT NULL", ...tagConditions];
+      const ftsConditions = ["animations_fts MATCH ?", ...(creatorParam ? [] : ["animations.share_chat = 1"]), "animations.frame_count IS NOT NULL", ...tagConditions, ...creatorConditions];
       const ftsWhere = "WHERE " + ftsConditions.join(" AND ");
-      const ftsParams = [ftsQuery, ...tagParams];
+      const ftsParams = [ftsQuery, ...tagParams, ...creatorParams];
 
       // Use bm25 relevance ranking for default sort, otherwise respect user's sort choice
       const ftsOrderBy = sort === "newest" ? "bm25(animations_fts)" : orderBy;
@@ -99,7 +109,7 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count
+          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count, animations.creator_id
            FROM animations
            INNER JOIN animations_fts ON animations.rowid = animations_fts.rowid
            ${ftsWhere}
@@ -113,8 +123,8 @@ export async function GET(request: Request) {
     }
 
     if (!useFts) {
-      const conditions = ["name LIKE ?", "share_chat = 1", "frame_count IS NOT NULL", ...tagConditions];
-      const params = [`%${q}%`, ...tagParams];
+      const conditions = ["name LIKE ?", ...(creatorParam ? [] : ["share_chat = 1"]), "frame_count IS NOT NULL", ...tagConditions, ...creatorConditions];
+      const params = [`%${q}%`, ...tagParams, ...creatorParams];
       const whereClause = "WHERE " + conditions.join(" AND ");
 
       const totalRow = db
@@ -124,7 +134,7 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count
+          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id
            FROM animations
            ${whereClause}
            ORDER BY ${orderBy}
@@ -134,8 +144,8 @@ export async function GET(request: Request) {
     }
   } else {
     // No search query — standard query
-    const conditions = ["share_chat = 1", "frame_count IS NOT NULL", ...tagConditions];
-    const params = [...tagParams];
+    const conditions = [...(creatorParam ? [] : ["share_chat = 1"]), "frame_count IS NOT NULL", ...tagConditions, ...creatorConditions];
+    const params = [...tagParams, ...creatorParams];
     const whereClause = "WHERE " + conditions.join(" AND ");
 
     const totalRow = db
@@ -145,7 +155,7 @@ export async function GET(request: Request) {
 
     rows = db
       .prepare(
-        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count
+        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id
          FROM animations
          ${whereClause}
          ORDER BY ${orderBy}

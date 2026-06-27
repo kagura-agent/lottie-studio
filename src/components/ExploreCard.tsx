@@ -18,9 +18,11 @@ interface ExploreCardProps {
     h: number | null;
     view_count?: number;
     like_count?: number;
+    creator_id?: string | null;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
+  isOwnAnimation?: boolean;
 }
 
 function formatViewCount(count: number): string {
@@ -33,7 +35,7 @@ function formatViewCount(count: number): string {
   return String(count);
 }
 
-export default function ExploreCard({ animation, isFavorite, onToggleFavorite }: ExploreCardProps) {
+export default function ExploreCard({ animation, isFavorite, onToggleFavorite, isOwnAnimation }: ExploreCardProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
@@ -278,6 +280,11 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite }:
       <div className="p-4">
         <h3 className="text-sm font-medium text-zinc-100 truncate group-hover:text-white">
           {animation.name}
+          {isOwnAnimation && (
+            <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25">
+              By you
+            </span>
+          )}
         </h3>
         {animation.description && (
           <p className="mt-1 text-xs text-zinc-400 line-clamp-2">

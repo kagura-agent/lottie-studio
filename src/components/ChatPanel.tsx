@@ -8,6 +8,7 @@ import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
 import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
 import { parseLottieFile } from "@/lib/importLottie";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface Message {
   id: string;
@@ -176,7 +177,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
   const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string, regenerate?: boolean) => {
-    const res = await fetch("/api/chat", {
+    const res = await apiFetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -785,7 +786,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("/api/import-svg", {
+        const res = await apiFetch("/api/import-svg", {
           method: "POST",
           body: formData,
         });
@@ -865,7 +866,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       }
 
       // Save via API
-      const res = await fetch("/api/animations", {
+      const res = await apiFetch("/api/animations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, data: lottieData }),
