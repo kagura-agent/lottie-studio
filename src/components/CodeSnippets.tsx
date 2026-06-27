@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/contexts/ToastContext";
-import { convertLottieToCss, type CssExportResult } from "@/lib/lottie-to-css";
+import { convertLottieToCss, buildCssPreviewSrcdoc, type CssExportResult } from "@/lib/lottie-to-css";
+import lottie from "lottie-web";
 
 interface CodeSnippetsProps {
   animationId: string;
@@ -261,6 +262,25 @@ function CssTabContent({
   t: ReturnType<typeof useTranslations>;
   handleCopy: () => void;
 }) {
+  const [showPreview, setShowPreview] = useState(false);
+  const lottieContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showPreview || !animationData || !lottieContainerRef.current) return;
+
+    const anim = lottie.loadAnimation({
+      container: lottieContainerRef.current,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+      animationData: animationData,
+    });
+
+    return () => {
+      anim.destroy();
+    };
+  }, [showPreview, animationData]);
+
   if (!animationData) {
     return <div className="text-zinc-400 text-sm">{t("common.loading")}</div>;
   }
@@ -282,8 +302,59 @@ function CssTabContent({
     );
   }
 
+  const animWidth = (animationData as { w?: number }).w || 400;
+  const animHeight = (animationData as { h?: number }).h || 400;
+  const srcdoc = buildCssPreviewSrcdoc(result.html, result.css, animWidth, animHeight);
+
   return (
     <>
+      {/* Preview toggle */}
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          onClick={() => setShowPreview(!showPreview)}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            showPreview
+              ? "bg-zinc-100 text-zinc-900"
+              : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600 hover:text-zinc-100"
+          }`}
+        >
+          {showPreview
+            ? t("codeSnippets.cssHidePreview")
+            : t("codeSnippets.cssShowPreview")}
+        </button>
+      </div>
+
+      {/* Live preview */}
+      {showPreview && (
+        <div className="mb-4 flex flex-col sm:flex-row gap-4 rounded-lg border border-zinc-700 bg-zinc-800/50 p-4">
+          {/* Original Lottie */}
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">
+              {t("codeSnippets.cssOriginal")}
+            </div>
+            <div
+              ref={lottieContainerRef}
+              className="w-full rounded border border-zinc-700 bg-zinc-900"
+              style={{ aspectRatio: `${animWidth} / ${animHeight}` }}
+            />
+          </div>
+
+          {/* CSS Preview */}
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-zinc-400 mb-2 uppercase tracking-wide">
+              {t("codeSnippets.cssCssPreview")}
+            </div>
+            <iframe
+              sandbox=""
+              srcDoc={srcdoc}
+              className="w-full rounded border border-zinc-700"
+              style={{ aspectRatio: `${animWidth} / ${animHeight}` }}
+              title="CSS Animation Preview"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Note */}
       <div className="mb-4 text-xs text-zinc-400">
         {t("codeSnippets.cssNote")}

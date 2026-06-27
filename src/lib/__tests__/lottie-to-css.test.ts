@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertLottieToCss } from "../lottie-to-css";
+import { convertLottieToCss, buildCssPreviewSrcdoc } from "../lottie-to-css";
 
 function makeLottie(overrides: Record<string, unknown> = {}) {
   return {
@@ -444,5 +444,54 @@ describe("convertLottieToCss", () => {
       expect(result.html).not.toContain("Null Layer");
       expect(result.html).toContain("Visible Layer");
     });
+  });
+});
+
+describe("buildCssPreviewSrcdoc", () => {
+  it("generates a valid HTML document string", () => {
+    const html = '<div class="lottie-animation"><div class="layer-0"></div></div>';
+    const css = '.lottie-animation { width: 400px; height: 400px; }';
+    const result = buildCssPreviewSrcdoc(html, css, 400, 400);
+
+    expect(result).toContain("<!DOCTYPE html>");
+    expect(result).toContain("<html>");
+    expect(result).toContain("</html>");
+    expect(result).toContain(html);
+    expect(result).toContain(css);
+  });
+
+  it("includes checkerboard background styles", () => {
+    const result = buildCssPreviewSrcdoc("<div></div>", "", 200, 200);
+
+    expect(result).toContain("linear-gradient(45deg");
+    expect(result).toContain("background-size: 16px 16px");
+  });
+
+  it("sets correct aspect-ratio from width and height", () => {
+    const result = buildCssPreviewSrcdoc("<div></div>", "", 800, 600);
+
+    expect(result).toContain("aspect-ratio: 800 / 600");
+  });
+
+  it("includes meta charset", () => {
+    const result = buildCssPreviewSrcdoc("<div></div>", "", 100, 100);
+
+    expect(result).toContain('<meta charset="utf-8">');
+  });
+
+  it("embeds CSS in a style tag", () => {
+    const css = "@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }";
+    const result = buildCssPreviewSrcdoc("<div></div>", css, 100, 100);
+
+    expect(result).toContain("<style>");
+    expect(result).toContain(css);
+    expect(result).toContain("</style>");
+  });
+
+  it("places HTML inside the body", () => {
+    const html = '<div class="lottie-animation"><div class="layer-0"><!-- Test --></div></div>';
+    const result = buildCssPreviewSrcdoc(html, "", 400, 300);
+
+    expect(result).toContain(`<body>\n${html}\n</body>`);
   });
 });

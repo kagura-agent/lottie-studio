@@ -299,6 +299,10 @@
     "cssNotSupported": "此动画使用了无法用纯 CSS 表示的功能：",
     "cssHtml": "HTML 结构",
     "cssCss": "CSS 动画",
-    "cssNote": "零运行时 — 纯 CSS 动画，无需 JavaScript。"
+    "cssNote": "零运行时 — 纯 CSS 动画，无需 JavaScript。",
+    "cssShowPreview": "显示预览",
+    "cssHidePreview": "隐藏预览",
+    "cssOriginal": "原始 (Lottie)",
+    "cssCssPreview": "CSS 动画"
   }
 }

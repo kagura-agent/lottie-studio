@@ -299,6 +299,10 @@
     "cssNotSupported": "This animation uses features that cannot be represented in pure CSS:",
     "cssHtml": "HTML Structure",
     "cssCss": "CSS Animation",
-    "cssNote": "Zero runtime — pure CSS animation, no JavaScript required."
+    "cssNote": "Zero runtime — pure CSS animation, no JavaScript required.",
+    "cssShowPreview": "Show Preview",
+    "cssHidePreview": "Hide Preview",
+    "cssOriginal": "Original (Lottie)",
+    "cssCssPreview": "CSS Animation"
   }
 }
