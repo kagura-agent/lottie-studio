@@ -103,6 +103,20 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add creator_id column for anonymous creator identity
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN creator_id TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
+// Migration: add creator_name column for optional display name
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN creator_name TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 // Likes table for IP-based deduplication
 db.exec(`
   CREATE TABLE IF NOT EXISTS likes (

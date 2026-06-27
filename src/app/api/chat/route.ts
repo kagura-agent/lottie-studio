@@ -189,6 +189,10 @@ export async function POST(request: Request) {
     return handleUndo(animationId, message);
   }
 
+  // Read creator identity headers
+  const creatorId = request.headers.get("x-creator-id") || null;
+  const creatorName = request.headers.get("x-creator-name") || null;
+
   let isNewAnimation = false;
   if (animationId) {
     const existing = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
@@ -199,8 +203,8 @@ export async function POST(request: Request) {
     animationId = randomUUID();
     const name = extractTitle(message);
     db.prepare(
-      "INSERT INTO animations (id, name) VALUES (?, ?)"
-    ).run(animationId, name);
+      "INSERT INTO animations (id, name, creator_id, creator_name) VALUES (?, ?, ?, ?)"
+    ).run(animationId, name, creatorId, creatorName);
     isNewAnimation = true;
   }
 

@@ -176,6 +176,8 @@ interface ShareViewProps {
   animationData: object;
   messages?: { role: string; content: string; imageUrl?: string }[];
   viewCount?: number;
+  creatorName?: string | null;
+  creatorId?: string | null;
 }
 
 function formatViewCount(count: number): string {
@@ -259,7 +261,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
   );
 }
 
-export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount }: ShareViewProps) {
+export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName, creatorId }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -448,6 +450,15 @@ export default function ShareView({ id, name, description, animationData, messag
         <h1 className="text-zinc-100 text-lg font-semibold px-1 flex-1 min-w-0 truncate">
           {name}
         </h1>
+        {creatorName && (
+          <span className="text-zinc-400 text-sm shrink-0 flex items-center gap-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {creatorName}
+          </span>
+        )}
         <span className="text-zinc-500 text-sm flex items-center gap-1 shrink-0" title={`${viewCount} views`}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />

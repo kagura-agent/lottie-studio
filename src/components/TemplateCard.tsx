@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/apiFetch";
 import { useTranslations } from 'next-intl';
 
 interface TemplateCardProps {
@@ -76,7 +77,7 @@ export default function TemplateCard({
     setCreating(true);
 
     try {
-      const res = await fetch("/api/animations", {
+      const res = await apiFetch("/api/animations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

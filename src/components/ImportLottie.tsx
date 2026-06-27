@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useTranslations } from 'next-intl';
 import { parseLottieFile } from "@/lib/importLottie";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface ImportLottieProps {
   onImported: (id: string, data: object) => void;
@@ -118,7 +119,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       const importMessage = `Imported **${name}** — ${lottieData.w}×${lottieData.h}px, ${layers.length} layer${layers.length !== 1 ? "s" : ""}, ${duration.toFixed(1)}s at ${lottieData.fr}fps. What would you like to change?`;
 
       // Create animation via API (with seed message)
-      const res = await fetch("/api/animations", {
+      const res = await apiFetch("/api/animations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, data: lottieData, importMessage }),

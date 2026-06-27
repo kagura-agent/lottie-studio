@@ -18,6 +18,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "name and data are required" }, { status: 400 });
   }
 
+  // Read creator identity headers
+  const creatorId = request.headers.get("x-creator-id") || null;
+  const creatorName = request.headers.get("x-creator-name") || null;
+
   const id = randomUUID();
   const frameCount = data.op ?? data.totalFrames ?? null;
   const frameRate = data.fr ?? 30;
@@ -26,8 +30,8 @@ export async function POST(request: Request) {
   fs.writeFileSync(path.join(ANIMATIONS_DIR, `${id}.json`), JSON.stringify(data));
 
   db.prepare(
-    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, name, frameCount, durationSeconds, templateName || null);
+    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source, creator_id, creator_name) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, name, frameCount, durationSeconds, templateName || null, creatorId, creatorName);
 
   // Persist seed assistant message when created from a template
   if (templateName) {

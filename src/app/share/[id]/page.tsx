@@ -100,6 +100,8 @@ export default async function SharePage({ params }: Props) {
 
   const name = (row.name as string) ?? "Untitled";
   const viewCount = (row.view_count as number) ?? 0;
+  const creatorName = (row.creator_name as string) || null;
+  const creatorId = (row.creator_id as string) || null;
   const animDescription =
     (row.description as string) || "Lottie animation created with Lottie Studio";
   const jsonLd = {
@@ -110,10 +112,9 @@ export default async function SharePage({ params }: Props) {
     url: `${BASE_URL}/share/${id}`,
     thumbnailUrl: `${BASE_URL}/api/animations/${id}/thumbnail`,
     dateCreated: row.created_at as string,
-    author: {
-      "@type": "Organization",
-      name: "Lottie Studio",
-    },
+    author: creatorName
+      ? { "@type": "Person", name: creatorName }
+      : { "@type": "Organization", name: "Lottie Studio" },
   };
 
   return (
@@ -129,6 +130,8 @@ export default async function SharePage({ params }: Props) {
           animationData={data}
           messages={messages}
           viewCount={viewCount}
+          creatorName={creatorName}
+          creatorId={creatorId}
         />
       </Suspense>
       <RelatedAnimations animationId={id} />

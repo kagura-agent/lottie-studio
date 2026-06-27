@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import ExploreCard from "@/components/ExploreCard";
 import { useFavorites } from "@/hooks/useFavorites";
+import { getCreatorId } from "@/lib/creatorId";
 import FeaturedSpotlight from "@/components/FeaturedSpotlight";
 
 type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-viewed" | "most-liked";
@@ -22,6 +23,7 @@ interface ExploreAnimation {
   tags: string | null;
   view_count?: number;
   like_count?: number;
+  creator_id?: string | null;
 }
 
 interface ExploreResponse {
@@ -65,6 +67,13 @@ export default function ExplorePage() {
   const fetchingRef = useRef(false);
   const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showMyAnimations, setShowMyAnimations] = useState(false);
+  const myCreatorId = useRef<string>("");
+
+  // Get creator ID on mount (client-side only)
+  useEffect(() => {
+    myCreatorId.current = getCreatorId();
+  }, []);
 
   const fetchAnimations = useCallback(async (
     p: number,
@@ -72,6 +81,7 @@ export default function ExplorePage() {
     sort: SortOption,
     tag: string | undefined,
     mode: "reset" | "append",
+    creator?: string,
   ) => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
@@ -89,6 +99,7 @@ export default function ExplorePage() {
       const params = new URLSearchParams({ page: String(p), limit: "24", sort });
       if (q) params.set("q", q);
       if (tag) params.set("tag", tag);
+      if (creator) params.set("creator", creator);
       const res = await fetch(`/api/animations/explore?${params}`);
       if (!res.ok) {
         if (res.status === 429) {
@@ -168,7 +179,7 @@ export default function ExplorePage() {
       (entries) => {
         const entry = entries[0];
         if (entry?.isIntersecting && hasMore && !fetchingRef.current) {
-          fetchAnimations(page + 1, searchQuery, sortOption, activeTag, "append");
+          fetchAnimations(page + 1, searchQuery, sortOption, activeTag, "append", showMyAnimations ? myCreatorId.current : undefined);
         }
       },
       { rootMargin: "200px" },
@@ -182,7 +193,7 @@ export default function ExplorePage() {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [hasMore, page, searchQuery, sortOption, activeTag, fetchAnimations]);
+  }, [hasMore, page, searchQuery, sortOption, activeTag, showMyAnimations, fetchAnimations]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -191,19 +202,19 @@ export default function ExplorePage() {
       setAnimations([]);
       setPage(1);
       setHasMore(false);
-      fetchAnimations(1, value, sortOption, activeTag, "reset");
+      fetchAnimations(1, value, sortOption, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
     }, 300);
   };
 
   const handleSortChange = (value: SortOption) => {
     setSortOption(value);
-    fetchAnimations(1, searchQuery, value, activeTag, "reset");
+    fetchAnimations(1, searchQuery, value, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
   };
 
   const handleTagChange = (tag: string) => {
     const newTag = tag === activeTag ? "" : tag;
     setActiveTag(newTag);
-    fetchAnimations(1, searchQuery, sortOption, newTag, "reset");
+    fetchAnimations(1, searchQuery, sortOption, newTag, "reset", showMyAnimations ? myCreatorId.current : undefined);
     // URL sync
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -299,6 +310,35 @@ export default function ExplorePage() {
             <option value="name-desc">{t('explore.sortNameDesc')}</option>
           </select>
           <button
+            onClick={() => {
+              const next = !showMyAnimations;
+              setShowMyAnimations(next);
+              fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", next ? myCreatorId.current : undefined);
+            }}
+            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              showMyAnimations
+                ? "border-blue-500/50 bg-blue-500/10 text-blue-400"
+                : "border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={showMyAnimations ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              className="w-4 h-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+              />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            My Animations
+          </button>
+          <button
             onClick={() => setShowFavoritesOnly((v) => !v)}
             className={`relative flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
               showFavoritesOnly
@@ -391,7 +431,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <p className="text-zinc-400 mb-4">{error}</p>
             <button
-              onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset")}
+              onClick={() => fetchAnimations(1, searchQuery, sortOption, activeTag, "reset", showMyAnimations ? myCreatorId.current : undefined)}
               className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
             >
               {t('common.tryAgain')}
@@ -488,6 +528,7 @@ export default function ExplorePage() {
                       animation={anim}
                       isFavorite={isFavorite(anim.id)}
                       onToggleFavorite={toggleFavorite}
+                      isOwnAnimation={!!anim.creator_id && anim.creator_id === myCreatorId.current}
                     />
                   ))}
                 </div>

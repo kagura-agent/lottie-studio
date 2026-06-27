@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
+import { apiFetch } from "@/lib/apiFetch";
 import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
 import HeroWelcome from "@/components/HeroWelcome";
@@ -120,7 +121,7 @@ export default function GalleryPage() {
       const dataRes = await fetch(`/api/animations/${id}`);
       if (!dataRes.ok) throw new Error("Failed to fetch animation");
       const { data, name } = await dataRes.json();
-      const createRes = await fetch("/api/animations", {
+      const createRes = await apiFetch("/api/animations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: `${name} (copy)`, data }),
@@ -139,7 +140,7 @@ export default function GalleryPage() {
     setImporting(true);
     try {
       const { name, data } = await parseLottieFile(file);
-      const res = await fetch("/api/animations", {
+      const res = await apiFetch("/api/animations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, data }),
@@ -191,7 +192,7 @@ export default function GalleryPage() {
     setImportError(null);
     setImportingUrl(true);
     try {
-      const res = await fetch("/api/animations/import-url", {
+      const res = await apiFetch("/api/animations/import-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: urlInput.trim() }),
