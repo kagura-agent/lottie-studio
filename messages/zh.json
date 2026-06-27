@@ -218,6 +218,21 @@
     "videoProgress": "视频 {progress}%",
     "codeSnippets": "</> 代码"
   },
+  "exportPresets": {
+    "socialPresets": "社交媒体预设",
+    "webPresets": "网页预设",
+    "exporting": "导出中 {progress}%",
+    "instagramStory": "Instagram 快拍",
+    "instagramPost": "Instagram 帖子",
+    "twitterPost": "Twitter/X 帖子",
+    "tiktok": "TikTok（抖音）",
+    "youtubeShorts": "YouTube Shorts",
+    "discordEmoji": "Discord 表情",
+    "slackEmoji": "Slack 表情",
+    "whatsappSticker": "WhatsApp 贴纸",
+    "webBanner": "网页横幅",
+    "favicon": "网站图标"
+  },
   "animationCard": {
     "deleteTitle": "删除动画？",
     "deleteMessage": "「{name}」及其聊天记录将被永久删除。此操作不可撤销。",
