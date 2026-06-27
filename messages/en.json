@@ -292,6 +292,13 @@
     "tabDotLottie": "dotLottie",
     "install": "Install",
     "usage": "Usage",
-    "copied": "Code copied to clipboard!"
+    "copied": "Code copied to clipboard!",
+    "tabs": {
+      "css": "CSS"
+    },
+    "cssNotSupported": "This animation uses features that cannot be represented in pure CSS:",
+    "cssHtml": "HTML Structure",
+    "cssCss": "CSS Animation",
+    "cssNote": "Zero runtime — pure CSS animation, no JavaScript required."
   }
 }

@@ -3,17 +3,20 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/contexts/ToastContext";
+import { convertLottieToCss, type CssExportResult } from "@/lib/lottie-to-css";
 
 interface CodeSnippetsProps {
   animationId: string;
+  animationData?: object;
   open: boolean;
   onClose: () => void;
 }
 
-type Tab = "html" | "react" | "vue" | "reactNative" | "dotLottie";
+type Tab = "html" | "react" | "vue" | "reactNative" | "dotLottie" | "css";
 
 export default function CodeSnippets({
   animationId,
+  animationData,
   open,
   onClose,
 }: CodeSnippetsProps) {
@@ -44,7 +47,7 @@ export default function CodeSnippets({
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const jsonUrl = `${origin}/api/animations/${animationId}/json`;
 
-  const snippets: Record<Tab, { install: string; code: string }> = {
+  const snippets: Record<Exclude<Tab, "css">, { install: string; code: string }> = {
     html: {
       install: `<!-- CDN -->\n<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>`,
       code: `<div id="lottie-container" style="width: 400px; height: 400px;"></div>
@@ -128,9 +131,19 @@ export default function Animation() {
     vue: t("codeSnippets.tabVue"),
     reactNative: t("codeSnippets.tabReactNative"),
     dotLottie: t("codeSnippets.tabDotLottie"),
+    css: t("codeSnippets.tabs.css"),
   };
 
   const handleCopy = () => {
+    if (activeTab === "css") {
+      if (!animationData) return;
+      const cssResult = convertLottieToCss(animationData);
+      if (!cssResult.success) return;
+      const fullText = `${cssResult.html}\n\n${cssResult.css}`;
+      navigator.clipboard.writeText(fullText);
+      toast({ message: t("codeSnippets.copied"), type: "success" });
+      return;
+    }
     const snippet = snippets[activeTab];
     const fullText = `${snippet.install}\n\n${snippet.code}`;
     navigator.clipboard.writeText(fullText);
@@ -171,7 +184,7 @@ export default function Animation() {
 
         {/* Tabs */}
         <div className="flex border-b border-zinc-800 overflow-x-auto">
-          {(["html", "react", "vue", "reactNative", "dotLottie"] as Tab[]).map(
+          {(["html", "react", "vue", "reactNative", "dotLottie", "css"] as Tab[]).map(
             (tab) => (
               <button
                 key={tab}
@@ -190,6 +203,10 @@ export default function Animation() {
 
         {/* Content */}
         <div className="p-5 overflow-y-auto flex-1">
+          {activeTab === "css" ? (
+            <CssTabContent animationData={animationData} t={t} handleCopy={handleCopy} />
+          ) : (
+          <>
           {/* Install command */}
           <div className="mb-4">
             <div className="text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">
@@ -227,9 +244,83 @@ export default function Animation() {
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function CssTabContent({
+  animationData,
+  t,
+  handleCopy,
+}: {
+  animationData?: object;
+  t: ReturnType<typeof useTranslations>;
+  handleCopy: () => void;
+}) {
+  if (!animationData) {
+    return <div className="text-zinc-400 text-sm">{t("common.loading")}</div>;
+  }
+
+  const result: CssExportResult = convertLottieToCss(animationData);
+
+  if (!result.success) {
+    return (
+      <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 p-4">
+        <div className="text-amber-300 text-sm font-medium mb-2">
+          {t("codeSnippets.cssNotSupported")}
+        </div>
+        <ul className="list-disc list-inside text-sm text-amber-200/80 space-y-1">
+          {result.reasons.map((reason, i) => (
+            <li key={i}>{reason}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Note */}
+      <div className="mb-4 text-xs text-zinc-400">
+        {t("codeSnippets.cssNote")}
+      </div>
+
+      {/* HTML Structure */}
+      <div className="mb-4">
+        <div className="text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">
+          {t("codeSnippets.cssHtml")}
+        </div>
+        <pre className="bg-zinc-800 rounded-lg p-3 text-sm font-mono overflow-x-auto">
+          <code>
+            <HighlightedCode code={result.html} type="code" />
+          </code>
+        </pre>
+      </div>
+
+      {/* CSS Animation */}
+      <div>
+        <div className="text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">
+          {t("codeSnippets.cssCss")}
+        </div>
+        <div className="relative">
+          <pre className="bg-zinc-800 rounded-lg p-4 text-sm font-mono overflow-x-auto">
+            <code>
+              <HighlightedCode code={result.css} type="code" />
+            </code>
+          </pre>
+          <button
+            onClick={handleCopy}
+            className="absolute top-2 right-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-zinc-700 text-zinc-300 hover:bg-zinc-600 hover:text-zinc-100"
+          >
+            {t("common.copy")}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
