@@ -26,6 +26,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/style", description: "Apply visual style (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)", hasParams: true },
   { command: "/animate", description: "Apply motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)", hasParams: true },
   { command: "/marker", description: "Add/remove named segments (add, remove, list, clear)", hasParams: true },
+  { command: "/compose", description: "Import layers from another animation", hasParams: true },
 ];
 
 export function filterCommands(query: string): CommandDef[] {
