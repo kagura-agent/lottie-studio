@@ -70,6 +70,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const [isStreaming, setIsStreaming] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [retryingMsgId, setRetryingMsgId] = useState<string | null>(null);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
@@ -754,6 +756,62 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     }
   }, [isThinking, isStreaming, messages, streamResponse]);
 
+  const handleEditSave = useCallback(async () => {
+    if (!editingMsgId || !editText.trim() || !currentAnimationId || isThinking || isStreaming) return;
+
+    const msgIndex = messages.findIndex((m) => m.id === editingMsgId);
+    if (msgIndex < 0) return;
+
+    // Call PATCH to truncate and update
+    try {
+      const res = await fetch(`/api/chat/${currentAnimationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: editingMsgId, newContent: editText.trim() }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || "Failed to edit message");
+        return;
+      }
+    } catch {
+      setError("Failed to edit message");
+      return;
+    }
+
+    // Truncate local messages: keep up to and including the edited message
+    const updatedMessages = messages.slice(0, msgIndex + 1).map((m) =>
+      m.id === editingMsgId ? { ...m, content: editText.trim() } : m
+    );
+    setMessages(updatedMessages);
+
+    const savedText = editText.trim();
+    setEditingMsgId(null);
+    setEditText("");
+    setError(null);
+    setIsThinking(true);
+
+    // Re-send with edited text
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      await streamResponse(savedText, undefined, controller.signal);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled
+      } else {
+        const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+        setError(errMsg);
+      }
+    } finally {
+      abortControllerRef.current = null;
+      setIsRepairing(false);
+      setIsThinking(false);
+      setIsStreaming(false);
+    }
+  }, [editingMsgId, editText, currentAnimationId, isThinking, isStreaming, messages, streamResponse]);
+
   // --- Autocomplete state (adjust during render when input changes) ---
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteQuery, setAutocompleteQuery] = useState("");
@@ -1115,7 +1173,34 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             <div
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div className={`group relative max-w-[80%] ${msg.role === "assistant" ? "pr-7" : ""}`}>
+              <div className={`group relative max-w-[80%] ${msg.role === "assistant" ? "pr-7" : "pl-7"}`}>
+                {editingMsgId === msg.id ? (
+                  <div className="flex flex-col gap-2 w-full min-w-[200px]">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="w-full bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 border border-indigo-500 focus:outline-none resize-none overflow-y-auto"
+                      rows={3}
+                      autoFocus
+                    />
+                    <p className="text-xs text-amber-400/80">{t('editWarning')}</p>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => { setEditingMsgId(null); setEditText(""); }}
+                        className="px-2.5 py-1 rounded text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+                      >
+                        {t('cancel')}
+                      </button>
+                      <button
+                        onClick={handleEditSave}
+                        disabled={!editText.trim()}
+                        className="px-2.5 py-1 rounded text-xs bg-indigo-600 text-white hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {t('saveAndRegenerate')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div
                   className={`px-3 py-2 rounded-lg text-sm leading-relaxed ${
                     msg.role === "user"
@@ -1150,6 +1235,20 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                     </>
                   )}
                 </div>
+                )}
+                {msg.role === "user" && !isThinking && !isStreaming && editingMsgId !== msg.id && (
+                  <button
+                    onClick={() => { setEditingMsgId(msg.id); setEditText(msg.content); }}
+                    className="absolute top-1.5 -left-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-600"
+                    aria-label={t('edit')}
+                    title={t('edit')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474Z" />
+                      <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 1 14 9v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
+                    </svg>
+                  </button>
+                )}
                 {msg.role === "assistant" && msg.id === lastAssistantMsgId && !isThinking && !isStreaming && (
                   <button
                     onClick={() => handleRetry(msg.id)}
