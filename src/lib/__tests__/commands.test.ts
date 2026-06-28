@@ -498,4 +498,31 @@ describe("parseCommand", () => {
       expect((result as { message: string }).message).toContain("typewriter");
     });
   });
+
+  describe("/compose", () => {
+    it("parses /compose with an animation id", () => {
+      expect(parseCommand("/compose abc-123-def")).toEqual({ type: "compose", id: "abc-123-def" });
+    });
+
+    it("parses /compose with a UUID", () => {
+      expect(parseCommand("/compose 550e8400-e29b-41d4-a716-446655440000")).toEqual({
+        type: "compose",
+        id: "550e8400-e29b-41d4-a716-446655440000",
+      });
+    });
+
+    it("is case-insensitive for command name", () => {
+      expect(parseCommand("/COMPOSE my-anim")).toEqual({ type: "compose", id: "my-anim" });
+      expect(parseCommand("/Compose other")).toEqual({ type: "compose", id: "other" });
+    });
+
+    it("returns error for missing argument", () => {
+      const result = parseCommand("/compose");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("takes only the first argument as id", () => {
+      expect(parseCommand("/compose id-1 extra-arg")).toEqual({ type: "compose", id: "id-1" });
+    });
+  });
 });

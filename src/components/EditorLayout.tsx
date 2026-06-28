@@ -807,6 +807,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
           pushState(cloned as object);
         }
         break;
+      case "compose":
+        // Handled server-side via ChatPanel streamResponse — no-op here
+        break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange, animationData, pushState]);

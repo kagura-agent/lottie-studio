@@ -53,6 +53,7 @@ export type Command =
   | { type: "marker_remove"; name: string }
   | { type: "marker_list" }
   | { type: "marker_clear" }
+  | { type: "compose"; id: string }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -259,6 +260,13 @@ export function parseCommand(input: string): Command | null {
         default:
           return { type: "error", message: `Unknown marker subcommand: "${subcommand}". Use add, remove, list, or clear.` };
       }
+    }
+
+    case "compose": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /compose <animation-id>" };
+      }
+      return { type: "compose", id: args[0] };
     }
 
     case "help":

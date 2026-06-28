@@ -9,6 +9,8 @@ import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
 import { extractIp, checkRate } from "@/lib/rateLimit";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
+import { parseCommand } from "@/lib/commands";
+import { composeLayers } from "@/lib/compose";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -187,6 +189,161 @@ export async function POST(request: Request) {
       return Response.json({ error: "Animation not found" }, { status: 404 });
     }
     return handleUndo(animationId, message);
+  }
+
+  // --- Compose command detection (before LLM call) ---
+  const parsedCmd = parseCommand(message);
+  if (parsedCmd && parsedCmd.type === "compose") {
+    if (!animationId) {
+      const encoder = new TextEncoder();
+      const reply = "Cannot compose — no current animation to compose into. Create an animation first.";
+      const doneEvent = JSON.stringify({ type: "done", reply });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    const encoder = new TextEncoder();
+    const sourceId = parsedCmd.id;
+
+    // Verify target animation exists
+    const targetRow = db.prepare("SELECT id FROM animations WHERE id = ?").get(animationId);
+    if (!targetRow) {
+      return Response.json({ error: "Animation not found" }, { status: 404 });
+    }
+
+    // Fetch source animation from DB
+    const sourceRow = db.prepare("SELECT id, name FROM animations WHERE id = ?").get(sourceId) as { id: string; name: string } | undefined;
+    if (!sourceRow) {
+      const reply = `Source animation "${sourceId}" not found.`;
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    // Read source animation JSON from disk
+    const sourceFile = path.join(ANIMATIONS_DIR, `${sourceId}.json`);
+    if (!fs.existsSync(sourceFile)) {
+      const reply = `Source animation "${sourceRow.name}" has no saved JSON file.`;
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    let sourceJson: object;
+    try {
+      sourceJson = JSON.parse(fs.readFileSync(sourceFile, "utf-8"));
+    } catch {
+      const reply = `Failed to parse source animation JSON.`;
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    // Read current target animation
+    const animationFile = path.join(ANIMATIONS_DIR, `${animationId}.json`);
+    let targetJson: object = { v: "5.7.1", fr: 30, ip: 0, op: 60, w: 512, h: 512, layers: [], assets: [] };
+    if (fs.existsSync(animationFile)) {
+      try {
+        targetJson = JSON.parse(fs.readFileSync(animationFile, "utf-8"));
+      } catch {}
+    }
+
+    // Compose layers
+    const merged = composeLayers(targetJson, sourceJson);
+    const sourceLayerCount = (sourceJson as { layers?: unknown[] }).layers?.length ?? 0;
+
+    // Save merged result
+    fs.writeFileSync(animationFile, JSON.stringify(merged));
+
+    // Update DB metadata
+    const lottie = merged as Record<string, unknown>;
+    const frameCount = (lottie.op as number) ?? null;
+    const frameRate = (lottie.fr as number) ?? 30;
+    const durationSeconds = frameCount != null ? frameCount / frameRate : null;
+    db.prepare(
+      "UPDATE animations SET frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(frameCount, durationSeconds, animationId);
+
+    // Save version
+    const lastVersion = db.prepare(
+      "SELECT MAX(version_num) as max_num FROM versions WHERE animation_id = ?"
+    ).get(animationId) as { max_num: number | null } | undefined;
+    const nextVersion = (lastVersion?.max_num ?? 0) + 1;
+    const mergedJson = JSON.stringify(merged);
+    db.prepare(
+      "INSERT INTO versions (animation_id, version_num, lottie_json, trigger_message) VALUES (?, ?, ?, ?)"
+    ).run(animationId, nextVersion, mergedJson, message);
+
+    // Save messages
+    const reply = `\u2728 Composed ${sourceLayerCount} layer${sourceLayerCount !== 1 ? "s" : ""} from "${sourceRow.name}" into the current animation.`;
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content) VALUES (?, ?, 'user', ?)"
+    ).run(randomUUID(), animationId, message);
+    db.prepare(
+      "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
+    ).run(randomUUID(), animationId, reply, mergedJson);
+
+    // Emit update event
+    animationEvents.emit("updated", { animationId });
+
+    const doneEvent = JSON.stringify({ type: "done", reply, lottieJson: merged, animationId });
+    const body = encoder.encode(`data: ${doneEvent}\n\n`);
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(body);
+        controller.close();
+      }
+    }), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   }
 
   // Read creator identity headers
