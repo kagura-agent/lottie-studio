@@ -55,6 +55,7 @@ export default function GalleryPage() {
   });
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [collectionAnimationIds, setCollectionAnimationIds] = useState<string[] | null>(null);
+  const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
   const router = useRouter();
@@ -245,6 +246,34 @@ export default function GalleryPage() {
     }
   }, [urlInput, router]);
 
+  const handleExportCollection = useCallback(async () => {
+    if (!selectedCollectionId || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/collections/${selectedCollectionId}/export`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="(.+)"/);
+      a.download = match?.[1] || "collection.zip";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Export failed");
+      setTimeout(() => setImportError(null), 5000);
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedCollectionId, exporting]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center flex-1">
@@ -301,6 +330,30 @@ export default function GalleryPage() {
                 onChange={handleFileChange}
               />
               <LanguageSwitcher />
+              {selectedCollectionId && (
+                <button
+                  onClick={handleExportCollection}
+                  disabled={exporting}
+                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  {exporting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Exporting...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Export ZIP
+                    </span>
+                  )}
+                </button>
+              )}
               <Link
                 href="/explore"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
