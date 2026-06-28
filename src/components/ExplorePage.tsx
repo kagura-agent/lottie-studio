@@ -24,6 +24,7 @@ interface ExploreAnimation {
   view_count?: number;
   like_count?: number;
   creator_id?: string | null;
+  creation_prompt?: string | null;
 }
 
 interface ExploreResponse {

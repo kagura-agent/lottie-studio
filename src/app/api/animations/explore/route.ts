@@ -85,6 +85,7 @@ export async function GET(request: Request) {
     view_count: number;
     like_count: number;
     creator_id: string | null;
+    creation_prompt: string | null;
   }[] = [];
 
   // Use FTS5 when a search query is provided
@@ -109,7 +110,8 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count, animations.creator_id
+          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count, animations.creator_id,
+           (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt
            FROM animations
            INNER JOIN animations_fts ON animations.rowid = animations_fts.rowid
            ${ftsWhere}
@@ -134,7 +136,8 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id
+          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id,
+           (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt
            FROM animations
            ${whereClause}
            ORDER BY ${orderBy}
@@ -155,7 +158,8 @@ export async function GET(request: Request) {
 
     rows = db
       .prepare(
-        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id
+        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id,
+         (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt
          FROM animations
          ${whereClause}
          ORDER BY ${orderBy}
@@ -180,7 +184,7 @@ export async function GET(request: Request) {
     } catch {
       // ignore parse errors
     }
-    return { ...row, layer_count: layerCount, w, h };
+    return { ...row, layer_count: layerCount, w, h, creation_prompt: row.creation_prompt ?? null };
   });
 
   // Compute tag counts for all shared animations (for filter chip counts)

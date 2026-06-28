@@ -27,6 +27,7 @@ interface ChatPanelProps {
   onAnimationCreated?: (id: string, data?: object) => void;
   onAnimationUpdated?: (id: string, data: object) => void;
   onCommand?: (command: Command) => void;
+  initialPrompt?: string;
 }
 
 // Image upload constraints (module-level to avoid recreating on each render)
@@ -62,10 +63,10 @@ const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
   typewriter: "Apply a typewriter reveal effect. If there are text layers, reveal characters one by one using trim paths or opacity per character. If no text layers, apply a left-to-right reveal using a rectangular mask with animated position.",
 };
 
-export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt }: ChatPanelProps) {
   const t = useTranslations('chat');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialPrompt ?? "");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);

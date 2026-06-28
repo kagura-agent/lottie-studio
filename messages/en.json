@@ -188,7 +188,9 @@
     "backToGallery": "Back to gallery",
     "featured": "Featured",
     "featuredView": "View",
-    "featuredRemix": "Remix"
+    "featuredRemix": "Remix",
+    "tryThis": "Try this",
+    "createdWithPrompt": "Created with prompt:"
   },
   "share": {
     "title": "Share Animation",

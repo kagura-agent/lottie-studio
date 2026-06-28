@@ -188,7 +188,9 @@
     "backToGallery": "返回画廊",
     "featured": "今日推荐",
     "featuredView": "查看",
-    "featuredRemix": "混音"
+    "featuredRemix": "混音",
+    "tryThis": "试试看",
+    "createdWithPrompt": "创作提示词："
   },
   "share": {
     "title": "分享动画",
