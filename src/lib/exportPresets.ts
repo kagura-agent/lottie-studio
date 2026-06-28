@@ -3,7 +3,7 @@
  * Each preset specifies target dimensions, format, and optional file size limits.
  */
 
-export type ExportFormat = "gif" | "mp4" | "apng" | "webp";
+export type ExportFormat = "gif" | "mp4" | "apng" | "webp" | "tgs";
 
 export interface ExportPreset {
   /** Unique identifier for the preset */
@@ -113,6 +113,18 @@ export const EXPORT_PRESETS: ExportPreset[] = [
     format: "apng",
     icon: "📨",
   },
+  {
+    id: "telegram-sticker",
+    nameKey: "exportPresets.telegramSticker",
+    platform: "Telegram",
+    category: "social",
+    width: 512,
+    height: 512,
+    format: "tgs" as ExportFormat,
+    maxFileSize: 64 * 1024, // 64KB
+    maxDuration: 3000, // 3 seconds
+    icon: "✈️",
+  },
   // Web Presets
   {
     id: "web-banner",
@@ -152,6 +164,8 @@ export function getFormatExtension(format: ExportFormat): string {
       return "apng";
     case "webp":
       return "webp";
+    case "tgs":
+      return "tgs";
   }
 }
 

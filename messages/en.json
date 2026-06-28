@@ -251,7 +251,8 @@
     "slackEmoji": "Slack Emoji",
     "whatsappSticker": "WhatsApp Sticker",
     "webBanner": "Web Banner",
-    "favicon": "Favicon"
+    "favicon": "Favicon",
+    "telegramSticker": "Telegram Sticker"
   },
   "animationCard": {
     "deleteTitle": "Delete animation?",
