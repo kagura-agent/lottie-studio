@@ -536,6 +536,19 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
           feedback = `\u23ed\ufe0f ${t('gotoFrame', { target: label })}`;
           break;
         }
+        case "marker_add":
+          feedback = `🏷️ Marker "${command.name}" added (frames ${command.startFrame}-${command.endFrame})`;
+          break;
+        case "marker_remove":
+          feedback = `🗑️ Marker "${command.name}" removed`;
+          break;
+        case "marker_list": {
+          feedback = `🏷️ Use the timeline to view markers, or check the JSON editor for the "markers" array.`;
+          break;
+        }
+        case "marker_clear":
+          feedback = `🧹 All markers cleared`;
+          break;
         case "help": {
           feedback = `**${t('helpTitle')}**\n\n`
             + `**${t('helpPlayback')}**\n`
@@ -564,6 +577,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/style <name>\` — ${t('helpStyleCmd')}\n\n`
             + `**${t('helpAnimate')}**\n`
             + `\`/animate <preset>\` — ${t('helpAnimateCmd')}\n\n`
+            + `**Markers**\n`
+            + `\`/marker add <name> <start>-<end>\` — Add a named segment\n`
+            + `\`/marker remove <name>\` — Remove a marker\n`
+            + `\`/marker list\` — List all markers\n`
+            + `\`/marker clear\` — Remove all markers\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

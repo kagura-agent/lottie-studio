@@ -49,6 +49,10 @@ export type Command =
   | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
   | { type: "style"; style: StyleName }
   | { type: "animate"; animation: AnimationPreset }
+  | { type: "marker_add"; name: string; startFrame: number; endFrame: number }
+  | { type: "marker_remove"; name: string }
+  | { type: "marker_list" }
+  | { type: "marker_clear" }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -216,6 +220,45 @@ export function parseCommand(input: string): Command | null {
         return { type: "animate", animation: animName as AnimationPreset };
       }
       return { type: "error", message: `Unknown animation preset "${args[0]}". Available presets: ${VALID_ANIMATIONS.join(", ")}` };
+    }
+
+    case "marker": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /marker add <name> <start>-<end> | /marker remove <name> | /marker list | /marker clear" };
+      }
+      const subcommand = args[0].toLowerCase();
+      switch (subcommand) {
+        case "add": {
+          if (args.length < 3) {
+            return { type: "error", message: "Usage: /marker add <name> <startFrame>-<endFrame>" };
+          }
+          const markerName = args[1];
+          const rangeStr = args[2];
+          const rangeMatch = rangeStr.match(/^(\d+)-(\d+)$/);
+          if (!rangeMatch) {
+            return { type: "error", message: `Invalid frame range: "${rangeStr}". Use format: <start>-<end> (e.g. 0-30)` };
+          }
+          const startFrame = parseInt(rangeMatch[1], 10);
+          const endFrame = parseInt(rangeMatch[2], 10);
+          if (startFrame >= endFrame) {
+            return { type: "error", message: `Start frame must be less than end frame. Got ${startFrame}-${endFrame}.` };
+          }
+          return { type: "marker_add", name: markerName, startFrame, endFrame };
+        }
+        case "remove":
+        case "delete": {
+          if (args.length < 2) {
+            return { type: "error", message: "Usage: /marker remove <name>" };
+          }
+          return { type: "marker_remove", name: args[1] };
+        }
+        case "list":
+          return { type: "marker_list" };
+        case "clear":
+          return { type: "marker_clear" };
+        default:
+          return { type: "error", message: `Unknown marker subcommand: "${subcommand}". Use add, remove, list, or clear.` };
+      }
     }
 
     case "help":
