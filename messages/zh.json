@@ -251,7 +251,8 @@
     "slackEmoji": "Slack 表情",
     "whatsappSticker": "WhatsApp 贴纸",
     "webBanner": "网页横幅",
-    "favicon": "网站图标"
+    "favicon": "网站图标",
+    "telegramSticker": "Telegram 贴纸"
   },
   "animationCard": {
     "deleteTitle": "删除动画？",

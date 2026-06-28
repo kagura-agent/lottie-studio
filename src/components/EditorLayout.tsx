@@ -436,6 +436,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       } else if (preset.format === "apng") {
         const { exportToApng } = await import("@/lib/apngExporter");
         blob = await exportToApng({ animationData: rescaledData, onProgress });
+      } else if (preset.format === "tgs") {
+        const { exportToTgs } = await import("@/lib/tgsExporter");
+        const result = await exportToTgs(rescaledData);
+        if (result.warnings.length > 0) {
+          toast({ message: result.warnings.join(". "), type: "info" });
+        }
+        blob = result.blob;
       } else {
         // webp fallback to apng
         const { exportToApng } = await import("@/lib/apngExporter");
