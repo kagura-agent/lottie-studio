@@ -2,11 +2,19 @@
 
 import { useState, useRef, useMemo, useCallback } from "react";
 
+interface Marker {
+  cm: string;
+  tm: number;
+  dr: number;
+}
+
 interface KeyframeTimelineProps {
   animationData: object | null;
   currentFrame: number;
   totalFrames: number;
   onSeek: (frame: number) => void;
+  markers?: Marker[];
+  onPlaySegment?: (startFrame: number, endFrame: number) => void;
 }
 
 interface KeyframeInfo {
@@ -192,6 +200,8 @@ export default function KeyframeTimeline({
   currentFrame,
   totalFrames,
   onSeek,
+  markers,
+  onPlaySegment,
 }: KeyframeTimelineProps) {
   const [collapsed, setCollapsed] = useState(true);
   const [tooltip, setTooltip] = useState<{
@@ -296,6 +306,52 @@ export default function KeyframeTimeline({
               style={{ left: `${playheadPercent}%` }}
             />
           </div>
+
+          {/* Markers row */}
+          {markers && markers.length > 0 && (
+            <div className="flex items-center h-6 mb-1">
+              <div className="w-24 shrink-0 truncate text-[10px] text-amber-400 pr-2 font-medium">
+                Markers
+              </div>
+              <div
+                className="flex-1 relative h-5 rounded-sm bg-zinc-800/30 cursor-pointer"
+                onClick={handleTimelineClick}
+              >
+                {markers.map((marker, mi) => {
+                  const markerLeft = frameToPercent(marker.tm);
+                  const markerWidth = frameToPercent(marker.tm + marker.dr) - markerLeft;
+                  const color = LAYER_COLORS[(mi + 2) % LAYER_COLORS.length];
+                  return (
+                    <div
+                      key={marker.cm}
+                      className="absolute top-0.5 bottom-0.5 rounded-sm flex items-center px-1 cursor-pointer hover:brightness-125 transition-all"
+                      style={{
+                        left: `${markerLeft}%`,
+                        width: `${markerWidth}%`,
+                        backgroundColor: color,
+                        opacity: 0.5,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSeek(marker.tm);
+                        onPlaySegment?.(marker.tm, marker.tm + marker.dr);
+                      }}
+                      title={`${marker.cm} (${marker.tm}-${marker.tm + marker.dr})`}
+                    >
+                      <span className="text-[9px] text-white font-medium truncate drop-shadow-sm">
+                        {marker.cm}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* Playhead */}
+                <div
+                  className="absolute top-0 bottom-0 w-px bg-zinc-100/70 pointer-events-none"
+                  style={{ left: `${playheadPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Layer rows */}
           <div className="space-y-px">

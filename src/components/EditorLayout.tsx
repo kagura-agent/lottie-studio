@@ -766,6 +766,47 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
         setInsertText(`⏭️ Seeked to frame ${targetFrame} (${timeAtFrame}s)`);
         break;
       }
+      case "marker_add":
+        if (animationData) {
+          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+          if (!Array.isArray(cloned.markers)) cloned.markers = [];
+          const markers = cloned.markers as Array<{ cm: string; tm: number; dr: number }>;
+          const existingIdx = markers.findIndex((m) => m.cm === command.name);
+          const newMarker = { cm: command.name, tm: command.startFrame, dr: command.endFrame - command.startFrame };
+          if (existingIdx >= 0) {
+            markers[existingIdx] = newMarker;
+          } else {
+            markers.push(newMarker);
+          }
+          setAnimationData(cloned as object);
+          setJsonText(JSON.stringify(cloned, null, 2));
+          pushState(cloned as object);
+        }
+        break;
+      case "marker_remove":
+        if (animationData) {
+          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+          if (Array.isArray(cloned.markers)) {
+            cloned.markers = (cloned.markers as Array<{ cm: string; tm: number; dr: number }>).filter((m) => m.cm !== command.name);
+            if ((cloned.markers as unknown[]).length === 0) delete cloned.markers;
+            setAnimationData(cloned as object);
+            setJsonText(JSON.stringify(cloned, null, 2));
+            pushState(cloned as object);
+          }
+        }
+        break;
+      case "marker_list":
+        // Feedback handled in ChatPanel
+        break;
+      case "marker_clear":
+        if (animationData) {
+          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+          delete cloned.markers;
+          setAnimationData(cloned as object);
+          setJsonText(JSON.stringify(cloned, null, 2));
+          pushState(cloned as object);
+        }
+        break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange, animationData, pushState]);
@@ -1022,6 +1063,11 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
             currentFrame={currentFrame}
             totalFrames={totalFrames}
             onSeek={handleSeek}
+            markers={animationData ? ((animationData as Record<string, unknown>).markers as Array<{ cm: string; tm: number; dr: number }>) ?? undefined : undefined}
+            onPlaySegment={(start, end) => {
+              setSeekFrame(start);
+              setIsPlaying(true);
+            }}
           />
           <div className="flex items-center border-t border-zinc-800">
             <Controls

@@ -468,6 +468,32 @@ Path morphing animates a shape ("sh" type) between two or more different path sh
 - Tangent handles interpolate too — transitioning from curved (non-zero tangents) to straight ([0,0] tangents) creates a satisfying sharpening effect.
 `;
 
+const SPEC_MARKERS = `
+## Named Markers
+Markers define labeled time segments for interactive playback.
+Top-level "markers" array (same level as "layers", "w", "h"):
+- "cm": marker name/comment (string)
+- "tm": start time (frame number)
+- "dr": duration (frame count)
+
+Example — toggle animation with two states:
+"markers": [
+  {"cm": "off", "tm": 0, "dr": 30},
+  {"cm": "on", "tm": 30, "dr": 30}
+]
+
+Use markers when the user asks for:
+- Multiple states (hover/active/idle, on/off, open/close)
+- Named segments ("the first part", "the loop section")
+- Interactive animations meant for web use (e.g. Lottie-web playSegments)
+
+Marker management commands:
+- /marker add <name> <startFrame>-<endFrame> — add a named marker
+- /marker remove <name> — remove a marker by name
+- /marker list — list all markers
+- /marker clear — remove all markers
+`;
+
 const SPEC_SECTIONS: Record<string, string> = {
   CORE: SPEC_CORE,
   SHAPES: SPEC_SHAPES,
@@ -481,6 +507,7 @@ const SPEC_SECTIONS: Record<string, string> = {
   MODIFIERS: SPEC_MODIFIERS,
   PARENTING: SPEC_PARENTING,
   MORPHING: SPEC_MORPHING,
+  MARKERS: SPEC_MARKERS,
 };
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -1890,6 +1917,7 @@ const INTENT_KEYWORDS: Record<string, string[]> = {
   PARENTING: ['parent', 'orbit', 'follow', 'group', 'hierarchy', 'pendulum', 'chain', 'null layer'],
   SHAPES: ['shape', 'circle', 'square', 'rectangle', 'ellipse', 'rect', 'ball', 'dot', 'box'],
   MORPHING: ['morph', 'morphing', 'transform into', 'change shape', 'become', 'transition from', 'icon transition', 'shape shift', 'evolve into'],
+  MARKERS: ['marker', 'segment', 'state', 'hover', 'active', 'idle', 'toggle', 'interactive', 'playSegment', 'multi-state'],
 };
 
 // Sections that indicate a non-shape-focused task
@@ -1928,6 +1956,7 @@ export function analyzeIntent(message: string, currentAnimation: object | null):
     if (animStr.includes('"ty":0,') || animStr.includes('"ty": 0,') || animStr.includes('"refId"')) sections.add('PRECOMPS');
     if (animStr.includes('"tm"') || animStr.includes('"rp"') || animStr.includes('"rd"') || animStr.includes('"mm"')) sections.add('MODIFIERS');
     if (animStr.includes('"parent":') || animStr.includes('"ty":3,') || animStr.includes('"ty": 3,')) sections.add('PARENTING');
+    if (animStr.includes('"markers"')) sections.add('MARKERS');
     if (animStr.includes('"sh"') && animStr.includes('"a":1') || animStr.includes('"a": 1')) {
       // Check for animated path data (morphing)
       if (animStr.includes('"sh"') && (animStr.match(/"ty"\s*:\s*"sh"[\s\S]*?"a"\s*:\s*1/) || animStr.includes('morph'))) sections.add('MORPHING');
@@ -2044,6 +2073,10 @@ Supported commands:
 - Resize canvas → COMMAND: {"type": "resize", "width": <n>, "height": <n>}
 - Background color → COMMAND: {"type": "background", "color": "<css color>"}
 - Fullscreen toggle → COMMAND: {"type": "fullscreen"}
+- Add marker → COMMAND: {"type": "marker_add", "name": "<name>", "startFrame": <n>, "endFrame": <n>}
+- Remove marker → COMMAND: {"type": "marker_remove", "name": "<name>"}
+- List markers → COMMAND: {"type": "marker_list"}
+- Clear markers → COMMAND: {"type": "marker_clear"}
 
 Examples:
 - "pause the animation" → COMMAND: {"type": "pause"}\n⏸️ Paused the animation.
