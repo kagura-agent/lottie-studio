@@ -19,6 +19,7 @@ interface Message {
   suggestions?: string[];
   imageUrl?: string;
   lottieJson?: object;
+  previousLottieJson?: object;
 }
 
 interface ChatPanelProps {
@@ -27,6 +28,7 @@ interface ChatPanelProps {
   onAnimationCreated?: (id: string, data?: object) => void;
   onAnimationUpdated?: (id: string, data: object) => void;
   onCommand?: (command: Command) => void;
+  initialPrompt?: string;
 }
 
 // Image upload constraints (module-level to avoid recreating on each render)
@@ -62,10 +64,10 @@ const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
   typewriter: "Apply a typewriter reveal effect. If there are text layers, reveal characters one by one using trim paths or opacity per character. If no text layers, apply a left-to-right reveal using a rectangular mask with animated position.",
 };
 
-export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt }: ChatPanelProps) {
   const t = useTranslations('chat');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialPrompt ?? "");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
@@ -124,12 +126,13 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         if (cancelled) return;
         if (data.messages && data.messages.length > 0) {
           setMessages(
-            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object }) => ({
+            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object; previousLottieJson?: object }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
               imageUrl: m.imageUrl,
               lottieJson: m.lottieJson || undefined,
+              previousLottieJson: m.previousLottieJson || undefined,
             }))
           );
         } else if (data.templateSource && autoDescribeTriggeredRef.current !== animationId) {
@@ -267,7 +270,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
         const data = trimmed.slice(6);
-        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; previousLottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
         try {
           parsed = JSON.parse(data);
         } catch {
@@ -392,6 +395,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         } else if (parsed.type === "done") {
           setIsRepairing(false);
           const doneLottieJson = parsed.lottieJson as object | undefined;
+          const donePreviousLottieJson = parsed.previousLottieJson as object | undefined;
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
             onAnimationCreated?.(parsed.animationId, doneLottieJson);
@@ -412,7 +416,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             const suggestionsList = parsed.suggestions;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson, previousLottieJson: donePreviousLottieJson } : m
               )
             );
           }
@@ -1209,7 +1213,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                   }`}
                 >
                   {msg.role === "assistant" && msg.lottieJson && (
-                    <InlineLottiePreview lottieJson={msg.lottieJson} />
+                    <InlineLottiePreview lottieJson={msg.lottieJson} previousLottieJson={msg.previousLottieJson} />
                   )}
                   {retryingMsgId === msg.id && !msg.content ? (
                     <span className="inline-flex gap-1">

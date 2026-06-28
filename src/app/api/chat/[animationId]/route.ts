@@ -14,14 +14,15 @@ export async function GET(
   }
 
   const messages = db.prepare(
-    "SELECT id, role, content, lottie_json, image_url, created_at FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
-  ).all(animationId) as { id: string; role: string; content: string; lottie_json: string | null; image_url: string | null; created_at: string }[];
+    "SELECT id, role, content, lottie_json, image_url, previous_lottie_json, created_at FROM messages WHERE animation_id = ? ORDER BY created_at ASC"
+  ).all(animationId) as { id: string; role: string; content: string; lottie_json: string | null; image_url: string | null; previous_lottie_json: string | null; created_at: string }[];
 
   const formatted = messages.map((m) => ({
     id: m.id,
     role: m.role,
     content: m.content,
     lottieJson: m.lottie_json ? JSON.parse(m.lottie_json) : null,
+    previousLottieJson: m.previous_lottie_json ? JSON.parse(m.previous_lottie_json) : null,
     imageUrl: m.image_url || undefined,
     createdAt: m.created_at,
   }));

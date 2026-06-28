@@ -161,7 +161,11 @@
     "invalidFileType": "Unsupported file type. Use .json, .svg, .lottie, or an image",
     "importingFile": "Importing file...",
     "importSuccess": "✨ Imported your animation! What would you like to change?",
-    "importFailed": "Import failed: {error}"
+    "importFailed": "Import failed: {error}",
+    "inlinePreview": {
+      "before": "Before",
+      "after": "After"
+    }
   },
   "explore": {
     "title": "Explore",
@@ -188,7 +192,9 @@
     "backToGallery": "Back to gallery",
     "featured": "Featured",
     "featuredView": "View",
-    "featuredRemix": "Remix"
+    "featuredRemix": "Remix",
+    "tryThis": "Try this",
+    "createdWithPrompt": "Created with prompt:"
   },
   "share": {
     "title": "Share Animation",

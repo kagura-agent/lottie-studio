@@ -161,7 +161,11 @@
     "invalidFileType": "不支持的文件类型，请使用 .json、.svg、.lottie 或图片",
     "importingFile": "正在导入文件...",
     "importSuccess": "✨ 已导入你的动画！你想做什么修改？",
-    "importFailed": "导入失败：{error}"
+    "importFailed": "导入失败：{error}",
+    "inlinePreview": {
+      "before": "修改前",
+      "after": "修改后"
+    }
   },
   "explore": {
     "title": "探索",
@@ -188,7 +192,9 @@
     "backToGallery": "返回画廊",
     "featured": "今日推荐",
     "featuredView": "查看",
-    "featuredRemix": "混音"
+    "featuredRemix": "混音",
+    "tryThis": "试试看",
+    "createdWithPrompt": "创作提示词："
   },
   "share": {
     "title": "分享动画",

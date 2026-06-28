@@ -41,6 +41,7 @@ interface EditorPageProps {
   initialName: string;
   initialData: object | null;
   remixedFrom?: { id: string; name: string };
+  initialPrompt?: string;
 }
 
 /**
@@ -90,7 +91,7 @@ async function exportWithSizeLimit(
   return blob;
 }
 
-export default function EditorPage({ id, initialName, initialData, remixedFrom }: EditorPageProps) {
+export default function EditorPage({ id, initialName, initialData, remixedFrom, initialPrompt }: EditorPageProps) {
   const t = useTranslations();
   const { toast } = useToast();
   const router = useRouter();
@@ -1228,7 +1229,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom }
           <div className="flex-1 min-h-0">
             {rightPanel === "chat" ? (
               <ErrorBoundary fallbackMessage={t('common.error')}>
-                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} />
+                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
               </ErrorBoundary>
             ) : rightPanel === "layers" ? (
               <LayerPanel

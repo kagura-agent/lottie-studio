@@ -7,6 +7,11 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
 import { useToast } from "@/contexts/ToastContext";
 
+function truncatePrompt(text: string, maxLen: number = 80): string {
+  if (text.length <= maxLen) return text;
+  return text.slice(0, maxLen).trimEnd() + "…";
+}
+
 interface ExploreCardProps {
   animation: {
     id: string;
@@ -19,6 +24,7 @@ interface ExploreCardProps {
     view_count?: number;
     like_count?: number;
     creator_id?: string | null;
+    creation_prompt?: string | null;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
@@ -290,6 +296,23 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           <p className="mt-1 text-xs text-zinc-400 line-clamp-2">
             {animation.description}
           </p>
+        )}
+        {animation.creation_prompt && (
+          <p
+            className="mt-1 text-xs text-zinc-500 italic truncate"
+            title={animation.creation_prompt}
+          >
+            {truncatePrompt(animation.creation_prompt)}
+          </p>
+        )}
+        {animation.creation_prompt && (
+          <Link
+            href={`/editor/new?prompt=${encodeURIComponent(animation.creation_prompt)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-violet-500/15 text-violet-400 border border-violet-500/25 hover:bg-violet-500/25 transition-colors"
+          >
+            {t('explore.tryThis')} ✨
+          </Link>
         )}
         <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
           {frames && <span>{frames}</span>}

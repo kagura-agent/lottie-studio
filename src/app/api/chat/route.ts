@@ -764,8 +764,8 @@ export async function POST(request: Request) {
         ).run(randomUUID(), capturedAnimationId, message, image || null);
 
         db.prepare(
-          "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
-        ).run(randomUUID(), capturedAnimationId, reply, lottieJson ? JSON.stringify(lottieJson) : null);
+          "INSERT INTO messages (id, animation_id, role, content, lottie_json, previous_lottie_json) VALUES (?, ?, 'assistant', ?, ?, ?)"
+        ).run(randomUUID(), capturedAnimationId, reply, lottieJson ? JSON.stringify(lottieJson) : null, lottieJson && currentAnimation ? JSON.stringify(currentAnimation) : null);
 
         // Save animation file and update DB if we got Lottie JSON
         if (lottieJson) {
@@ -837,6 +837,7 @@ export async function POST(request: Request) {
           ...(warning ? { warning } : {}),
           ...(suggestions ? { suggestions } : {}),
           ...(command ? { command } : {}),
+          ...(lottieJson && currentAnimation ? { previousLottieJson: currentAnimation } : {}),
         });
         controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
       } catch (err) {
