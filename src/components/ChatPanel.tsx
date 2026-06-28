@@ -535,6 +535,39 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Sequence command: send to server for temporal composition
+      if (command.type === "sequence") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(text, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",

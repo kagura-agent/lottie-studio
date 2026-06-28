@@ -1,21 +1,22 @@
 /**
- * Animation layer composition: merge layers from a source animation into a target.
- * Handles layer index conflicts, parent references, frame rate normalization,
- * duration extension, and precomp/asset merging.
+ * Animation sequence composition: append source animation after target temporally.
+ * Unlike compose (which overlays layers), sequence places them end-to-end.
  */
+
+import { getMaxLayerIndex, scaleKeyframes } from "./compose";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LottieAny = any;
 
 /**
- * Recursively scale all keyframe `t` values in an object by a ratio.
+ * Recursively add an offset to all keyframe `t` values in an object.
  */
-export function scaleKeyframes(obj: LottieAny, ratio: number): void {
+export function offsetKeyframes(obj: LottieAny, offset: number): void {
   if (!obj || typeof obj !== "object") return;
 
   if (Array.isArray(obj)) {
     for (const item of obj) {
-      scaleKeyframes(item, ratio);
+      offsetKeyframes(item, offset);
     }
     return;
   }
@@ -24,7 +25,7 @@ export function scaleKeyframes(obj: LottieAny, ratio: number): void {
   if (obj.a === 1 && Array.isArray(obj.k)) {
     for (const kf of obj.k) {
       if (kf && typeof kf === "object" && typeof kf.t === "number") {
-        kf.t = kf.t * ratio;
+        kf.t = kf.t + offset;
       }
     }
   }
@@ -33,29 +34,17 @@ export function scaleKeyframes(obj: LottieAny, ratio: number): void {
   for (const key of Object.keys(obj)) {
     const val = obj[key];
     if (val && typeof val === "object") {
-      scaleKeyframes(val, ratio);
+      offsetKeyframes(val, offset);
     }
   }
 }
 
 /**
- * Find the maximum layer index (ind) in an array of layers.
+ * Sequence layers from a source animation after a target animation.
+ * Returns a new animation with source appended temporally after target.
+ * Does not mutate inputs.
  */
-export function getMaxLayerIndex(layers: LottieAny[]): number {
-  let max = 0;
-  for (const layer of layers) {
-    if (typeof layer.ind === "number" && layer.ind > max) {
-      max = layer.ind;
-    }
-  }
-  return max;
-}
-
-/**
- * Compose layers from a source animation into a target animation.
- * Returns a new merged animation object (does not mutate inputs).
- */
-export function composeLayers(target: object, source: object): object {
+export function sequenceLayers(target: object, source: object): object {
   const result: LottieAny = JSON.parse(JSON.stringify(target));
   const src: LottieAny = JSON.parse(JSON.stringify(source));
 
@@ -76,7 +65,10 @@ export function composeLayers(target: object, source: object): object {
   const sourceFr = src.fr || 30;
   const frRatio = targetFr / sourceFr;
 
-  // Process source layers: reassign indices, adjust parents, scale timing
+  // Time offset: target's duration in target frames
+  const timeOffset = (result.op || 0) - (result.ip || 0);
+
+  // Process source layers
   for (const layer of src.layers) {
     // Reassign layer index
     if (typeof layer.ind === "number") {
@@ -112,14 +104,30 @@ export function composeLayers(target: object, source: object): object {
         scaleKeyframes(layer.ef, frRatio);
       }
     }
+
+    // Add time offset to ip and op (place after target)
+    if (typeof layer.ip === "number") {
+      layer.ip = layer.ip + timeOffset;
+    }
+    if (typeof layer.op === "number") {
+      layer.op = layer.op + timeOffset;
+    }
+
+    // Offset keyframes in transform, shapes, effects
+    if (layer.ks) {
+      offsetKeyframes(layer.ks, timeOffset);
+    }
+    if (Array.isArray(layer.shapes)) {
+      offsetKeyframes(layer.shapes, timeOffset);
+    }
+    if (Array.isArray(layer.ef)) {
+      offsetKeyframes(layer.ef, timeOffset);
+    }
   }
 
-  // Extend target duration if source is longer (after frame rate conversion)
-  const targetDuration = (result.op || 0) - (result.ip || 0);
+  // Extend target.op by the source's converted duration
   const sourceDuration = ((src.op || 0) - (src.ip || 0)) * frRatio;
-  if (sourceDuration > targetDuration) {
-    result.op = (result.ip || 0) + sourceDuration;
-  }
+  result.op = (result.op || 0) + sourceDuration;
 
   // Merge layers
   result.layers = [...result.layers, ...src.layers];
@@ -142,4 +150,4 @@ export function composeLayers(target: object, source: object): object {
   return result;
 }
 
-export default composeLayers;
+export default sequenceLayers;
