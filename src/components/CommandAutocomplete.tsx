@@ -27,6 +27,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/animate", description: "Apply motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)", hasParams: true },
   { command: "/marker", description: "Add/remove named segments (add, remove, list, clear)", hasParams: true },
   { command: "/compose", description: "Import layers from another animation", hasParams: true },
+  { command: "/sequence", description: "Append animation after current one (storyboard)", hasParams: true },
 ];
 
 export function filterCommands(query: string): CommandDef[] {

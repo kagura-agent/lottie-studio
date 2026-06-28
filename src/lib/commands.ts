@@ -54,6 +54,7 @@ export type Command =
   | { type: "marker_list" }
   | { type: "marker_clear" }
   | { type: "compose"; id: string }
+  | { type: "sequence"; id: string }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -267,6 +268,13 @@ export function parseCommand(input: string): Command | null {
         return { type: "error", message: "Usage: /compose <animation-id>" };
       }
       return { type: "compose", id: args[0] };
+    }
+
+    case "sequence": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /sequence <animation-id>" };
+      }
+      return { type: "sequence", id: args[0] };
     }
 
     case "help":
