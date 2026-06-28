@@ -19,6 +19,7 @@ interface Message {
   suggestions?: string[];
   imageUrl?: string;
   lottieJson?: object;
+  previousLottieJson?: object;
 }
 
 interface ChatPanelProps {
@@ -125,12 +126,13 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         if (cancelled) return;
         if (data.messages && data.messages.length > 0) {
           setMessages(
-            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object }) => ({
+            data.messages.map((m: { id: string; role: "user" | "assistant"; content: string; imageUrl?: string; lottieJson?: object; previousLottieJson?: object }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
               imageUrl: m.imageUrl,
               lottieJson: m.lottieJson || undefined,
+              previousLottieJson: m.previousLottieJson || undefined,
             }))
           );
         } else if (data.templateSource && autoDescribeTriggeredRef.current !== animationId) {
@@ -268,7 +270,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
         const data = trimmed.slice(6);
-        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; previousLottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
         try {
           parsed = JSON.parse(data);
         } catch {
@@ -393,6 +395,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         } else if (parsed.type === "done") {
           setIsRepairing(false);
           const doneLottieJson = parsed.lottieJson as object | undefined;
+          const donePreviousLottieJson = parsed.previousLottieJson as object | undefined;
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
             onAnimationCreated?.(parsed.animationId, doneLottieJson);
@@ -413,7 +416,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             const suggestionsList = parsed.suggestions;
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson } : m
+                m.id === msgId ? { ...m, content: parsed.reply!, warning: warningText, isRepair: undefined, suggestions: suggestionsList, lottieJson: doneLottieJson, previousLottieJson: donePreviousLottieJson } : m
               )
             );
           }
@@ -1210,7 +1213,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                   }`}
                 >
                   {msg.role === "assistant" && msg.lottieJson && (
-                    <InlineLottiePreview lottieJson={msg.lottieJson} />
+                    <InlineLottiePreview lottieJson={msg.lottieJson} previousLottieJson={msg.previousLottieJson} />
                   )}
                   {retryingMsgId === msg.id && !msg.content ? (
                     <span className="inline-flex gap-1">

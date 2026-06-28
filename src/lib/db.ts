@@ -47,6 +47,13 @@ try {
   // Column already exists — ignore
 }
 
+// Migration: add previous_lottie_json column for before/after comparison
+try {
+  db.exec(`ALTER TABLE messages ADD COLUMN previous_lottie_json TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 // Migration: add share_chat column to control chat history visibility on share page
 try {
   db.exec(`ALTER TABLE animations ADD COLUMN share_chat INTEGER DEFAULT 0`);
