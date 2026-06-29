@@ -508,6 +508,56 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Import command: fetch animation from URL
+      if (command.type === "import") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        try {
+          const response = await fetch('/api/animations/import-url', {
+            method: 'POST',
+            body: JSON.stringify({ url: command.url }),
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const data = await response.json();
+
+          if (response.ok) {
+            onAnimationCreated?.(data.id);
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `📥 Imported "${data.name}" from URL. You can now modify it — try describing what you want to change!`,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          } else {
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `⚠️ Import failed: ${data.error || 'Unknown error'}`,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+          const assistantMessage: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: `⚠️ Import failed: ${errMsg}`,
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+        } finally {
+          setIsThinking(false);
+        }
+        return;
+      }
+
       // Compose command: send to server for layer composition
       if (command.type === "compose") {
         const userMessage: Message = {
@@ -654,6 +704,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/marker remove <name>\` — Remove a marker\n`
             + `\`/marker list\` — List all markers\n`
             + `\`/marker clear\` — Remove all markers\n\n`
+            + `**Import**\n`
+            + `\`/import <url>\` — Import a Lottie animation from URL for remixing\n\n`
             + `**Compose**\n`
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
             + `**${t('helpHelpSection')}**\n`

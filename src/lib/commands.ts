@@ -53,6 +53,7 @@ export type Command =
   | { type: "marker_remove"; name: string }
   | { type: "marker_list" }
   | { type: "marker_clear" }
+  | { type: "import"; url: string }
   | { type: "compose"; id: string }
   | { type: "sequence"; id: string }
   | { type: "help" }
@@ -260,6 +261,22 @@ export function parseCommand(input: string): Command | null {
           return { type: "marker_clear" };
         default:
           return { type: "error", message: `Unknown marker subcommand: "${subcommand}". Use add, remove, list, or clear.` };
+      }
+    }
+
+    case "import": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /import <url> (e.g. /import https://lottie.host/abc/animation.json)" };
+      }
+      const url = args.join(" ");
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return { type: "error", message: "URL must use http or https protocol." };
+        }
+        return { type: "import", url: parsed.href };
+      } catch {
+        return { type: "error", message: `Invalid URL: "${url}". Provide a valid http/https URL.` };
       }
     }
 
