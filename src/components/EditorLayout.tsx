@@ -25,6 +25,7 @@ import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
 import ErrorBoundary from "./ErrorBoundary";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
+import CommandPalette from "./CommandPalette";
 import FullscreenPreview from "./FullscreenPreview";
 import EmbedDialog from "./EmbedDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
@@ -133,6 +134,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
   const [shareChat, setShareChat] = useState(false);
@@ -563,6 +565,18 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     onShowHelp: () => setShortcutsHelpOpen((v) => !v),
     onToggleFullscreen: () => setFullscreenOpen((v) => !v),
   });
+
+  // Global Ctrl+K / Cmd+K for command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const handleFrameChange = useCallback((frame: number, total: number) => {
     setCurrentFrame(frame);
@@ -1264,6 +1278,28 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       <ShortcutsHelp
         open={shortcutsHelpOpen}
         onClose={() => setShortcutsHelpOpen(false)}
+      />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onCommand={handleCommand}
+        onInsertText={(text) => {
+          setInsertText(text);
+          setRightPanel("chat");
+          setMobileView("chat");
+          setTimeout(() => setInsertText(""), 0);
+        }}
+        onNavigate={(path) => router.push(path)}
+        onSave={handleSave}
+        onToggleFullscreen={() => setFullscreenOpen((v) => !v)}
+        onToggleJson={() => setRightPanel("json")}
+        onToggleLayers={() => setRightPanel("layers")}
+        onShowShortcuts={() => setShortcutsHelpOpen(true)}
+        onExportJson={handleExport}
+        onExportGif={() => handleExportGif({ preventDefault: () => {} } as MouseEvent)}
+        onExportApng={() => handleExportApng({ preventDefault: () => {} } as MouseEvent)}
+        onExportVideo={() => handleExportVideo({ preventDefault: () => {} } as MouseEvent)}
+        onExportDotLottie={handleExportDotLottie}
       />
       {fullscreenOpen && (
         <FullscreenPreview
