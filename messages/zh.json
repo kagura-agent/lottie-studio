@@ -346,5 +346,16 @@
     "cssHidePreview": "隐藏预览",
     "cssOriginal": "原始 (Lottie)",
     "cssCssPreview": "CSS 动画"
+  },
+  "quickGenerate": {
+    "title": "立即体验",
+    "subtitle": "描述任何动画，看它变为现实",
+    "placeholder": "一个带阴影的彩色弹跳球...",
+    "generate": "生成",
+    "generating": "正在创作动画...",
+    "openInEditor": "在编辑器中打开",
+    "tryAnother": "再试一个",
+    "rateLimited": "请求过多，请稍等片刻",
+    "error": "生成失败，请尝试不同的描述"
   }
 }

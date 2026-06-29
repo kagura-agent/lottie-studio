@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import AnimationCard from "@/components/AnimationCard";
 import TemplateCard from "@/components/TemplateCard";
 import HeroWelcome from "@/components/HeroWelcome";
+import QuickGenerate from "@/components/QuickGenerate";
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import CollectionSidebar from "@/components/CollectionSidebar";
 import Link from "next/link";
@@ -307,6 +308,9 @@ export default function GalleryPage() {
         {animations.length === 0 && !heroDismissed && (
           <HeroWelcome onDismiss={handleHeroDismiss} />
         )}
+
+        {/* Quick Generate widget */}
+        <QuickGenerate />
 
         {/* Header */}
         <div className="mb-8">

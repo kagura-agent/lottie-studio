@@ -346,5 +346,16 @@
     "cssHidePreview": "Hide Preview",
     "cssOriginal": "Original (Lottie)",
     "cssCssPreview": "CSS Animation"
+  },
+  "quickGenerate": {
+    "title": "Try it now",
+    "subtitle": "Describe any animation and watch it come to life",
+    "placeholder": "A bouncing colorful ball with a shadow...",
+    "generate": "Generate",
+    "generating": "Creating your animation...",
+    "openInEditor": "Open in Editor",
+    "tryAnother": "Try another",
+    "rateLimited": "Too many requests. Please wait a moment.",
+    "error": "Generation failed. Try a different prompt."
   }
 }
