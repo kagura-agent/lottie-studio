@@ -51,8 +51,9 @@ export default async function EmbedPage({ params, searchParams }: Props) {
 
   // Parse URL parameters with defaults
   const bg = query.bg ?? "";
-  const autoplay = query.autoplay !== "0";
-  const loop = query.loop !== "0";
+  const mode = query.mode as "scroll" | "hover" | "click" | "cursor" | undefined;
+  const autoplay = mode ? false : query.autoplay !== "0";
+  const loop = mode ? false : query.loop !== "0";
   const controls = query.controls === "1";
 
   return (
@@ -62,6 +63,7 @@ export default async function EmbedPage({ params, searchParams }: Props) {
       autoplay={autoplay}
       loop={loop}
       controls={controls}
+      mode={mode}
     />
   );
 }
