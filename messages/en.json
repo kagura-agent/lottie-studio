@@ -214,7 +214,13 @@
     "tabIframe": "Iframe",
     "tabJsonUrl": "JSON URL",
     "shareOnX": "Share on X",
-    "nativeShare": "Share"
+    "nativeShare": "Share",
+    "interactiveMode": "Interactive Mode",
+    "modeDefault": "Default (autoplay + loop)",
+    "modeScroll": "Scroll — playback follows page scroll",
+    "modeHover": "Hover — plays on hover, rewinds on leave",
+    "modeClick": "Click — click to toggle play/pause",
+    "modeCursor": "Cursor — frame follows horizontal cursor"
   },
   "importLottie": {
     "title": "Import Lottie JSON, SVG, or dotLottie",

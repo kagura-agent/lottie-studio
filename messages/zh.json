@@ -214,7 +214,13 @@
     "tabIframe": "Iframe",
     "tabJsonUrl": "JSON URL",
     "shareOnX": "分享到 X",
-    "nativeShare": "分享"
+    "nativeShare": "分享",
+    "interactiveMode": "交互模式",
+    "modeDefault": "默认（自动播放 + 循环）",
+    "modeScroll": "滚动 — 播放跟随页面滚动",
+    "modeHover": "悬停 — 鼠标悬停播放，离开回到开头",
+    "modeClick": "点击 — 点击切换播放/暂停",
+    "modeCursor": "光标 — 帧位置跟随水平光标"
   },
   "importLottie": {
     "title": "导入 Lottie JSON、SVG 或 dotLottie",

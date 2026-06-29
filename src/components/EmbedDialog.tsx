@@ -14,6 +14,8 @@ type Tab = "player" | "iframe" | "json";
 const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "https://lottie.kagura-agent.com";
 
+type EmbedMode = "" | "scroll" | "hover" | "click" | "cursor";
+
 export default function EmbedDialog({
   animationId,
   open,
@@ -23,6 +25,7 @@ export default function EmbedDialog({
   const [activeTab, setActiveTab] = useState<Tab>("player");
   const [copied, setCopied] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
+  const [embedMode, setEmbedMode] = useState<EmbedMode>("");
 
   useEffect(() => {
     if (!open) return;
@@ -37,6 +40,7 @@ export default function EmbedDialog({
   if (open && !prevOpen) {
     setActiveTab("player");
     setCopied(false);
+    setEmbedMode("");
   }
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -44,9 +48,10 @@ export default function EmbedDialog({
 
   if (!open) return null;
 
+  const iframeModeParam = embedMode ? `?mode=${embedMode}` : "";
   const snippets: Record<Tab, string> = {
     player: `<script src="https://unpkg.com/@dotlottie/player-component@2/dist/dotlottie-player.mjs" type="module"></script>\n<dotlottie-player src="${BASE_URL}/api/animations/${animationId}/json" autoplay loop style="width:300px;height:300px" aria-label="Lottie animation"></dotlottie-player>`,
-    iframe: `<iframe src="${BASE_URL}/embed/${animationId}" width="400" height="400" style="border:none" allowtransparency="true" title="Lottie animation"></iframe>`,
+    iframe: `<iframe src="${BASE_URL}/embed/${animationId}${iframeModeParam}" width="400" height="400" style="border:none" allowtransparency="true" title="Lottie animation"></iframe>`,
     json: `${BASE_URL}/api/animations/${animationId}/json`,
   };
 
@@ -113,6 +118,29 @@ export default function EmbedDialog({
             </button>
           ))}
         </div>
+
+        {/* Mode selector (iframe tab only) */}
+        {activeTab === "iframe" && (
+          <div className="px-5 pt-4 pb-0">
+            <label className="block text-sm text-zinc-400 mb-1.5">
+              {t('share.interactiveMode', { defaultValue: 'Interactive Mode' })}
+            </label>
+            <select
+              value={embedMode}
+              onChange={(e) => {
+                setEmbedMode(e.target.value as EmbedMode);
+                setCopied(false);
+              }}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
+            >
+              <option value="">{t('share.modeDefault', { defaultValue: 'Default (autoplay + loop)' })}</option>
+              <option value="scroll">{t('share.modeScroll', { defaultValue: 'Scroll — playback follows page scroll' })}</option>
+              <option value="hover">{t('share.modeHover', { defaultValue: 'Hover — plays on hover, rewinds on leave' })}</option>
+              <option value="click">{t('share.modeClick', { defaultValue: 'Click — click to toggle play/pause' })}</option>
+              <option value="cursor">{t('share.modeCursor', { defaultValue: 'Cursor — frame follows horizontal cursor' })}</option>
+            </select>
+          </div>
+        )}
 
         {/* Snippet */}
         <div className="p-5">

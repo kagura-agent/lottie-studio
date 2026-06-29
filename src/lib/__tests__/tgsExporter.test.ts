@@ -46,7 +46,6 @@ beforeAll(async () => {
 
         this.readable = null as unknown as ReadableStream<Uint8Array>;
         // We need to make readable available synchronously, so use a proxy pattern
-        const self = this;
         this.readable = new ReadableStream<Uint8Array>({
           async start(controller) {
             const stream = await readablePromise;

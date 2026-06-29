@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 
+export type EmbedMode = "scroll" | "hover" | "click" | "cursor";
+
 interface EmbedPlayerProps {
   animationData: object;
   bg: string;
   autoplay: boolean;
   loop: boolean;
   controls: boolean;
+  mode?: EmbedMode;
 }
 
 export default function EmbedPlayer({
@@ -17,8 +20,10 @@ export default function EmbedPlayer({
   autoplay,
   loop,
   controls,
+  mode,
 }: EmbedPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(autoplay);
 
@@ -45,6 +50,111 @@ export default function EmbedPlayer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationData, loop, autoplay]);
+
+  // Scroll mode: map scroll position to frame
+  useEffect(() => {
+    if (mode !== "scroll") return;
+    const anim = animRef.current;
+    if (!anim) return;
+
+    const handleScroll = () => {
+      if (!animRef.current) return;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollHeight <= 0) return;
+      const progress = Math.min(Math.max(window.scrollY / scrollHeight, 0), 1);
+      const frame = Math.round(progress * (animRef.current.totalFrames - 1));
+      animRef.current.goToAndStop(frame, true);
+    };
+
+    // Initial position
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [mode, animationData]);
+
+  // Hover mode: play on mouseenter, stop+rewind on mouseleave
+  useEffect(() => {
+    if (mode !== "hover") return;
+    const root = rootRef.current;
+    if (!root) return;
+
+    const handleEnter = () => {
+      const anim = animRef.current;
+      if (!anim) return;
+      anim.loop = true;
+      anim.play();
+      setIsPlaying(true);
+    };
+
+    const handleLeave = () => {
+      const anim = animRef.current;
+      if (!anim) return;
+      anim.pause();
+      anim.goToAndStop(0, true);
+      setIsPlaying(false);
+    };
+
+    root.addEventListener("mouseenter", handleEnter);
+    root.addEventListener("mouseleave", handleLeave);
+    return () => {
+      root.removeEventListener("mouseenter", handleEnter);
+      root.removeEventListener("mouseleave", handleLeave);
+    };
+  }, [mode, animationData]);
+
+  // Click mode: click to toggle play/pause
+  useEffect(() => {
+    if (mode !== "click") return;
+    const root = rootRef.current;
+    if (!root) return;
+
+    const handleClick = () => {
+      const anim = animRef.current;
+      if (!anim) return;
+      if (isPlaying) {
+        anim.pause();
+        setIsPlaying(false);
+      } else {
+        anim.loop = true;
+        anim.play();
+        setIsPlaying(true);
+      }
+    };
+
+    root.addEventListener("click", handleClick);
+    return () => root.removeEventListener("click", handleClick);
+  }, [mode, isPlaying, animationData]);
+
+  // Cursor mode: map horizontal cursor position to frame
+  useEffect(() => {
+    if (mode !== "cursor") return;
+    const root = rootRef.current;
+    if (!root) return;
+
+    const mapPositionToFrame = (clientX: number) => {
+      const anim = animRef.current;
+      if (!anim) return;
+      const rect = root.getBoundingClientRect();
+      const relativeX = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+      const progress = rect.width > 0 ? relativeX / rect.width : 0;
+      const frame = Math.round(progress * (anim.totalFrames - 1));
+      anim.goToAndStop(frame, true);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => mapPositionToFrame(e.clientX);
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        mapPositionToFrame(e.touches[0].clientX);
+      }
+    };
+
+    root.addEventListener("mousemove", handleMouseMove);
+    root.addEventListener("touchmove", handleTouchMove, { passive: true });
+    return () => {
+      root.removeEventListener("mousemove", handleMouseMove);
+      root.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [mode, animationData]);
 
   const togglePlay = useCallback(() => {
     const anim = animRef.current;
@@ -76,6 +186,7 @@ export default function EmbedPlayer({
 
   return (
     <div
+      ref={rootRef}
       className="embed-root"
       style={{
         position: "fixed",
@@ -86,6 +197,7 @@ export default function EmbedPlayer({
         overflow: "hidden",
         margin: 0,
         padding: 0,
+        cursor: mode === "cursor" ? "crosshair" : mode === "click" ? "pointer" : undefined,
         ...bgStyle,
       }}
     >
