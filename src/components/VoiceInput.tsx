@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -10,84 +11,43 @@ interface VoiceInputProps {
   disabled?: boolean;
 }
 
-function getSpeechRecognitionClass(): SpeechRecognitionConstructor | null {
-  if (typeof window === "undefined") return null;
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-}
-
 export default function VoiceInput({ onTranscript, onFinalTranscript, disabled }: VoiceInputProps) {
   const t = useTranslations("chat");
   const locale = useLocale();
-  const [isListening, setIsListening] = useState(false);
-  const supported = useState(() => getSpeechRecognitionClass() !== null)[0];
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const lang = locale === "zh" ? "zh-CN" : "en-US";
 
-  const startListening = useCallback(() => {
-    const SpeechRecognitionClass = getSpeechRecognitionClass();
-    if (!SpeechRecognitionClass) return;
+  const {
+    supported,
+    isListening,
+    transcript,
+    finalTranscript,
+    start,
+    stop,
+  } = useSpeechRecognition({ lang, continuous: false, interimResults: true });
 
-    const recognition = new SpeechRecognitionClass();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = locale === "zh" ? "zh-CN" : "en-US";
+  // Track previous transcript/finalTranscript to avoid redundant calls
+  const prevTranscriptRef = useRef("");
+  const prevFinalRef = useRef("");
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-
-      const isFinal = event.results[event.results.length - 1]?.isFinal;
-      if (isFinal) {
-        onFinalTranscript(transcript);
-      } else {
-        onTranscript(transcript);
-      }
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, [locale, onTranscript, onFinalTranscript]);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+  useEffect(() => {
+    if (finalTranscript && finalTranscript !== prevFinalRef.current) {
+      prevFinalRef.current = finalTranscript;
+      onFinalTranscript(finalTranscript);
+    } else if (transcript && transcript !== prevTranscriptRef.current && !finalTranscript) {
+      prevTranscriptRef.current = transcript;
+      onTranscript(transcript);
     }
-    setIsListening(false);
-  }, []);
+  }, [transcript, finalTranscript, onTranscript, onFinalTranscript]);
 
   const handleClick = useCallback(() => {
     if (isListening) {
-      stopListening();
+      stop();
     } else {
-      startListening();
+      prevTranscriptRef.current = "";
+      prevFinalRef.current = "";
+      start();
     }
-  }, [isListening, startListening, stopListening]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
+  }, [isListening, start, stop]);
 
   // Graceful degradation: render nothing if not supported
   if (!supported) return null;
