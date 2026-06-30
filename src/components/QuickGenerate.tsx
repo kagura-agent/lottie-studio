@@ -19,6 +19,9 @@ export default function QuickGenerate() {
   const [status, setStatus] = useState<"idle" | "generating" | "done" | "error" | "rateLimited">("idle");
   const [animationData, setAnimationData] = useState<object | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [refinePrompt, setRefinePrompt] = useState("");
+  const [refineCount, setRefineCount] = useState(0);
+  const [isRefining, setIsRefining] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [reducedMotion, setReducedMotion] = useState(() => {
@@ -121,7 +124,50 @@ export default function QuickGenerate() {
     setAnimationData(null);
     setPrompt("");
     setErrorMessage("");
+    setRefinePrompt("");
+    setRefineCount(0);
+    setIsRefining(false);
   }, []);
+
+  const handleRefine = useCallback(async () => {
+    if (!refinePrompt.trim() || !animationData || isRefining) return;
+    setIsRefining(true);
+
+    try {
+      const res = await apiFetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: refinePrompt.trim(),
+          currentAnimation: animationData,
+          width: 300,
+          height: 300,
+        }),
+      });
+
+      if (res.status === 429) {
+        setStatus("rateLimited");
+        setIsRefining(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setIsRefining(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success && data.animation) {
+        setAnimationData(data.animation);
+        setRefineCount((c) => c + 1);
+        setRefinePrompt("");
+      }
+    } catch {
+      // Refinement failed silently
+    } finally {
+      setIsRefining(false);
+    }
+  }, [refinePrompt, animationData, isRefining]);
 
   const handleChipClick = useCallback((example: string) => {
     setPrompt(example);
@@ -196,10 +242,64 @@ export default function QuickGenerate() {
         {/* Animation preview */}
         {status === "done" && animationData && (
           <div className="mt-8 flex flex-col items-center gap-4">
-            <div
-              ref={containerRef}
-              className="w-[300px] h-[300px] max-w-full rounded-xl bg-zinc-800/50 border border-zinc-700/50 overflow-hidden"
-            />
+            <div className="relative">
+              <div
+                ref={containerRef}
+                className="w-[300px] h-[300px] max-w-full rounded-xl bg-zinc-800/50 border border-zinc-700/50 overflow-hidden"
+              />
+              {/* Spinner overlay during refinement */}
+              {isRefining && (
+                <div className="absolute inset-0 rounded-xl bg-zinc-900/60 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                    <p className="text-xs text-zinc-400">{t("refining")}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Refinement input */}
+            {refineCount < 3 ? (
+              <div className="w-full max-w-md">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={refinePrompt}
+                    onChange={(e) => setRefinePrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !isRefining) {
+                        handleRefine();
+                      }
+                    }}
+                    placeholder={t("refinePlaceholder")}
+                    disabled={isRefining}
+                    className="flex-1 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+                  />
+                  <button
+                    onClick={handleRefine}
+                    disabled={!refinePrompt.trim() || isRefining}
+                    className="px-4 py-2 rounded-lg bg-violet-600/80 text-white text-sm font-medium hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {isRefining ? t("refining") : t("refine")}
+                  </button>
+                </div>
+                {refineCount > 0 && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {t("refineCount", { count: refineCount })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-400">
+                <button
+                  onClick={handleOpenInEditor}
+                  className="text-violet-400 hover:text-violet-300 underline transition-colors"
+                >
+                  {t("maxRefinements")}
+                </button>
+              </p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={handleOpenInEditor}

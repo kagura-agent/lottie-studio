@@ -77,12 +77,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { prompt, width, height, duration } = validation.data;
+  const { prompt, width, height, duration, currentAnimation } = validation.data;
   const fps = 30;
   const totalFrames = Math.round(duration * fps);
 
-  // Build system prompt (no current animation — generating from scratch)
-  const systemPrompt = buildSystemPrompt(null, prompt);
+  // Build system prompt (pass currentAnimation if refining an existing animation)
+  const systemPrompt = buildSystemPrompt(currentAnimation ?? null, prompt);
 
   // Add dimension/duration overrides to system prompt
   const overrideNote = `\n\nIMPORTANT: Generate this animation with exactly these settings:

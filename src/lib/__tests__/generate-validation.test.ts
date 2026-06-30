@@ -182,4 +182,83 @@ describe("validateGenerateInput", () => {
       expect(result.valid).toBe(true);
     });
   });
+
+  describe("currentAnimation validation", () => {
+    it("accepts valid currentAnimation object", () => {
+      const result = validateGenerateInput({
+        prompt: "make it bouncier",
+        currentAnimation: { v: "5.5.7", fr: 30, layers: [] },
+      });
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.currentAnimation).toEqual({ v: "5.5.7", fr: 30, layers: [] });
+      }
+    });
+
+    it("accepts request without currentAnimation", () => {
+      const result = validateGenerateInput({
+        prompt: "bouncing ball",
+      });
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.currentAnimation).toBeUndefined();
+      }
+    });
+
+    it("rejects non-object currentAnimation (string)", () => {
+      const result = validateGenerateInput({
+        prompt: "test",
+        currentAnimation: "not an object",
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toContain("JSON object");
+    });
+
+    it("rejects non-object currentAnimation (number)", () => {
+      const result = validateGenerateInput({
+        prompt: "test",
+        currentAnimation: 42,
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toContain("JSON object");
+    });
+
+    it("rejects null currentAnimation", () => {
+      const result = validateGenerateInput({
+        prompt: "test",
+        currentAnimation: null,
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toContain("JSON object");
+    });
+
+    it("rejects array currentAnimation", () => {
+      const result = validateGenerateInput({
+        prompt: "test",
+        currentAnimation: [1, 2, 3],
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toContain("JSON object");
+    });
+
+    it("rejects oversized currentAnimation (>200KB)", () => {
+      const largeAnimation = {
+        v: "5.5.7",
+        layers: Array.from({ length: 5000 }, (_, i) => ({
+          ty: 4,
+          nm: `layer_${i}_${'x'.repeat(40)}`,
+          ks: { o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [256, 256] }, s: { a: 0, k: [100, 100] } },
+        })),
+      };
+      // Ensure it's actually > 200KB
+      expect(JSON.stringify(largeAnimation).length).toBeGreaterThan(200 * 1024);
+
+      const result = validateGenerateInput({
+        prompt: "test",
+        currentAnimation: largeAnimation,
+      });
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.error).toContain("200KB");
+    });
+  });
 });

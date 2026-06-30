@@ -8,10 +8,11 @@ export interface GenerateInput {
   width?: number;
   height?: number;
   duration?: number;
+  currentAnimation?: object;
 }
 
 export type ValidationResult =
-  | { valid: true; data: Required<GenerateInput> }
+  | { valid: true; data: Required<Omit<GenerateInput, 'currentAnimation'>> & { currentAnimation?: object } }
   | { valid: false; error: string }
 
 const PROMPT_MAX_LENGTH = 500;
@@ -22,13 +23,14 @@ const MAX_DURATION = 30;
 const DEFAULT_WIDTH = 512;
 const DEFAULT_HEIGHT = 512;
 const DEFAULT_DURATION = 2;
+const MAX_CURRENT_ANIMATION_SIZE = 200 * 1024; // 200KB
 
 export function validateGenerateInput(body: unknown): ValidationResult {
   if (!body || typeof body !== "object") {
     return { valid: false, error: "Request body must be a JSON object" };
   }
 
-  const { prompt, width, height, duration } = body as Record<string, unknown>;
+  const { prompt, width, height, duration, currentAnimation } = body as Record<string, unknown>;
 
   // Prompt validation
   if (prompt === undefined || prompt === null) {
@@ -81,8 +83,21 @@ export function validateGenerateInput(body: unknown): ValidationResult {
     dur = duration;
   }
 
+  // currentAnimation validation (optional)
+  let parsedAnimation: object | undefined;
+  if (currentAnimation !== undefined) {
+    if (typeof currentAnimation !== "object" || currentAnimation === null || Array.isArray(currentAnimation)) {
+      return { valid: false, error: "\"currentAnimation\" must be a JSON object" };
+    }
+    const serialized = JSON.stringify(currentAnimation);
+    if (serialized.length > MAX_CURRENT_ANIMATION_SIZE) {
+      return { valid: false, error: `\"currentAnimation\" must be at most 200KB when serialized (got ${Math.round(serialized.length / 1024)}KB)` };
+    }
+    parsedAnimation = currentAnimation as object;
+  }
+
   return {
     valid: true,
-    data: { prompt: trimmed, width: w, height: h, duration: dur },
+    data: { prompt: trimmed, width: w, height: h, duration: dur, ...(parsedAnimation !== undefined && { currentAnimation: parsedAnimation }) },
   };
 }

@@ -356,6 +356,11 @@
     "openInEditor": "Open in Editor",
     "tryAnother": "Try another",
     "rateLimited": "Too many requests. Please wait a moment.",
-    "error": "Generation failed. Try a different prompt."
+    "error": "Generation failed. Try a different prompt.",
+    "refinePlaceholder": "Make it bouncier, change color...",
+    "refine": "Refine",
+    "refining": "Refining...",
+    "maxRefinements": "Open in Editor for unlimited iterations",
+    "refineCount": "{count}/3 refinements"
   }
 }

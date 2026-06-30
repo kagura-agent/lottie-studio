@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock next-intl
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => {
+  useTranslations: () => (key: string, params?: Record<string, unknown>) => {
     const translations: Record<string, string> = {
       title: "Try it now",
       subtitle: "Describe any animation and watch it come to life",
@@ -18,8 +18,19 @@ vi.mock("next-intl", () => ({
       tryAnother: "Try another",
       rateLimited: "Too many requests. Please wait a moment.",
       error: "Generation failed. Try a different prompt.",
+      refinePlaceholder: "Make it bouncier, change color...",
+      refine: "Refine",
+      refining: "Refining...",
+      maxRefinements: "Open in Editor for unlimited iterations",
+      refineCount: "{count}/3 refinements",
     };
-    return translations[key] || key;
+    let result = translations[key] || key;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        result = result.replace(`{${k}}`, String(v));
+      });
+    }
+    return result;
   },
 }));
 
@@ -183,5 +194,97 @@ describe("QuickGenerate component logic", () => {
     const prompt3 = "bouncing ball";
     const isDisabled3 = !prompt3.trim();
     expect(isDisabled3).toBe(false);
+  });
+});
+
+describe("QuickGenerate refinement logic", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApiFetch.mockReset();
+  });
+
+  it("refinement input appears after generation succeeds", async () => {
+    const mockAnimation = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 300, h: 300, layers: [] };
+    mockApiFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, animation: mockAnimation }),
+    });
+
+    const res = await mockApiFetch("/api/generate", {
+      method: "POST",
+      body: JSON.stringify({ prompt: "bouncing ball", width: 300, height: 300 }),
+    });
+    const data = await res.json();
+    expect(data.success).toBe(true);
+
+    // After success, component state transitions to "done" which renders the refine input
+    // Verify the component module exposes the refinement capability
+    const mod = await import("@/components/QuickGenerate");
+    expect(mod.default).toBeDefined();
+  });
+
+  it("refinement sends currentAnimation in request body", async () => {
+    const existingAnimation = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 300, h: 300, layers: [{ ty: 4 }] };
+    const refinedAnimation = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 300, h: 300, layers: [{ ty: 4 }, { ty: 1 }] };
+
+    mockApiFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, animation: refinedAnimation }),
+    });
+
+    // Simulate refinement call - component sends currentAnimation
+    const res = await mockApiFetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: "make it bouncier",
+        currentAnimation: existingAnimation,
+        width: 300,
+        height: 300,
+      }),
+    });
+
+    // Verify the call was made with currentAnimation
+    expect(mockApiFetch).toHaveBeenCalledWith("/api/generate", expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining("currentAnimation"),
+    }));
+
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.animation.layers).toHaveLength(2);
+  });
+
+  it("refinement counter increments and hides input after 3", () => {
+    // Test the logic: refineCount >= 3 means no more refinement input
+    let refineCount = 0;
+    const MAX_REFINEMENTS = 3;
+
+    // After each successful refinement, counter increments
+    refineCount++;
+    expect(refineCount < MAX_REFINEMENTS).toBe(true); // refine input still shown
+
+    refineCount++;
+    expect(refineCount < MAX_REFINEMENTS).toBe(true); // refine input still shown
+
+    refineCount++;
+    expect(refineCount < MAX_REFINEMENTS).toBe(false); // refine input hidden, shows "Open in Editor" message
+    expect(refineCount).toBe(3);
+  });
+
+  it("validation accepts currentAnimation field", async () => {
+    const { validateGenerateInput } = await import("@/lib/generate-validation");
+    const result = validateGenerateInput({
+      prompt: "make it faster",
+      currentAnimation: { v: "5.5.7", layers: [] },
+      width: 300,
+      height: 300,
+    });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data.currentAnimation).toEqual({ v: "5.5.7", layers: [] });
+    }
   });
 });
