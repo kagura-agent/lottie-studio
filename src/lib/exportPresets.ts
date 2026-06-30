@@ -159,7 +159,7 @@ export function getFormatExtension(format: ExportFormat): string {
     case "gif":
       return "gif";
     case "mp4":
-      return "webm"; // Browser MediaRecorder outputs WebM
+      return "mp4";
     case "apng":
       return "apng";
     case "webp":

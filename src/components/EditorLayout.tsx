@@ -125,6 +125,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [apngProgress, setApngProgress] = useState(0);
   const [videoExporting, setVideoExporting] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [mp4Exporting, setMp4Exporting] = useState(false);
+  const [mp4Progress, setMp4Progress] = useState(0);
   const [presetExporting, setPresetExporting] = useState(false);
   const [presetProgress, setPresetProgress] = useState(0);
   const [presetExportingId, setPresetExportingId] = useState<string | null>(null);
@@ -405,6 +407,39 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     }
   };
 
+  const handleExportMp4 = async (e: MouseEvent) => {
+    e.preventDefault();
+    if (!animationData || mp4Exporting) return;
+    setMp4Exporting(true);
+    setMp4Progress(0);
+    try {
+      const { exportToMp4, isMP4ExportSupported, formatFileSize } = await import("@/lib/mp4Exporter");
+      if (!isMP4ExportSupported()) {
+        toast({ message: "MP4 export requires Chrome 94+ or Edge 94+ (WebCodecs API).", type: "error" });
+        return;
+      }
+      const blob = await exportToMp4({
+        animationData,
+        onProgress: setMp4Progress,
+      });
+      const url = URL.createObjectURL(blob);
+      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sanitized}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ message: `MP4 exported (${formatFileSize(blob.size)})`, type: "success" });
+    } catch (err) {
+      console.error("MP4 export failed:", err);
+      const message = err instanceof Error ? err.message : "MP4 export failed. Please try again.";
+      toast({ message, type: "error" });
+    } finally {
+      setMp4Exporting(false);
+      setMp4Progress(0);
+    }
+  };
+
   const handleExportPreset = async (preset: ExportPreset) => {
     if (!animationData || presetExporting) return;
     setPresetExporting(true);
@@ -431,8 +466,12 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           blob = await exportToGif({ animationData: rescaledData, onProgress });
         }
       } else if (preset.format === "mp4") {
-        const { exportToVideo } = await import("@/lib/videoExporter");
-        blob = await exportToVideo({ animationData: rescaledData, onProgress });
+        const { exportToMp4, isMP4ExportSupported } = await import("@/lib/mp4Exporter");
+        if (!isMP4ExportSupported()) {
+          toast({ message: "MP4 export requires Chrome 94+ or Edge 94+ (WebCodecs API).", type: "error" });
+          return;
+        }
+        blob = await exportToMp4({ animationData: rescaledData, onProgress });
       } else if (preset.format === "apng") {
         const { exportToApng } = await import("@/lib/apngExporter");
         blob = await exportToApng({ animationData: rescaledData, onProgress });
@@ -860,6 +899,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           apngProgress={apngProgress}
           videoExporting={videoExporting}
           videoProgress={videoProgress}
+          mp4Exporting={mp4Exporting}
+          mp4Progress={mp4Progress}
           presetExporting={presetExporting}
           presetProgress={presetProgress}
           presetExportingId={presetExportingId}
@@ -868,6 +909,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           onExportApng={handleExportApng}
           onExportDotLottie={handleExportDotLottie}
           onExportVideo={handleExportVideo}
+          onExportMp4={handleExportMp4}
           onExportPreset={handleExportPreset}
           onDuplicate={handleDuplicate}
           isDuplicating={duplicating}
