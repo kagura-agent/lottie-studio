@@ -1,0 +1,236 @@
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import lottie, { AnimationItem } from "lottie-web";
+import { apiFetch } from "@/lib/apiFetch";
+
+const EXAMPLE_PROMPTS = [
+  "Loading spinner",
+  "Bouncing ball",
+  "Fade-in text",
+];
+
+export default function QuickGenerate() {
+  const t = useTranslations("quickGenerate");
+  const router = useRouter();
+  const [prompt, setPrompt] = useState("");
+  const [status, setStatus] = useState<"idle" | "generating" | "done" | "error" | "rateLimited">("idle");
+  const [animationData, setAnimationData] = useState<object | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<AnimationItem | null>(null);
+  const [reducedMotion, setReducedMotion] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Render lottie animation when data is available
+  useEffect(() => {
+    if (!containerRef.current || !animationData) return;
+    if (animRef.current) {
+      animRef.current.destroy();
+      animRef.current = null;
+    }
+    try {
+      animRef.current = lottie.loadAnimation({
+        container: containerRef.current,
+        renderer: "svg",
+        loop: !reducedMotion,
+        autoplay: !reducedMotion,
+        animationData,
+      });
+    } catch {
+      // invalid data
+    }
+    return () => {
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+    };
+  }, [animationData, reducedMotion]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!prompt.trim()) return;
+    setStatus("generating");
+    setAnimationData(null);
+    setErrorMessage("");
+
+    try {
+      const res = await apiFetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim(), width: 300, height: 300 }),
+      });
+
+      if (res.status === 429) {
+        setStatus("rateLimited");
+        return;
+      }
+
+      if (!res.ok) {
+        setStatus("error");
+        setErrorMessage(t("error"));
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success && data.animation) {
+        setAnimationData(data.animation);
+        setStatus("done");
+      } else {
+        setStatus("error");
+        setErrorMessage(t("error"));
+      }
+    } catch {
+      setStatus("error");
+      setErrorMessage(t("error"));
+    }
+  }, [prompt, t]);
+
+  const handleOpenInEditor = useCallback(async () => {
+    if (!animationData) return;
+    try {
+      const res = await apiFetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: prompt.trim(), data: animationData }),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        router.push(`/editor/${id}`);
+      }
+    } catch {
+      // navigation failed silently
+    }
+  }, [animationData, prompt, router]);
+
+  const handleTryAnother = useCallback(() => {
+    setStatus("idle");
+    setAnimationData(null);
+    setPrompt("");
+    setErrorMessage("");
+  }, []);
+
+  const handleChipClick = useCallback((example: string) => {
+    setPrompt(example);
+  }, []);
+
+  return (
+    <section className="relative my-12 rounded-2xl border border-violet-500/20 bg-gradient-to-b from-zinc-900 to-zinc-950 p-8 shadow-[0_0_40px_-12px_rgba(139,92,246,0.15)]">
+      {/* Subtle gradient glow */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-600/5 via-transparent to-violet-600/5 pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-1">
+          {t("title")}
+        </h2>
+        <p className="text-sm text-zinc-400 mb-6">
+          {t("subtitle")}
+        </p>
+
+        {/* Input area */}
+        <div className="w-full max-w-xl">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && status !== "generating") {
+                  handleGenerate();
+                }
+              }}
+              placeholder={t("placeholder")}
+              disabled={status === "generating"}
+              className="flex-1 px-4 py-3 rounded-lg border border-zinc-700 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all disabled:opacity-50"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || status === "generating"}
+              className="px-5 py-3 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {status === "generating" ? t("generating") : t("generate")}
+            </button>
+          </div>
+
+          {/* Example chips */}
+          {status === "idle" && (
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {EXAMPLE_PROMPTS.map((example) => (
+                <button
+                  key={example}
+                  onClick={() => handleChipClick(example)}
+                  className="px-3 py-1 rounded-full border border-zinc-700 bg-zinc-800/50 text-xs text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 transition-colors"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Loading state */}
+        {status === "generating" && (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <div className="w-[300px] h-[300px] max-w-full rounded-xl bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                <p className="text-xs text-zinc-500">{t("generating")}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Animation preview */}
+        {status === "done" && animationData && (
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div
+              ref={containerRef}
+              className="w-[300px] h-[300px] max-w-full rounded-xl bg-zinc-800/50 border border-zinc-700/50 overflow-hidden"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleOpenInEditor}
+                className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition-colors"
+              >
+                {t("openInEditor")}
+              </button>
+              <button
+                onClick={handleTryAnother}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+              >
+                {t("tryAnother")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Rate limit error */}
+        {status === "rateLimited" && (
+          <div className="mt-6 px-4 py-3 rounded-lg bg-yellow-900/30 border border-yellow-700/50 text-yellow-200 text-sm">
+            {t("rateLimited")}
+          </div>
+        )}
+
+        {/* Generic error */}
+        {status === "error" && (
+          <div className="mt-6 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-200 text-sm">
+            {errorMessage || t("error")}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
