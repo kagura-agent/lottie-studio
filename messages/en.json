@@ -364,6 +364,11 @@
     "refineCount": "{count}/3 refinements",
     "downloadJson": "⬇ Download",
     "copyJson": "📋 Copy JSON",
+    "exportGif": "🎞 Export GIF",
+    "exportWebm": "🎬 Export WebM",
+    "gifProgress": "GIF {progress}%",
+    "webmProgress": "WebM {progress}%",
+    "exportError": "Export failed. Please try again.",
     "shareLink": "🔗 Share",
     "copied": "Copied!",
     "linkCopied": "Link copied!"

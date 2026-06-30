@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import lottie, { AnimationItem } from "lottie-web";
 import { apiFetch } from "@/lib/apiFetch";
+import { exportToGif } from "@/lib/gifExporter";
+import { exportToVideo, getVideoExtension } from "@/lib/videoExporter";
 
 const EXAMPLE_PROMPTS = [
   "Loading spinner",
@@ -23,6 +25,8 @@ export default function QuickGenerate() {
   const [refineCount, setRefineCount] = useState(0);
   const [isRefining, setIsRefining] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [gifProgress, setGifProgress] = useState<number | null>(null);
+  const [webmProgress, setWebmProgress] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [reducedMotion, setReducedMotion] = useState(() => {
@@ -219,6 +223,50 @@ export default function QuickGenerate() {
     }
   }, [animationData, prompt, showToast, t]);
 
+  const triggerDownload = useCallback((blob: Blob, extension: string) => {
+    const url = URL.createObjectURL(blob);
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slug}.${extension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [prompt]);
+
+  const handleExportGif = useCallback(async () => {
+    if (!animationData || gifProgress !== null) return;
+    setGifProgress(0);
+    try {
+      const blob = await exportToGif({
+        animationData,
+        onProgress: (p) => setGifProgress(Math.round(p * 100)),
+      });
+      triggerDownload(blob, "gif");
+    } catch {
+      showToast(t("exportError"));
+    } finally {
+      setGifProgress(null);
+    }
+  }, [animationData, gifProgress, triggerDownload, showToast, t]);
+
+  const handleExportWebm = useCallback(async () => {
+    if (!animationData || webmProgress !== null) return;
+    setWebmProgress(0);
+    try {
+      const blob = await exportToVideo({
+        animationData,
+        onProgress: (p) => setWebmProgress(Math.round(p * 100)),
+      });
+      triggerDownload(blob, getVideoExtension());
+    } catch {
+      showToast(t("exportError"));
+    } finally {
+      setWebmProgress(null);
+    }
+  }, [animationData, webmProgress, triggerDownload, showToast, t]);
+
   const handleChipClick = useCallback((example: string) => {
     setPrompt(example);
   }, []);
@@ -363,6 +411,20 @@ export default function QuickGenerate() {
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
                 {t("copyJson")}
+              </button>
+              <button
+                onClick={handleExportGif}
+                disabled={gifProgress !== null}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {gifProgress !== null ? t("gifProgress", { progress: gifProgress }) : t("exportGif")}
+              </button>
+              <button
+                onClick={handleExportWebm}
+                disabled={webmProgress !== null}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {webmProgress !== null ? t("webmProgress", { progress: webmProgress }) : t("exportWebm")}
               </button>
               <button
                 onClick={handleShareLink}
