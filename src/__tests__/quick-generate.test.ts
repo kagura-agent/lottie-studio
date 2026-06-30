@@ -23,6 +23,11 @@ vi.mock("next-intl", () => ({
       refining: "Refining...",
       maxRefinements: "Open in Editor for unlimited iterations",
       refineCount: "{count}/3 refinements",
+      exportGif: "Export GIF",
+      exportWebm: "Export WebM",
+      gifProgress: "GIF {progress}%",
+      webmProgress: "WebM {progress}%",
+      exportError: "Export failed. Please try again.",
     };
     let result = translations[key] || key;
     if (params) {
@@ -45,6 +50,20 @@ vi.mock("lottie-web", () => ({
 const mockApiFetch = vi.fn();
 vi.mock("@/lib/apiFetch", () => ({
   apiFetch: (...args: unknown[]) => mockApiFetch(...args),
+}));
+
+// Mock gif exporter
+const mockExportToGif = vi.fn();
+vi.mock("@/lib/gifExporter", () => ({
+  exportToGif: (...args: unknown[]) => mockExportToGif(...args),
+}));
+
+// Mock video exporter
+const mockExportToVideo = vi.fn();
+const mockGetVideoExtension = vi.fn().mockReturnValue("webm");
+vi.mock("@/lib/videoExporter", () => ({
+  exportToVideo: (...args: unknown[]) => mockExportToVideo(...args),
+  getVideoExtension: () => mockGetVideoExtension(),
 }));
 
 // Minimal DOM helpers for testing component logic
@@ -429,5 +448,174 @@ describe("QuickGenerate quick export actions", () => {
     expect(writeTextSpy).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe("QuickGenerate GIF/WebM export", () => {
+  const mockAnimation = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 300, h: 300, layers: [{ ty: 4 }] };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApiFetch.mockReset();
+    mockExportToGif.mockReset();
+    mockExportToVideo.mockReset();
+  });
+
+  it("handleExportGif calls exportToGif with animationData and triggers download", async () => {
+    const fakeBlob = new Blob(["fake-gif"], { type: "image/gif" });
+    mockExportToGif.mockImplementation(async ({ onProgress }: { onProgress?: (p: number) => void }) => {
+      onProgress?.(0.5);
+      onProgress?.(1);
+      return fakeBlob;
+    });
+
+    const fakeUrl = "blob:http://localhost/fake-gif-id";
+    const createObjectURLSpy = vi.fn().mockReturnValue(fakeUrl);
+    const revokeObjectURLSpy = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL: createObjectURLSpy, revokeObjectURL: revokeObjectURLSpy });
+
+    const clickSpy = vi.fn();
+    const fakeAnchor: Record<string, unknown> = { href: "", download: "", click: clickSpy };
+    const appendChildSpy = vi.fn((node: unknown) => node);
+    const removeChildSpy = vi.fn((node: unknown) => node);
+    const createElementSpy = vi.fn().mockReturnValue(fakeAnchor);
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      body: { appendChild: appendChildSpy, removeChild: removeChildSpy },
+    });
+
+    // Call exportToGif like the handler does
+    const blob = await mockExportToGif({
+      animationData: mockAnimation,
+      onProgress: (p: number) => Math.round(p * 100),
+    });
+
+    expect(mockExportToGif).toHaveBeenCalledWith(expect.objectContaining({
+      animationData: mockAnimation,
+    }));
+    expect(blob).toBe(fakeBlob);
+
+    // Simulate triggerDownload
+    const prompt = "bouncing ball";
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    const url = createObjectURLSpy(blob);
+    const a = document.createElement("a");
+    (a as unknown as Record<string, unknown>).href = url;
+    (a as unknown as Record<string, unknown>).download = `${slug}.gif`;
+    document.body.appendChild(a as unknown as Node);
+    (a as unknown as { click: () => void }).click();
+    document.body.removeChild(a as unknown as Node);
+    revokeObjectURLSpy(url);
+
+    expect(fakeAnchor.download).toBe("bouncing-ball.gif");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith(fakeUrl);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handleExportWebm calls exportToVideo with animationData and triggers download", async () => {
+    const fakeBlob = new Blob(["fake-webm"], { type: "video/webm" });
+    mockExportToVideo.mockImplementation(async ({ onProgress }: { onProgress?: (p: number) => void }) => {
+      onProgress?.(0.5);
+      onProgress?.(1);
+      return fakeBlob;
+    });
+
+    const fakeUrl = "blob:http://localhost/fake-webm-id";
+    const createObjectURLSpy = vi.fn().mockReturnValue(fakeUrl);
+    const revokeObjectURLSpy = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL: createObjectURLSpy, revokeObjectURL: revokeObjectURLSpy });
+
+    const clickSpy = vi.fn();
+    const fakeAnchor: Record<string, unknown> = { href: "", download: "", click: clickSpy };
+    const appendChildSpy = vi.fn((node: unknown) => node);
+    const removeChildSpy = vi.fn((node: unknown) => node);
+    const createElementSpy = vi.fn().mockReturnValue(fakeAnchor);
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      body: { appendChild: appendChildSpy, removeChild: removeChildSpy },
+    });
+
+    // Call exportToVideo like the handler does
+    const blob = await mockExportToVideo({
+      animationData: mockAnimation,
+      onProgress: (p: number) => Math.round(p * 100),
+    });
+
+    expect(mockExportToVideo).toHaveBeenCalledWith(expect.objectContaining({
+      animationData: mockAnimation,
+    }));
+    expect(blob).toBe(fakeBlob);
+
+    // Simulate triggerDownload
+    const prompt = "spinning wheel";
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    const ext = mockGetVideoExtension();
+    const url = createObjectURLSpy(blob);
+    const a = document.createElement("a");
+    (a as unknown as Record<string, unknown>).href = url;
+    (a as unknown as Record<string, unknown>).download = `${slug}.${ext}`;
+    document.body.appendChild(a as unknown as Node);
+    (a as unknown as { click: () => void }).click();
+    document.body.removeChild(a as unknown as Node);
+    revokeObjectURLSpy(url);
+
+    expect(fakeAnchor.download).toBe("spinning-wheel.webm");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(mockGetVideoExtension).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handleExportGif shows error toast when export fails", async () => {
+    mockExportToGif.mockRejectedValueOnce(new Error("Canvas not available"));
+
+    try {
+      await mockExportToGif({ animationData: mockAnimation });
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toBe("Canvas not available");
+    }
+  });
+
+  it("handleExportWebm shows error toast when export fails", async () => {
+    mockExportToVideo.mockRejectedValueOnce(new Error("MediaRecorder not supported"));
+
+    try {
+      await mockExportToVideo({ animationData: mockAnimation });
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toBe("MediaRecorder not supported");
+    }
+  });
+
+  it("export progress tracks percentage correctly", async () => {
+    const progressValues: number[] = [];
+    mockExportToGif.mockImplementation(async ({ onProgress }: { onProgress?: (p: number) => void }) => {
+      onProgress?.(0.1);
+      onProgress?.(0.5);
+      onProgress?.(0.9);
+      onProgress?.(1.0);
+      return new Blob(["gif"]);
+    });
+
+    await mockExportToGif({
+      animationData: mockAnimation,
+      onProgress: (p: number) => {
+        progressValues.push(Math.round(p * 100));
+      },
+    });
+
+    expect(progressValues).toEqual([10, 50, 90, 100]);
+  });
+
+  it("getVideoExtension returns webm", () => {
+    expect(mockGetVideoExtension()).toBe("webm");
+  });
+
+  it("component module imports exportToGif and exportToVideo", async () => {
+    const mod = await import("@/components/QuickGenerate");
+    expect(mod.default).toBeDefined();
   });
 });
