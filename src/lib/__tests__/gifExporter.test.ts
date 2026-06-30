@@ -27,6 +27,7 @@ vi.mock("gif.js", () => {
 
     constructor(opts: unknown) {
       mockGifConstructorArgs = opts;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       mockGifInstance = this;
     }
   }

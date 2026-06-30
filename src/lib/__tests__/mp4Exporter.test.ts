@@ -11,6 +11,7 @@ vi.mock("mp4-muxer", () => {
   class MockArrayBufferTarget {
     buffer = new ArrayBuffer(1024);
     constructor() {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       mockTargetInstance = this;
     }
   }
@@ -18,6 +19,7 @@ vi.mock("mp4-muxer", () => {
     addVideoChunk = vi.fn();
     finalize = vi.fn();
     constructor(_opts: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       mockMuxerInstance = this;
     }
   }
