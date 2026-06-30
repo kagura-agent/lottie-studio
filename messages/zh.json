@@ -356,6 +356,11 @@
     "openInEditor": "在编辑器中打开",
     "tryAnother": "再试一个",
     "rateLimited": "请求过多，请稍等片刻",
-    "error": "生成失败，请尝试不同的描述"
+    "error": "生成失败，请尝试不同的描述",
+    "refinePlaceholder": "让它更有弹性，换个颜色...",
+    "refine": "优化",
+    "refining": "优化中...",
+    "maxRefinements": "在编辑器中无限迭代",
+    "refineCount": "{count}/3 次优化"
   }
 }
