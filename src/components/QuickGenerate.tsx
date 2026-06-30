@@ -22,6 +22,7 @@ export default function QuickGenerate() {
   const [refinePrompt, setRefinePrompt] = useState("");
   const [refineCount, setRefineCount] = useState(0);
   const [isRefining, setIsRefining] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [reducedMotion, setReducedMotion] = useState(() => {
@@ -169,6 +170,55 @@ export default function QuickGenerate() {
     }
   }, [refinePrompt, animationData, isRefining]);
 
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(""), 2000);
+  }, []);
+
+  const handleDownloadJson = useCallback(() => {
+    if (!animationData) return;
+    const json = JSON.stringify(animationData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${slug}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [animationData, prompt]);
+
+  const handleCopyJson = useCallback(async () => {
+    if (!animationData) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(animationData, null, 2));
+      showToast(t("copied"));
+    } catch {
+      // clipboard failed silently
+    }
+  }, [animationData, showToast, t]);
+
+  const handleShareLink = useCallback(async () => {
+    if (!animationData) return;
+    try {
+      const res = await apiFetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: prompt.trim(), data: animationData }),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        const shareUrl = `${window.location.origin}/share/${id}`;
+        await navigator.clipboard.writeText(shareUrl);
+        showToast(t("linkCopied"));
+      }
+    } catch {
+      // share failed silently
+    }
+  }, [animationData, prompt, showToast, t]);
+
   const handleChipClick = useCallback((example: string) => {
     setPrompt(example);
   }, []);
@@ -299,6 +349,33 @@ export default function QuickGenerate() {
                 </button>
               </p>
             )}
+
+            {/* Quick export actions */}
+            <div className="flex gap-3 relative">
+              <button
+                onClick={handleDownloadJson}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+              >
+                {t("downloadJson")}
+              </button>
+              <button
+                onClick={handleCopyJson}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+              >
+                {t("copyJson")}
+              </button>
+              <button
+                onClick={handleShareLink}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+              >
+                {t("shareLink")}
+              </button>
+              {toastMessage && (
+                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded bg-zinc-700 text-zinc-100 text-xs whitespace-nowrap animate-pulse">
+                  {toastMessage}
+                </span>
+              )}
+            </div>
 
             <div className="flex gap-3">
               <button

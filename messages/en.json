@@ -361,6 +361,11 @@
     "refine": "Refine",
     "refining": "Refining...",
     "maxRefinements": "Open in Editor for unlimited iterations",
-    "refineCount": "{count}/3 refinements"
+    "refineCount": "{count}/3 refinements",
+    "downloadJson": "⬇ Download",
+    "copyJson": "📋 Copy JSON",
+    "shareLink": "🔗 Share",
+    "copied": "Copied!",
+    "linkCopied": "Link copied!"
   }
 }
