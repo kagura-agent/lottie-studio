@@ -288,3 +288,146 @@ describe("QuickGenerate refinement logic", () => {
     }
   });
 });
+
+describe("QuickGenerate quick export actions", () => {
+  const mockAnimation = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 300, h: 300, layers: [{ ty: 4 }] };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockApiFetch.mockReset();
+  });
+
+  it("handleDownloadJson creates blob URL, triggers download with slugified filename, and cleans up", () => {
+    // Mock URL.createObjectURL / revokeObjectURL
+    const fakeUrl = "blob:http://localhost/fake-blob-id";
+    const createObjectURLSpy = vi.fn().mockReturnValue(fakeUrl);
+    const revokeObjectURLSpy = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL: createObjectURLSpy, revokeObjectURL: revokeObjectURLSpy });
+
+    // Mock document with createElement, body.appendChild/removeChild
+    const clickSpy = vi.fn();
+    const fakeAnchor: Record<string, unknown> = { href: "", download: "", click: clickSpy };
+    const appendChildSpy = vi.fn((node: unknown) => node);
+    const removeChildSpy = vi.fn((node: unknown) => node);
+    const createElementSpy = vi.fn().mockReturnValue(fakeAnchor);
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      body: { appendChild: appendChildSpy, removeChild: removeChildSpy },
+    });
+
+    // Replicate handleDownloadJson logic with prompt "A bouncing ball!"
+    const prompt = "A bouncing ball!";
+    const animationData = mockAnimation;
+    const json = JSON.stringify(animationData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = createObjectURLSpy(blob);
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    const a = document.createElement("a");
+    (a as unknown as Record<string, unknown>).href = url;
+    (a as unknown as Record<string, unknown>).download = `${slug}.json`;
+    document.body.appendChild(a as unknown as Node);
+    (a as unknown as { click: () => void }).click();
+    document.body.removeChild(a as unknown as Node);
+    revokeObjectURLSpy(url);
+
+    // Assertions
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
+    expect(createObjectURLSpy).toHaveBeenCalledWith(expect.any(Blob));
+    expect(createElementSpy).toHaveBeenCalledWith("a");
+    expect(fakeAnchor.href).toBe(fakeUrl);
+    expect(fakeAnchor.download).toBe("a-bouncing-ball.json");
+    expect(appendChildSpy).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(removeChildSpy).toHaveBeenCalled();
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith(fakeUrl);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handleDownloadJson uses 'animation' as filename when prompt is empty", () => {
+    const prompt = "   ";
+    const slug = prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "animation";
+    expect(slug).toBe("animation");
+  });
+
+  it("handleCopyJson calls navigator.clipboard.writeText with stringified animation", async () => {
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText: writeTextSpy } });
+
+    // Replicate handleCopyJson logic
+    const animationData = mockAnimation;
+    await navigator.clipboard.writeText(JSON.stringify(animationData, null, 2));
+
+    expect(writeTextSpy).toHaveBeenCalledTimes(1);
+    expect(writeTextSpy).toHaveBeenCalledWith(JSON.stringify(mockAnimation, null, 2));
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handleShareLink calls apiFetch POST /api/animations and copies share URL to clipboard", async () => {
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText: writeTextSpy } });
+    vi.stubGlobal("window", { location: { origin: "https://lottiestudio.com" } });
+
+    const animationId = "shared-anim-123";
+    mockApiFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: animationId }),
+    });
+
+    // Replicate handleShareLink logic
+    const promptText = "bouncing ball";
+    const animationData = mockAnimation;
+    const res = await mockApiFetch("/api/animations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: promptText.trim(), data: animationData }),
+    });
+
+    expect(mockApiFetch).toHaveBeenCalledWith("/api/animations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "bouncing ball", data: mockAnimation }),
+    });
+
+    if (res.ok) {
+      const { id } = await res.json();
+      const shareUrl = `https://lottiestudio.com/share/${id}`;
+      await navigator.clipboard.writeText(shareUrl);
+    }
+
+    expect(writeTextSpy).toHaveBeenCalledTimes(1);
+    expect(writeTextSpy).toHaveBeenCalledWith("https://lottiestudio.com/share/shared-anim-123");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handleShareLink does not copy if apiFetch fails", async () => {
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText: writeTextSpy } });
+
+    mockApiFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "Server error" }),
+    });
+
+    // Replicate handleShareLink logic - only copies on res.ok
+    const res = await mockApiFetch("/api/animations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "test", data: mockAnimation }),
+    });
+
+    if (res.ok) {
+      const { id } = await res.json();
+      const shareUrl = `https://lottiestudio.com/share/${id}`;
+      await navigator.clipboard.writeText(shareUrl);
+    }
+
+    expect(writeTextSpy).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+});

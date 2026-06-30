@@ -361,6 +361,11 @@
     "refine": "优化",
     "refining": "优化中...",
     "maxRefinements": "在编辑器中无限迭代",
-    "refineCount": "{count}/3 次优化"
+    "refineCount": "{count}/3 次优化",
+    "downloadJson": "⬇ 下载",
+    "copyJson": "📋 复制 JSON",
+    "shareLink": "🔗 分享",
+    "copied": "已复制！",
+    "linkCopied": "链接已复制！"
   }
 }
