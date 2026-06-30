@@ -7,6 +7,7 @@ import lottie, { AnimationItem } from "lottie-web";
 import { apiFetch } from "@/lib/apiFetch";
 import { exportToGif } from "@/lib/gifExporter";
 import { exportToVideo, getVideoExtension } from "@/lib/videoExporter";
+import { exportToMp4, isMP4ExportSupported, formatFileSize } from "@/lib/mp4Exporter";
 
 const EXAMPLE_PROMPTS = [
   "Loading spinner",
@@ -27,6 +28,7 @@ export default function QuickGenerate() {
   const [toastMessage, setToastMessage] = useState("");
   const [gifProgress, setGifProgress] = useState<number | null>(null);
   const [webmProgress, setWebmProgress] = useState<number | null>(null);
+  const [mp4Progress, setMp4Progress] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [reducedMotion, setReducedMotion] = useState(() => {
@@ -267,6 +269,27 @@ export default function QuickGenerate() {
     }
   }, [animationData, webmProgress, triggerDownload, showToast, t]);
 
+  const handleExportMp4 = useCallback(async () => {
+    if (!animationData || mp4Progress !== null) return;
+    if (!isMP4ExportSupported()) {
+      showToast("MP4 export requires Chrome 94+ or Edge 94+");
+      return;
+    }
+    setMp4Progress(0);
+    try {
+      const blob = await exportToMp4({
+        animationData,
+        onProgress: (p) => setMp4Progress(Math.round(p * 100)),
+      });
+      triggerDownload(blob, "mp4");
+      showToast(`MP4 exported (${formatFileSize(blob.size)})`);
+    } catch {
+      showToast(t("exportError"));
+    } finally {
+      setMp4Progress(null);
+    }
+  }, [animationData, mp4Progress, triggerDownload, showToast, t]);
+
   const handleChipClick = useCallback((example: string) => {
     setPrompt(example);
   }, []);
@@ -425,6 +448,13 @@ export default function QuickGenerate() {
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {webmProgress !== null ? t("webmProgress", { progress: webmProgress }) : t("exportWebm")}
+              </button>
+              <button
+                onClick={handleExportMp4}
+                disabled={mp4Progress !== null}
+                className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {mp4Progress !== null ? t("mp4Progress", { progress: mp4Progress }) : t("exportMp4")}
               </button>
               <button
                 onClick={handleShareLink}

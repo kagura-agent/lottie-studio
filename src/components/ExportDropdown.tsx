@@ -15,6 +15,8 @@ interface ExportDropdownProps {
   apngProgress: number;
   videoExporting: boolean;
   videoProgress: number;
+  mp4Exporting: boolean;
+  mp4Progress: number;
   presetExporting: boolean;
   presetProgress: number;
   presetExportingId: string | null;
@@ -23,6 +25,7 @@ interface ExportDropdownProps {
   onExportApng: (e: React.MouseEvent) => void;
   onExportDotLottie: () => void;
   onExportVideo: (e: React.MouseEvent) => void;
+  onExportMp4: (e: React.MouseEvent) => void;
   onExportPreset: (preset: ExportPreset) => void;
   onDuplicate: () => void;
   isDuplicating: boolean;
@@ -38,6 +41,8 @@ export default function ExportDropdown({
   apngProgress,
   videoExporting,
   videoProgress,
+  mp4Exporting,
+  mp4Progress,
   presetExporting,
   presetProgress,
   presetExportingId,
@@ -46,6 +51,7 @@ export default function ExportDropdown({
   onExportApng,
   onExportDotLottie,
   onExportVideo,
+  onExportMp4,
   onExportPreset,
   onDuplicate,
   isDuplicating,
@@ -178,7 +184,7 @@ export default function ExportDropdown({
             {t('exportDropdown.exportDotLottie')}
           </button>
 
-          {/* Download Video */}
+          {/* Download Video (WebM) */}
           <button
             onClick={(e) => { onExportVideo(e); setOpen(false); }}
             disabled={noData || videoExporting}
@@ -190,6 +196,20 @@ export default function ExportDropdown({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             {videoExporting ? t('exportDropdown.videoProgress', { progress: Math.round(videoProgress * 100) }) : t('exportDropdown.exportVideo')}
+          </button>
+
+          {/* Download MP4 (H.264) */}
+          <button
+            onClick={(e) => { onExportMp4(e); setOpen(false); }}
+            disabled={noData || mp4Exporting}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {mp4Exporting ? t('exportDropdown.mp4Progress', { progress: Math.round(mp4Progress * 100) }) : t('exportDropdown.exportMp4')}
           </button>
 
           {/* Separator */}
