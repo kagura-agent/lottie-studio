@@ -9,6 +9,7 @@ import { exportToGif } from "@/lib/gifExporter";
 import { exportToVideo, getVideoExtension } from "@/lib/videoExporter";
 import { exportToMp4, isMP4ExportSupported, formatFileSize } from "@/lib/mp4Exporter";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
+import VariationGrid, { type Variation } from "@/components/VariationGrid";
 
 const EXAMPLE_PROMPTS = [
   "Loading spinner",
@@ -21,6 +22,7 @@ export default function QuickGenerate() {
   const router = useRouter();
   const { tokens: designTokens, hasTokens: hasDesignTokens } = useDesignTokens();
   const [prompt, setPrompt] = useState("");
+  const [mode, setMode] = useState<"single" | "variations">("single");
   const [status, setStatus] = useState<"idle" | "generating" | "done" | "error" | "rateLimited">("idle");
   const [animationData, setAnimationData] = useState<object | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -31,6 +33,7 @@ export default function QuickGenerate() {
   const [gifProgress, setGifProgress] = useState<number | null>(null);
   const [webmProgress, setWebmProgress] = useState<number | null>(null);
   const [mp4Progress, setMp4Progress] = useState<number | null>(null);
+  const [variations, setVariations] = useState<Variation[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [reducedMotion, setReducedMotion] = useState(() => {
@@ -77,7 +80,42 @@ export default function QuickGenerate() {
     if (!prompt.trim()) return;
     setStatus("generating");
     setAnimationData(null);
+    setVariations([]);
     setErrorMessage("");
+
+    if (mode === "variations") {
+      try {
+        const res = await apiFetch("/api/generate/variations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: prompt.trim(), width: 300, height: 300, duration: 2 }),
+        });
+
+        if (res.status === 429) {
+          setStatus("rateLimited");
+          return;
+        }
+
+        if (!res.ok) {
+          setStatus("error");
+          setErrorMessage(t("error"));
+          return;
+        }
+
+        const data = await res.json();
+        if (data.success && data.variations) {
+          setVariations(data.variations);
+          setStatus("done");
+        } else {
+          setStatus("error");
+          setErrorMessage(t("error"));
+        }
+      } catch {
+        setStatus("error");
+        setErrorMessage(t("error"));
+      }
+      return;
+    }
 
     try {
       const res = await apiFetch("/api/generate", {
@@ -109,7 +147,7 @@ export default function QuickGenerate() {
       setStatus("error");
       setErrorMessage(t("error"));
     }
-  }, [prompt, t, designTokens, hasDesignTokens]);
+  }, [prompt, mode, t, designTokens, hasDesignTokens]);
 
   const handleOpenInEditor = useCallback(async () => {
     if (!animationData) return;
@@ -128,9 +166,26 @@ export default function QuickGenerate() {
     }
   }, [animationData, prompt, router]);
 
+  const handleSelectVariation = useCallback(async (variation: Variation) => {
+    try {
+      const res = await apiFetch("/api/animations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: prompt.trim(), data: variation.animation }),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        router.push(`/editor/${id}`);
+      }
+    } catch {
+      // navigation failed silently
+    }
+  }, [prompt, router]);
+
   const handleTryAnother = useCallback(() => {
     setStatus("idle");
     setAnimationData(null);
+    setVariations([]);
     setPrompt("");
     setErrorMessage("");
     setRefinePrompt("");
@@ -335,6 +390,32 @@ export default function QuickGenerate() {
             </button>
           </div>
 
+          {/* Mode toggle */}
+          <div className="flex justify-center mt-3">
+            <div className="inline-flex rounded-full border border-zinc-700 bg-zinc-800/50 p-0.5">
+              <button
+                onClick={() => setMode("single")}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  mode === "single"
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {t("modeSingle")}
+              </button>
+              <button
+                onClick={() => setMode("variations")}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  mode === "variations"
+                    ? "bg-violet-600 text-white shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {t("modeVariations")}
+              </button>
+            </div>
+          </div>
+
           {/* Example chips */}
           {status === "idle" && (
             <div className="flex flex-wrap justify-center gap-2 mt-3">
@@ -357,14 +438,33 @@ export default function QuickGenerate() {
             <div className="w-[300px] h-[300px] max-w-full rounded-xl bg-zinc-800/50 border border-zinc-700/50 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
-                <p className="text-xs text-zinc-500">{t("generating")}</p>
+                <p className="text-xs text-zinc-500">
+                  {mode === "variations" ? t("generatingVariations") : t("generating")}
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Animation preview */}
-        {status === "done" && animationData && (
+        {/* Variations result */}
+        {status === "done" && mode === "variations" && variations.length > 0 && (
+          <div className="mt-8 flex flex-col items-center gap-4 w-full max-w-2xl">
+            <p className="text-sm text-zinc-400">{t("variationsSubtitle")}</p>
+            <VariationGrid
+              variations={variations}
+              onSelect={handleSelectVariation}
+            />
+            <button
+              onClick={handleTryAnother}
+              className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
+            >
+              {t("tryAnother")}
+            </button>
+          </div>
+        )}
+
+        {/* Animation preview (single mode) */}
+        {status === "done" && mode === "single" && animationData && (
           <div className="mt-8 flex flex-col items-center gap-4">
             <div className="relative">
               <div

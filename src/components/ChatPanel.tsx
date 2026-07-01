@@ -12,6 +12,7 @@ import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import PromptSuggestions from "./PromptSuggestions";
+import VariationGrid, { type Variation } from "./VariationGrid";
 
 interface Message {
   id: string;
@@ -23,6 +24,8 @@ interface Message {
   imageUrl?: string;
   lottieJson?: object;
   previousLottieJson?: object;
+  variations?: Variation[];
+  variationsLoading?: boolean;
 }
 
 interface ChatPanelProps {
@@ -666,6 +669,71 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Variations command: generate multiple style variations
+      if (command.type === "variations") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+
+        // Add a loading assistant message with the grid
+        const assistantMsgId = crypto.randomUUID();
+        const loadingMessage: Message = {
+          id: assistantMsgId,
+          role: "assistant",
+          content: t("variationsGenerating"),
+          variationsLoading: true,
+          variations: [],
+        };
+        setMessages((prev) => [...prev, loadingMessage]);
+        setIsThinking(true);
+
+        try {
+          const res = await apiFetch("/api/generate/variations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: command.prompt }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            const errMsg = data.error || `Request failed (${res.status})`;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: `⚠️ ${errMsg}`, variationsLoading: false, variations: undefined }
+                  : m
+              )
+            );
+          } else {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: t("variationsReady"), variationsLoading: false, variations: data.variations }
+                  : m
+              )
+            );
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, content: `⚠️ ${errMsg}`, variationsLoading: false, variations: undefined }
+                : m
+            )
+          );
+        } finally {
+          setIsThinking(false);
+        }
+        return;
+      }
+
       // Random command: pick a random prompt and send it to the LLM
       if (command.type === "random") {
         const randomPrompt = getRandomPrompt();
@@ -1234,6 +1302,21 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     }
   }, [currentAnimationId, messages.length]);
 
+  const handleVariationSelect = useCallback((msgId: string, variation: Variation) => {
+    // Update the message to show selected state
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId ? { ...m, content: t("variationSelected", { style: variation.style }), variations: undefined, variationsLoading: false } : m
+      )
+    );
+    // Notify parent about the new animation
+    if (currentAnimationId) {
+      onAnimationUpdated?.(currentAnimationId, variation.animation);
+    } else {
+      onAnimationCreated?.("variation-" + crypto.randomUUID(), variation.animation);
+    }
+  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated, t]);
+
   // Find the last assistant message id (for showing regenerate button only on the last one)
   const lastAssistantMsgId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -1326,6 +1409,15 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                 >
                   {msg.role === "assistant" && msg.lottieJson && (
                     <InlineLottiePreview lottieJson={msg.lottieJson} previousLottieJson={msg.previousLottieJson} />
+                  )}
+                  {msg.role === "assistant" && (msg.variations?.length || msg.variationsLoading) && (
+                    <div className="mt-2">
+                      <VariationGrid
+                        variations={msg.variations || []}
+                        loading={msg.variationsLoading}
+                        onSelect={(v) => handleVariationSelect(msg.id, v)}
+                      />
+                    </div>
                   )}
                   {retryingMsgId === msg.id && !msg.content ? (
                     <span className="inline-flex gap-1">

@@ -165,10 +165,19 @@
     "importingFile": "正在导入文件...",
     "importSuccess": "✨ 已导入你的动画！你想做什么修改？",
     "importFailed": "导入失败：{error}",
+    "variationsGenerating": "正在生成 3 种风格变体...",
+    "variationsReady": "这是你的变体！选择你喜欢的：",
+    "variationSelected": "已选择 {style} 风格变体 ✨",
     "inlinePreview": {
       "before": "修改前",
       "after": "修改后"
     }
+  },
+  "variations": {
+    "gridLabel": "动画变体",
+    "cardLabel": "{style} 风格变体",
+    "select": "选择",
+    "selectVariation": "选择 {style} 变体"
   },
   "explore": {
     "title": "探索",
@@ -424,7 +433,11 @@
     "exportError": "导出失败，请重试。",
     "shareLink": "🔗 分享",
     "copied": "已复制！",
-    "linkCopied": "链接已复制！"
+    "linkCopied": "链接已复制！",
+    "modeSingle": "单个",
+    "modeVariations": "多变体",
+    "generatingVariations": "正在生成 3 种风格变体...",
+    "variationsSubtitle": "从 3 种风格演绎中选择你最喜欢的"
   },
   "theme": {
     "title": "设计令牌",

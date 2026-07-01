@@ -62,6 +62,7 @@ export type Command =
   | { type: "compose"; id: string }
   | { type: "sequence"; id: string }
   | { type: "theme"; subcommand: ThemeSubcommand }
+  | { type: "variations"; prompt: string }
   | { type: "random" }
   | { type: "help" }
   | { type: "error"; message: string };
@@ -327,6 +328,14 @@ export function parseCommand(input: string): Command | null {
         default:
           return { type: "error", message: `Unknown theme subcommand "${sub}". Use set, show, or clear.` };
       }
+    }
+
+    case "variations": {
+      const prompt = args.join(" ").trim();
+      if (!prompt) {
+        return { type: "error", message: "Usage: /variations <prompt> (e.g. /variations a bouncing ball)" };
+      }
+      return { type: "variations", prompt };
     }
 
     case "random":
