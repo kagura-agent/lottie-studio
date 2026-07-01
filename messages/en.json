@@ -165,10 +165,19 @@
     "importingFile": "Importing file...",
     "importSuccess": "✨ Imported your animation! What would you like to change?",
     "importFailed": "Import failed: {error}",
+    "variationsGenerating": "Generating 3 style variations...",
+    "variationsReady": "Here are your variations! Pick the one you like:",
+    "variationSelected": "Selected the {style} variation ✨",
     "inlinePreview": {
       "before": "Before",
       "after": "After"
     }
+  },
+  "variations": {
+    "gridLabel": "Animation variations",
+    "cardLabel": "{style} style variation",
+    "select": "Select",
+    "selectVariation": "Select {style} variation"
   },
   "explore": {
     "title": "Explore",
@@ -424,7 +433,11 @@
     "exportError": "Export failed. Please try again.",
     "shareLink": "🔗 Share",
     "copied": "Copied!",
-    "linkCopied": "Link copied!"
+    "linkCopied": "Link copied!",
+    "modeSingle": "Single",
+    "modeVariations": "Variations",
+    "generatingVariations": "Generating 3 style variations...",
+    "variationsSubtitle": "Pick your favorite from 3 style interpretations"
   },
   "theme": {
     "title": "Design Tokens",
