@@ -538,7 +538,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             const assistantMessage: Message = {
               id: crypto.randomUUID(),
               role: "assistant",
-              content: `📥 Imported "${data.name}" from URL. You can now modify it — try describing what you want to change!`,
+              content: data.message || `📥 Imported "${data.name}" from URL. You can now modify it — try describing what you want to change!`,
             };
             setMessages((prev) => [...prev, assistantMessage]);
           } else {
@@ -1087,7 +1087,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         const successMsg: Message = {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: t('importSuccess'),
+          content: result.message || t('importSuccess'),
         };
         setMessages((prev) => [...prev, successMsg]);
         return;
