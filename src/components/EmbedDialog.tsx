@@ -74,6 +74,9 @@ export default function EmbedDialog({
     >
       <div
         className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[90vw] max-w-lg mx-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Embed animation"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -84,6 +87,7 @@ export default function EmbedDialog({
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+            aria-label="Close embed dialog"
           >
             <svg
               width="16"
@@ -93,6 +97,7 @@ export default function EmbedDialog({
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
+              aria-hidden="true"
             >
               <path d="M4 4l8 8M12 4l-8 8" />
             </svg>

@@ -137,6 +137,7 @@ export default function LayerPanel({ animationData, onSelectLayer, onToggleVisib
                 <button
                   className="text-zinc-500 hover:text-zinc-300 text-sm w-4 text-center shrink-0 cursor-grab active:cursor-grabbing"
                   title="Drag to reorder"
+                  aria-label={`Drag to reorder layer ${name}`}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   ≡
@@ -160,6 +161,10 @@ export default function LayerPanel({ animationData, onSelectLayer, onToggleVisib
                   min={0}
                   max={100}
                   value={draggingState?.layerIndex === originalIndex ? draggingState.opacity : getOpacity(layer)}
+                  aria-label={`Opacity for layer ${name}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={draggingState?.layerIndex === originalIndex ? draggingState.opacity : getOpacity(layer)}
                   onPointerDown={(e) => {
                     // Start dragging - record initial state
                     setDraggingState({ layerIndex: originalIndex, opacity: getOpacity(layer) });
@@ -197,6 +202,8 @@ export default function LayerPanel({ animationData, onSelectLayer, onToggleVisib
                     : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"
                 }`}
                 title={isHidden ? "Show layer" : "Hide layer"}
+                aria-label={isHidden ? `Show layer ${name}` : `Hide layer ${name}`}
+                aria-pressed={!isHidden}
               >
                 {isHidden ? "🚫" : "👁"}
               </button>

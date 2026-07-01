@@ -44,6 +44,7 @@ export default function PromptSuggestions({ onSelect, hasDesignTokens }: PromptS
                 onClick={() => handleClick(s.label, s.prompt)}
                 className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors"
                 title={s.prompt}
+                aria-label={s.prompt}
               >
                 <span className="mr-1">{s.emoji}</span>
                 {s.label}

@@ -883,6 +883,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       <header className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-zinc-800 bg-zinc-900 shrink-0">
         <Link
           href="/"
+          aria-label="Go back to gallery"
           className="px-2 md:px-3 py-1.5 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors shrink-0"
         >
           &larr;
@@ -892,6 +893,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Animation name"
           className="bg-transparent border-b border-zinc-700 text-zinc-100 text-base md:text-lg font-semibold px-1 py-0.5 focus:outline-none focus:border-zinc-400 transition-colors flex-1 min-w-0"
         />
         {remixedFrom && (
@@ -945,6 +947,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <button
           onClick={() => setEmbedOpen(true)}
           disabled={isNewMode}
+          aria-label="Open embed dialog"
           className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('editor.embed')}
@@ -953,13 +956,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           onClick={handleToggleShareChat}
           disabled={isNewMode || shareChatSaving}
           title="Include chat history in share page"
+          aria-label={shareChat ? "Chat history is shared" : "Share chat history"}
+          aria-pressed={shareChat}
           className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             shareChat
               ? "border-emerald-600 text-emerald-400 hover:border-emerald-500"
               : "border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200"
           }`}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
           {shareChat ? "Chat shared" : "Share chat"}
@@ -967,6 +972,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <button
           onClick={handleSave}
           disabled={saving || animationData === null || isNewMode}
+          aria-label="Save animation"
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {saving ? "..." : t('common.save')}
@@ -981,6 +987,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <div className="relative md:hidden" ref={menuRef}>
           <button
             onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
+            aria-haspopup="true"
             className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition-colors"
           >
             ⋯
@@ -1193,9 +1202,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 onClick={() => setFullscreenOpen(true)}
                 disabled={!animationData}
                 title={t('editor.fullscreen')}
+                aria-label="Toggle fullscreen preview"
                 className="flex items-center justify-center w-8 h-8 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <polyline points="15 3 21 3 21 9" />
                   <polyline points="9 21 3 21 3 15" />
                   <line x1="21" y1="3" x2="14" y2="10" />
@@ -1269,9 +1279,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             <button
               onClick={() => setShortcutsHelpOpen(true)}
               title={t('editor.shortcuts')}
+              aria-label="Show keyboard shortcuts"
               className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors text-zinc-400 hover:text-zinc-200"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8" />
               </svg>
@@ -1280,13 +1291,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               onClick={() => setVersionPanelOpen((v) => !v)}
               disabled={isNewMode}
               title={t('editor.versions')}
+              aria-label="Toggle version history"
+              aria-expanded={versionPanelOpen}
               className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 versionPanelOpen
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>

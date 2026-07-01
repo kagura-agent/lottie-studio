@@ -153,6 +153,8 @@ export default function AddToCollectionMenu({
     <div
       ref={menuRef}
       className="absolute top-10 right-0 w-56 rounded-xl bg-zinc-800 border border-zinc-700 shadow-xl shadow-black/50 z-30 overflow-hidden"
+      role="dialog"
+      aria-label="Add to collection"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-2 border-b border-zinc-700">
@@ -212,6 +214,7 @@ export default function AddToCollectionMenu({
                 }
               }}
               placeholder="Collection name..."
+              aria-label="New collection name"
               className="w-full px-2 py-1.5 rounded-lg border border-zinc-600 bg-zinc-900 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
               autoFocus
               disabled={creating}

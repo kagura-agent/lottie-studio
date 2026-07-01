@@ -75,9 +75,10 @@ export default function InlineLottiePreview({ lottieJson, previousLottieJson }: 
         />
       </div>
       {previousLottieJson && (
-        <div className="mt-1.5 flex rounded-full bg-zinc-800 border border-zinc-700 p-0.5 text-xs">
+        <div className="mt-1.5 flex rounded-full bg-zinc-800 border border-zinc-700 p-0.5 text-xs" role="group" aria-label="Animation version toggle">
           <button
             onClick={() => setShowBefore(true)}
+            aria-pressed={showBefore}
             className={`px-2.5 py-0.5 rounded-full transition-colors ${
               showBefore
                 ? "bg-zinc-600 text-zinc-100"
@@ -88,6 +89,7 @@ export default function InlineLottiePreview({ lottieJson, previousLottieJson }: 
           </button>
           <button
             onClick={() => setShowBefore(false)}
+            aria-pressed={!showBefore}
             className={`px-2.5 py-0.5 rounded-full transition-colors ${
               !showBefore
                 ? "bg-zinc-600 text-zinc-100"

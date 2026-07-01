@@ -161,6 +161,7 @@ export default function TemplateCard({
           onClick={handleUseTemplate}
           disabled={creating || !loaded}
           className="w-full px-3 py-2 rounded-lg bg-white text-zinc-900 text-xs font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          aria-label={`Use ${name} as starter template`}
         >
           {creating ? (
             <>

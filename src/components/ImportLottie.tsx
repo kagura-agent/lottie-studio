@@ -172,6 +172,8 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      role="region"
+      aria-label="File drop zone"
       className={`flex flex-col items-center justify-center gap-4 p-8 rounded-xl border-2 border-dashed transition-colors ${
         dragOver
           ? "border-violet-500 bg-violet-500/10"
@@ -183,6 +185,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
         type="file"
         accept=".json,.svg,.lottie"
         onChange={handleFileSelect}
+        aria-label="Upload Lottie animation file"
         className="hidden"
       />
 
@@ -213,7 +216,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
       </button>
 
       {error && (
-        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 max-w-sm">
+        <div role="alert" className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 max-w-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400 shrink-0 mt-0.5">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />

@@ -224,7 +224,7 @@ export default function VersionHistory({
         onClick={onClose}
       />
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-zinc-900 border-l border-zinc-700 z-50 flex flex-col shadow-2xl">
+      <div className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-zinc-900 border-l border-zinc-700 z-50 flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label="Version history">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
           <h2 className="text-sm font-semibold text-zinc-100">
@@ -233,6 +233,7 @@ export default function VersionHistory({
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+            aria-label="Close version history"
           >
             <svg
               width="16"
@@ -242,6 +243,7 @@ export default function VersionHistory({
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
+              aria-hidden="true"
             >
               <path d="M4 4l8 8M12 4l-8 8" />
             </svg>

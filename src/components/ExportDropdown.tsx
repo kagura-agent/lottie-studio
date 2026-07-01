@@ -119,15 +119,18 @@ export default function ExportDropdown({
     <div className="relative hidden md:inline-flex" ref={dropdownRef}>
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-label="Export animation"
+        aria-expanded={open}
+        aria-haspopup="true"
         className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors"
       >
         {t('common.export')}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 5l3 3 3-3" />
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[260px] py-1 max-h-[70vh] overflow-y-auto">
+        <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[260px] py-1 max-h-[70vh] overflow-y-auto" role="menu" aria-label="Export options">
           {/* Download JSON */}
           <button
             onClick={() => { onExportJson(); setOpen(false); }}
@@ -218,9 +221,10 @@ export default function ExportDropdown({
           {/* Social Presets Section */}
           <button
             onClick={() => setSocialExpanded((v) => !v)}
+            aria-expanded={socialExpanded}
             className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2 font-medium"
           >
-            <span>📱</span>
+            <span aria-hidden="true">📱</span>
             {t('exportPresets.socialPresets')}
             <svg
               width="12"
@@ -245,9 +249,10 @@ export default function ExportDropdown({
           {/* Web Presets Section */}
           <button
             onClick={() => setWebExpanded((v) => !v)}
+            aria-expanded={webExpanded}
             className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2 font-medium"
           >
-            <span>🖥️</span>
+            <span aria-hidden="true">🖥️</span>
             {t('exportPresets.webPresets')}
             <svg
               width="12"

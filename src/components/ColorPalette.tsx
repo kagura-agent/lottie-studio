@@ -293,6 +293,9 @@ export default function ColorPalette({
         onClick={() => setOpen((v) => !v)}
         disabled={colors.length === 0}
         title="Color palette"
+        aria-label="Color palette"
+        aria-expanded={open}
+        aria-haspopup="true"
         className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-2 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {previewColors.length > 0 ? (
@@ -373,6 +376,7 @@ function ColorSwatchRow({
           type="color"
           value={entry.hex}
           onChange={(e) => onColorChange(entry, e.target.value)}
+          aria-label={`Change color ${entry.hex}`}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </label>
