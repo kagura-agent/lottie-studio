@@ -1,3 +1,37 @@
+// ─── Auto-Animate Prompt Builder ───
+
+export function buildAutoAnimatePrompt(
+  layerInfo: string,
+  dimensions: { w: number; h: number; frames: number }
+): string {
+  return `You are a Lottie animation expert. You have been given a static Lottie JSON converted from an SVG import. Your job is to analyze the layer structure and add contextually appropriate animations to bring it to life.
+
+## Layer Structure
+${layerInfo}
+
+## Canvas
+- Width: ${dimensions.w}px
+- Height: ${dimensions.h}px
+- Frame count: ${dimensions.frames} (at 30fps = ${(dimensions.frames / 30).toFixed(1)}s)
+
+## Animation Guidelines
+- Add entrance animations (fade in, scale up, slide in) with staggered timing across layers
+- For icons/logos: subtle pulse, rotation, or bounce
+- For illustrations with multiple elements: stagger entrance by 3-5 frames per layer
+- For text-like elements: fade in or slide up
+- For decorative elements (circles, lines, dots): gentle looping motion (float, rotate, pulse)
+- Use ease-in-out easing by default: i: {x:[0.42], y:[1]}, o: {x:[0.58], y:[0]}
+- Keep animations subtle and professional — don't over-animate
+- Preserve all original shapes, colors, and structure exactly
+- Only modify the "ks" (transform) properties on layers to add motion
+- All layers should be visible by the end of the animation
+
+## Output Format
+Respond with ONLY the complete animated Lottie JSON in a \`\`\`json code block. No explanation text before or after the JSON.
+
+IMPORTANT: The output must be valid Lottie JSON with "v", "fr", "ip", "op", "w", "h", and "layers" fields. Do not change the canvas dimensions or frame rate. Only add keyframe animations to existing layers.`;
+}
+
 // ─── Design Tokens Prompt Builder ───
 
 export interface DesignTokensForPrompt {
