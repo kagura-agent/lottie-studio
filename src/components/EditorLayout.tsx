@@ -30,6 +30,7 @@ import EmbedDialog from "./EmbedDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
+import ThemePanel, { ThemeIndicator } from "./ThemePanel";
 import { optimizeLottie } from "@/lib/optimizer";
 import { rescaleDuration } from "@/lib/rescaleDuration";
 import { rescaleForExport } from "@/lib/rescaleForExport";
@@ -137,6 +138,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [shareChat, setShareChat] = useState(false);
   const [shareChatSaving, setShareChatSaving] = useState(false);
   const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
@@ -925,6 +927,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             }}
           />
         )}
+        <ThemeIndicator onClick={() => setThemePanelOpen((v) => !v)} />
         <button
           onClick={() => setEmbedOpen(true)}
           disabled={isNewMode}
@@ -1327,6 +1330,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           onClose={() => setEmbedOpen(false)}
         />
       )}
+      <ThemePanel open={themePanelOpen} onClose={() => setThemePanelOpen(false)} />
     </div>
   );
 }

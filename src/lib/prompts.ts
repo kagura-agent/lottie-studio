@@ -1,3 +1,26 @@
+// ─── Design Tokens Prompt Builder ───
+
+export interface DesignTokensForPrompt {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  background?: string;
+  font?: string;
+}
+
+export function buildDesignTokensPrompt(tokens: DesignTokensForPrompt): string {
+  const parts: string[] = [];
+  if (tokens.primary) parts.push(`primary color ${tokens.primary}`);
+  if (tokens.secondary) parts.push(`secondary color ${tokens.secondary}`);
+  if (tokens.accent) parts.push(`accent color ${tokens.accent}`);
+  if (tokens.background) parts.push(`background color ${tokens.background}`);
+  if (tokens.font) parts.push(`font "${tokens.font}"`);
+
+  if (parts.length === 0) return "";
+
+  return `The user has set brand design tokens: ${parts.join(", ")}. Use these colors by default when generating animations unless the user explicitly specifies different colors.`;
+}
+
 // ─── Spec Sections (selectively injected based on user intent) ───
 
 const SPEC_CORE = `

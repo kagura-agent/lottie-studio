@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
-import { buildSystemPrompt } from "@/lib/prompts";
+import { buildSystemPrompt, buildDesignTokensPrompt } from "@/lib/prompts";
 import { extractIp } from "@/lib/rateLimit";
 import { validateGenerateInput } from "@/lib/generate-validation";
 
@@ -78,11 +78,20 @@ export async function POST(request: Request) {
   }
 
   const { prompt, width, height, duration, currentAnimation } = validation.data;
+  const designTokens = (body as Record<string, unknown>).designTokens as { primary?: string; secondary?: string; accent?: string; background?: string; font?: string } | undefined;
   const fps = 30;
   const totalFrames = Math.round(duration * fps);
 
   // Build system prompt (pass currentAnimation if refining an existing animation)
-  const systemPrompt = buildSystemPrompt(currentAnimation ?? null, prompt);
+  let systemPrompt = buildSystemPrompt(currentAnimation ?? null, prompt);
+
+  // Inject design tokens into system prompt if provided
+  if (designTokens) {
+    const tokenPrompt = buildDesignTokensPrompt(designTokens);
+    if (tokenPrompt) {
+      systemPrompt += `\n\n${tokenPrompt}`;
+    }
+  }
 
   // Add dimension/duration overrides to system prompt
   const overrideNote = `\n\nIMPORTANT: Generate this animation with exactly these settings:

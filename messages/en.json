@@ -376,5 +376,20 @@
     "shareLink": "🔗 Share",
     "copied": "Copied!",
     "linkCopied": "Link copied!"
+  },
+  "theme": {
+    "title": "Design Tokens",
+    "close": "Close",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "accent": "Accent",
+    "background": "Background",
+    "font": "Font",
+    "noColor": "Not set",
+    "remove": "Remove",
+    "defaultFont": "Default",
+    "presets": "Presets",
+    "clearAll": "Clear All Tokens",
+    "indicator": "Design tokens active — click to edit"
   }
 }

@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { exportToGif } from "@/lib/gifExporter";
 import { exportToVideo, getVideoExtension } from "@/lib/videoExporter";
 import { exportToMp4, isMP4ExportSupported, formatFileSize } from "@/lib/mp4Exporter";
+import { useDesignTokens } from "@/contexts/DesignTokensContext";
 
 const EXAMPLE_PROMPTS = [
   "Loading spinner",
@@ -18,6 +19,7 @@ const EXAMPLE_PROMPTS = [
 export default function QuickGenerate() {
   const t = useTranslations("quickGenerate");
   const router = useRouter();
+  const { tokens: designTokens, hasTokens: hasDesignTokens } = useDesignTokens();
   const [prompt, setPrompt] = useState("");
   const [status, setStatus] = useState<"idle" | "generating" | "done" | "error" | "rateLimited">("idle");
   const [animationData, setAnimationData] = useState<object | null>(null);
@@ -81,7 +83,7 @@ export default function QuickGenerate() {
       const res = await apiFetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), width: 300, height: 300 }),
+        body: JSON.stringify({ prompt: prompt.trim(), width: 300, height: 300, ...(hasDesignTokens ? { designTokens } : {}) }),
       });
 
       if (res.status === 429) {
@@ -107,7 +109,7 @@ export default function QuickGenerate() {
       setStatus("error");
       setErrorMessage(t("error"));
     }
-  }, [prompt, t]);
+  }, [prompt, t, designTokens, hasDesignTokens]);
 
   const handleOpenInEditor = useCallback(async () => {
     if (!animationData) return;
