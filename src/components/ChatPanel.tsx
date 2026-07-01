@@ -538,7 +538,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             const assistantMessage: Message = {
               id: crypto.randomUUID(),
               role: "assistant",
-              content: `📥 Imported "${data.name}" from URL. You can now modify it — try describing what you want to change!`,
+              content: data.autoAnimated
+                ? `✨ Imported and auto-animated SVG from URL! I added entrance animations to bring the design to life. Try asking me to adjust the timing or style.`
+                : `📥 Imported "${data.name}" from URL. You can now modify it — try describing what you want to change!`,
             };
             setMessages((prev) => [...prev, assistantMessage]);
           } else {
