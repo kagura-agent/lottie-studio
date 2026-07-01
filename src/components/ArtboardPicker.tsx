@@ -77,6 +77,9 @@ export default function ArtboardPicker({ width, height, onChange }: ArtboardPick
       <button
         onClick={() => setOpen((v) => !v)}
         title="Artboard dimensions"
+        aria-label="Artboard dimensions"
+        aria-expanded={open}
+        aria-haspopup="true"
         className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-2 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors flex items-center justify-center gap-1.5"
       >
         <svg
@@ -149,6 +152,7 @@ export default function ArtboardPicker({ width, height, onChange }: ArtboardPick
                     onChange={(e) => setCustomW(e.target.value)}
                     onBlur={applyCustom}
                     onKeyDown={handleKeyDown}
+                    aria-label="Custom width"
                     className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
@@ -163,6 +167,7 @@ export default function ArtboardPicker({ width, height, onChange }: ArtboardPick
                     onChange={(e) => setCustomH(e.target.value)}
                     onBlur={applyCustom}
                     onKeyDown={handleKeyDown}
+                    aria-label="Custom height"
                     className="w-full bg-zinc-900 border border-zinc-600 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>

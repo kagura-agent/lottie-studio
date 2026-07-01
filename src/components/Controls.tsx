@@ -94,6 +94,7 @@ export default function Controls({
     <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 bg-zinc-900 flex-1">
       <button
         onClick={onTogglePlay}
+        aria-label={isPlaying ? 'Pause animation' : 'Play animation'}
         className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors"
       >
         {isPlaying ? "⏸" : "▶"}
@@ -104,6 +105,8 @@ export default function Controls({
           <button
             key={s}
             onClick={() => onSpeedChange(s)}
+            aria-label={`Set playback speed to ${s}x`}
+            aria-pressed={speed === s}
             className={`min-w-[36px] min-h-[36px] md:min-w-0 md:min-h-0 px-2 py-1 rounded text-xs transition-colors flex items-center justify-center ${
               speed === s
                 ? "bg-zinc-600 text-white"
@@ -118,6 +121,9 @@ export default function Controls({
       <div className="relative" ref={popoverRef}>
         <button
           onClick={() => setPopoverOpen((v) => !v)}
+          aria-label="Loop mode"
+          aria-expanded={popoverOpen}
+          aria-haspopup="true"
           className={`min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-1.5 rounded text-sm transition-colors flex items-center justify-center ${
             loopConfig.mode !== "once"
               ? "bg-zinc-600 text-white"
@@ -169,6 +175,10 @@ export default function Controls({
         max={Math.max(totalFrames - 1, 0)}
         value={currentFrame}
         onChange={(e) => onSeek(Number(e.target.value))}
+        aria-label="Animation timeline scrubber"
+        aria-valuemin={0}
+        aria-valuemax={Math.max(totalFrames - 1, 0)}
+        aria-valuenow={currentFrame}
         className="flex-1 accent-zinc-400 h-2 touch-pan-x"
       />
 
@@ -184,6 +194,8 @@ export default function Controls({
           onClick={() => setShortcutsOpen((v) => !v)}
           className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm transition-colors"
           title={t('shortcuts')}
+          aria-label="Show keyboard shortcuts"
+          aria-expanded={shortcutsOpen}
         >
           ⌨
         </button>

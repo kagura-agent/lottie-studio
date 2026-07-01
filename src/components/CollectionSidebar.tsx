@@ -107,6 +107,7 @@ export default function CollectionSidebar({
           onClick={() => setCollapsed(false)}
           className="p-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
           title="Expand collections"
+          aria-label="Expand collections sidebar"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -127,6 +128,7 @@ export default function CollectionSidebar({
           onClick={() => setCollapsed(true)}
           className="p-1 rounded text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
           title="Collapse"
+          aria-label="Collapse collections sidebar"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -190,6 +192,7 @@ export default function CollectionSidebar({
                 }
               }}
               placeholder="Collection name..."
+              aria-label="New collection name"
               className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
               autoFocus
               disabled={creating}

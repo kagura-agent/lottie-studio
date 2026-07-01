@@ -203,6 +203,9 @@ export default function EasingEditor({ animationData, onChange }: EasingEditorPr
         disabled={!animationData}
         className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-2 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
         title="Easing curves"
+        aria-label="Easing curves"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
         <svg
           width="16"
@@ -214,6 +217,7 @@ export default function EasingEditor({ animationData, onChange }: EasingEditorPr
           strokeLinecap="round"
           strokeLinejoin="round"
           className="shrink-0"
+          aria-hidden="true"
         >
           <path d="M2 14 C5 14, 11 2, 14 2" />
         </svg>

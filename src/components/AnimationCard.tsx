@@ -175,6 +175,7 @@ export default function AnimationCard({
                         setMenuOpen(false);
                         setConfirmingDelete(true);
                       }}
+                      aria-label={`Delete animation ${name}`}
                       className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-700 hover:text-red-300 transition-colors flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +208,7 @@ export default function AnimationCard({
             if (e.target === e.currentTarget) setConfirmingDelete(false);
           }}
         >
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" role="dialog" aria-modal="true" aria-label="Confirm delete animation">
             <h3 className="text-lg font-semibold text-zinc-100">{t('animationCard.deleteTitle')}</h3>
             <p className="mt-2 text-sm text-zinc-400">
               {t('animationCard.deleteMessage', { name })}

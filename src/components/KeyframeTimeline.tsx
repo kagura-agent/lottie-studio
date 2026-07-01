@@ -263,6 +263,8 @@ export default function KeyframeTimeline({
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed((v) => !v)}
+        aria-label="Toggle timeline"
+        aria-expanded={!collapsed}
         className="w-full flex items-center gap-2 px-3 py-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
       >
         <svg
@@ -271,6 +273,7 @@ export default function KeyframeTimeline({
           viewBox="0 0 10 10"
           fill="currentColor"
           className={`transition-transform ${collapsed ? "" : "rotate-90"}`}
+          aria-hidden="true"
         >
           <path d="M3 1l4 4-4 4z" />
         </svg>

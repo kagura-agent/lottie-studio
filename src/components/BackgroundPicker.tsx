@@ -37,6 +37,9 @@ export default function BackgroundPicker({ value, onChange }: BackgroundPickerPr
       <button
         onClick={() => setOpen((v) => !v)}
         title="Canvas background"
+        aria-label="Canvas background"
+        aria-expanded={open}
+        aria-haspopup="true"
         className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-2 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm transition-colors flex items-center justify-center gap-1.5"
       >
         <svg
@@ -110,6 +113,7 @@ export default function BackgroundPicker({ value, onChange }: BackgroundPickerPr
                   type="color"
                   value={isCustomColor ? value : "#6366f1"}
                   onChange={(e) => onChange(e.target.value)}
+                  aria-label="Custom background color"
                   className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent"
                 />
               </label>

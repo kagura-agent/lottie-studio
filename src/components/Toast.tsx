@@ -57,7 +57,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
         ${visible && !exiting ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
       `}
     >
-      <span className={`font-bold text-sm flex-shrink-0 mt-0.5 ${typeIconColors[toast.type]}`}>
+      <span className={`font-bold text-sm flex-shrink-0 mt-0.5 ${typeIconColors[toast.type]}`} aria-hidden="true">
         {typeIcons[toast.type]}
       </span>
       <p className="text-sm text-zinc-100 flex-1 break-words">{toast.message}</p>

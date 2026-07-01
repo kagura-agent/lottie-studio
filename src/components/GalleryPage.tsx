@@ -332,6 +332,7 @@ export default function GalleryPage() {
                 accept=".json,.lottie"
                 className="hidden"
                 onChange={handleFileChange}
+                aria-label="Import Lottie file"
               />
               <LanguageSwitcher />
               {selectedCollectionId && (
@@ -385,6 +386,8 @@ export default function GalleryPage() {
                     setImportError(null);
                   }
                 }}
+                aria-expanded={showUrlImport}
+                aria-label="Toggle URL import"
                 className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm font-medium hover:bg-zinc-800 transition-colors"
               >
                 {t('gallery.importUrl')}
@@ -413,6 +416,7 @@ export default function GalleryPage() {
                   }}
                   placeholder={t('gallery.urlPlaceholder')}
                   disabled={importingUrl}
+                  aria-label="Lottie animation URL"
                   className="flex-1 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors disabled:opacity-50"
                   autoFocus
                 />
@@ -501,11 +505,13 @@ export default function GalleryPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('gallery.searchPlaceholder')}
+                  aria-label="Search animations"
                   className="w-full pl-9 pr-8 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,6 +523,7 @@ export default function GalleryPage() {
               <select
                 value={sortOption}
                 onChange={(e) => handleSortChange(e.target.value as SortOption)}
+                aria-label="Sort animations"
                 className="px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-sm text-zinc-300 focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
               >
                 <option value="newest">{t('gallery.sortNewest')}</option>

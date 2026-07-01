@@ -50,6 +50,7 @@ export default function QualityPanel({ animationData, onSuggestionClick }: Quali
       <button
         onClick={() => setExpanded((v) => !v)}
         title={t('score', { score: result.score })}
+        aria-expanded={expanded}
         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${statusBgColors[result.status]} hover:opacity-80`}
       >
         <span className={statusColors[result.status]}>{statusIcons[result.status]}</span>
@@ -70,6 +71,7 @@ export default function QualityPanel({ animationData, onSuggestionClick }: Quali
             <button
               onClick={() => setExpanded(false)}
               className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              aria-label="Close quality panel"
             >
               ✕
             </button>

@@ -21,10 +21,11 @@ export default function LanguageSwitcher() {
     : 'en';
 
   return (
-    <div className={`flex items-center gap-1 text-xs ${isPending ? 'opacity-50' : ''}`}>
+    <div className={`flex items-center gap-1 text-xs ${isPending ? 'opacity-50' : ''}`} role="group" aria-label="Language switcher">
       <button
         onClick={() => setLocale('en')}
         disabled={isPending}
+        aria-pressed={currentLocale === 'en'}
         className={`px-2 py-1 rounded transition-colors ${
           currentLocale === 'en'
             ? 'bg-zinc-700 text-white'
@@ -37,6 +38,7 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => setLocale('zh')}
         disabled={isPending}
+        aria-pressed={currentLocale === 'zh'}
         className={`px-2 py-1 rounded transition-colors ${
           currentLocale === 'zh'
             ? 'bg-zinc-700 text-white'

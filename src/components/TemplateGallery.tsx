@@ -156,6 +156,7 @@ function TemplatePreviewCard({ template }: { template: TemplateItem }) {
           onClick={handleRemix}
           disabled={creating || !lottieData}
           className="w-full px-3 py-2 rounded-lg bg-white text-zinc-900 text-xs font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          aria-label={`Remix ${template.name}`}
         >
           {creating ? (
             <>
@@ -169,6 +170,7 @@ function TemplatePreviewCard({ template }: { template: TemplateItem }) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"

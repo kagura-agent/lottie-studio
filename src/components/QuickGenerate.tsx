@@ -323,6 +323,7 @@ export default function QuickGenerate() {
               }}
               placeholder={t("placeholder")}
               disabled={status === "generating"}
+              aria-label="Animation prompt"
               className="flex-1 px-4 py-3 rounded-lg border border-zinc-700 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all disabled:opacity-50"
             />
             <button
@@ -396,6 +397,7 @@ export default function QuickGenerate() {
                     }}
                     placeholder={t("refinePlaceholder")}
                     disabled={isRefining}
+                    aria-label="Refine animation prompt"
                     className="flex-1 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-950 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all disabled:opacity-50"
                   />
                   <button
@@ -490,14 +492,14 @@ export default function QuickGenerate() {
 
         {/* Rate limit error */}
         {status === "rateLimited" && (
-          <div className="mt-6 px-4 py-3 rounded-lg bg-yellow-900/30 border border-yellow-700/50 text-yellow-200 text-sm">
+          <div className="mt-6 px-4 py-3 rounded-lg bg-yellow-900/30 border border-yellow-700/50 text-yellow-200 text-sm" role="alert">
             {t("rateLimited")}
           </div>
         )}
 
         {/* Generic error */}
         {status === "error" && (
-          <div className="mt-6 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-200 text-sm">
+          <div className="mt-6 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-200 text-sm" role="alert">
             {errorMessage || t("error")}
           </div>
         )}

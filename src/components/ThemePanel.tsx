@@ -92,7 +92,7 @@ export default function ThemePanel({ open, onClose }: ThemePanelProps) {
         <button
           onClick={onClose}
           className="text-zinc-400 hover:text-zinc-200 text-lg leading-none"
-          aria-label={t("close")}
+          aria-label="Close theme panel"
         >
           ×
         </button>
@@ -126,6 +126,7 @@ export default function ThemePanel({ open, onClose }: ThemePanelProps) {
                   onClick={() => setToken(key, "")}
                   className="text-zinc-500 hover:text-zinc-300 text-xs"
                   title={t("remove")}
+                  aria-label="Remove color"
                 >
                   ×
                 </button>
@@ -207,6 +208,7 @@ export function ThemeIndicator({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex items-center gap-0.5 px-1.5 py-1 rounded hover:bg-zinc-700/50 transition-colors"
       title={t("indicator")}
+      aria-label="Theme settings"
     >
       {colors.map((color, i) => (
         <span
