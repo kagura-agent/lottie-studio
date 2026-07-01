@@ -376,5 +376,20 @@
     "shareLink": "🔗 分享",
     "copied": "已复制！",
     "linkCopied": "链接已复制！"
+  },
+  "theme": {
+    "title": "设计令牌",
+    "close": "关闭",
+    "primary": "主色",
+    "secondary": "辅助色",
+    "accent": "强调色",
+    "background": "背景色",
+    "font": "字体",
+    "noColor": "未设置",
+    "remove": "移除",
+    "defaultFont": "默认",
+    "presets": "预设调色板",
+    "clearAll": "清除所有令牌",
+    "indicator": "设计令牌已激活 — 点击编辑"
   }
 }

@@ -1,6 +1,6 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
-import { buildSystemPrompt } from "@/lib/prompts";
+import { buildSystemPrompt, buildDesignTokensPrompt } from "@/lib/prompts";
 import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
 import type { MessageRow } from "@/lib/chat-utils";
 import { animationEvents } from "@/lib/events";
@@ -23,6 +23,7 @@ interface ChatRequest {
   message: string;
   image?: string; // base64 data URL for image attachment
   regenerate?: boolean; // true when regenerating the last assistant response
+  designTokens?: { primary?: string; secondary?: string; accent?: string; background?: string; font?: string };
 }
 
 /**
@@ -565,6 +566,14 @@ export async function POST(request: Request) {
   let systemPrompt = buildSystemPrompt(currentAnimation, message);
   if (templateSource) {
     systemPrompt += `\n\nThe user is working with a remix of the "${templateSource}" template.`;
+  }
+
+  // Inject design tokens into system prompt if provided
+  if (body.designTokens) {
+    const tokenPrompt = buildDesignTokensPrompt(body.designTokens);
+    if (tokenPrompt) {
+      systemPrompt += `\n\n${tokenPrompt}`;
+    }
   }
 
   // Style command: add extra instructions to preserve motion/keyframes

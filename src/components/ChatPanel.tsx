@@ -9,6 +9,8 @@ import VoiceInput from "./VoiceInput";
 import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
 import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
+import { useDesignTokens } from "@/contexts/DesignTokensContext";
+import PromptSuggestions from "./PromptSuggestions";
 
 interface Message {
   id: string;
@@ -66,6 +68,7 @@ const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt }: ChatPanelProps) {
   const t = useTranslations('chat');
+  const { tokens: designTokens, setToken: setDesignToken, clearTokens: clearDesignTokens, hasTokens: hasDesignTokens } = useDesignTokens();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState(initialPrompt ?? "");
   const [isThinking, setIsThinking] = useState(false);
@@ -190,6 +193,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         message: text,
         ...(imageDataUrl ? { image: imageDataUrl } : {}),
         ...(regenerate ? { regenerate: true } : {}),
+        ...(hasDesignTokens ? { designTokens } : {}),
       }),
       signal,
     });
@@ -429,7 +433,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         }
       }
     }
-  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated, onCommand]);
+  }, [currentAnimationId, onAnimationCreated, onAnimationUpdated, onCommand, designTokens, hasDesignTokens]);
 
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();
@@ -624,6 +628,43 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Theme command: handle design token management locally
+      if (command.type === "theme") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+
+        let feedback: string;
+        const sub = command.subcommand;
+        if (sub.action === "set") {
+          setDesignToken(sub.key as keyof typeof designTokens, sub.value);
+          feedback = `🎨 Design token "${sub.key}" set to ${sub.value}`;
+        } else if (sub.action === "clear") {
+          clearDesignTokens();
+          feedback = "🧹 All design tokens cleared";
+        } else {
+          // show
+          const entries = Object.entries(designTokens).filter(([, v]) => v);
+          if (entries.length === 0) {
+            feedback = "No design tokens set. Use `/theme set <key> <value>` to set one.";
+          } else {
+            feedback = "**Current design tokens:**\n" + entries.map(([k, v]) => `- **${k}**: ${v}`).join("\n");
+          }
+        }
+
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: feedback,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -762,7 +803,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand, designTokens, setDesignToken, clearDesignTokens]);
 
   // Keep handleSendRef in sync for use in async callbacks (e.g. auto-describe)
   useEffect(() => {
@@ -1155,14 +1196,6 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     }
   }, [currentAnimationId, messages.length]);
 
-  const [starterChips] = useState(() => {
-    const allPrompts = Array.from({ length: 10 }, (_, i) =>
-      t(`starterChips.${i}`)
-    );
-    const shuffled = [...allPrompts].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 5);
-  });
-
   // Find the last assistant message id (for showing regenerate button only on the last one)
   const lastAssistantMsgId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -1206,22 +1239,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
-            <h2 className="text-zinc-300 text-base font-medium">
-              What would you like to create?
-            </h2>
-            <div className="flex flex-wrap justify-center gap-2 max-w-md">
-              {starterChips.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => handleSend(prompt)}
-                  disabled={isThinking || isStreaming}
-                  className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center justify-center h-full">
+            <PromptSuggestions
+              onSelect={(prompt) => setInput(prompt)}
+              hasDesignTokens={hasDesignTokens}
+            />
           </div>
         )}
         {messages.map((msg) => (

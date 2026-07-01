@@ -28,6 +28,11 @@ export const VALID_ANIMATIONS = [
 
 export type AnimationPreset = (typeof VALID_ANIMATIONS)[number];
 
+export type ThemeSubcommand =
+  | { action: "set"; key: string; value: string }
+  | { action: "show" }
+  | { action: "clear" };
+
 export type Command =
   | { type: "play" }
   | { type: "pause" }
@@ -56,6 +61,7 @@ export type Command =
   | { type: "import"; url: string }
   | { type: "compose"; id: string }
   | { type: "sequence"; id: string }
+  | { type: "theme"; subcommand: ThemeSubcommand }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -292,6 +298,34 @@ export function parseCommand(input: string): Command | null {
         return { type: "error", message: "Usage: /sequence <animation-id>" };
       }
       return { type: "sequence", id: args[0] };
+    }
+
+    case "theme": {
+      if (args.length === 0) {
+        return { type: "theme", subcommand: { action: "show" } };
+      }
+      const sub = args[0].toLowerCase();
+      switch (sub) {
+        case "show":
+          return { type: "theme", subcommand: { action: "show" } };
+        case "clear":
+        case "reset":
+          return { type: "theme", subcommand: { action: "clear" } };
+        case "set": {
+          if (args.length < 3) {
+            return { type: "error", message: "Usage: /theme set <key> <value> (e.g. /theme set primary #3B82F6)" };
+          }
+          const key = args[1].toLowerCase();
+          const validKeys = ["primary", "secondary", "accent", "background", "font"];
+          if (!validKeys.includes(key)) {
+            return { type: "error", message: `Invalid theme key "${args[1]}". Valid keys: ${validKeys.join(", ")}` };
+          }
+          const value = args.slice(2).join(" ");
+          return { type: "theme", subcommand: { action: "set", key, value } };
+        }
+        default:
+          return { type: "error", message: `Unknown theme subcommand "${sub}". Use set, show, or clear.` };
+      }
     }
 
     case "help":
