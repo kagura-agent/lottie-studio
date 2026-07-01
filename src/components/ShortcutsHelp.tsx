@@ -61,6 +61,7 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
         { keys: [mod, "Z"], description: t('shortcutsHelp.undo') },
         { keys: [mod, "Shift", "Z"], description: t('shortcutsHelp.redo') },
         { keys: [mod, "/"], description: t('shortcutsHelp.showShortcuts') },
+        { keys: [mod, "K"], description: t('shortcutsHelp.commandPalette') },
       ],
     },
     {
