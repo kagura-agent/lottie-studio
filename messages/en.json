@@ -138,6 +138,9 @@
     "helpStyleCmd": "Apply a visual style preset (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)",
     "helpAnimate": "Animate",
     "helpAnimateCmd": "Apply a motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)",
+    "helpRandom": "Random",
+    "helpRandomCmd": "Generate a surprise animation from a random creative prompt",
+    "randomSelected": "Random prompt: {prompt}",
     "helpHelpSection": "Help",
     "helpHelp": "Show this help message",
     "starterChips": {

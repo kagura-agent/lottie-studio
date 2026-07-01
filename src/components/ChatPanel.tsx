@@ -7,6 +7,7 @@ import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
 import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
+import { getRandomPrompt } from "@/data/randomPrompts";
 import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
@@ -665,6 +666,41 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Random command: pick a random prompt and send it to the LLM
+      if (command.type === "random") {
+        const randomPrompt = getRandomPrompt();
+
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: `${t('randomSelected', { prompt: randomPrompt })}`,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(randomPrompt, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -749,6 +785,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/import <url>\` — Import a Lottie animation from URL for remixing\n\n`
             + `**Compose**\n`
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
+            + `**${t('helpRandom')}**\n`
+            + `\`/random\` — ${t('helpRandomCmd')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

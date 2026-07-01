@@ -62,6 +62,7 @@ export type Command =
   | { type: "compose"; id: string }
   | { type: "sequence"; id: string }
   | { type: "theme"; subcommand: ThemeSubcommand }
+  | { type: "random" }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -327,6 +328,9 @@ export function parseCommand(input: string): Command | null {
           return { type: "error", message: `Unknown theme subcommand "${sub}". Use set, show, or clear.` };
       }
     }
+
+    case "random":
+      return { type: "random" };
 
     case "help":
     case "commands":
