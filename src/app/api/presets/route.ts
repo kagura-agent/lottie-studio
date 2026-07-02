@@ -1,4 +1,4 @@
-import { getAllPresets, createPreset } from "@/lib/db";
+import { getAllPresets, createPreset, deletePresetByName, getPresetByName } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -33,4 +33,37 @@ export async function POST(request: Request) {
     }
     return Response.json({ error: message }, { status: 500 });
   }
+}
+
+export async function DELETE(request: Request) {
+  const body = await request.json();
+  const { name } = body;
+
+  if (!name?.trim()) {
+    return Response.json(
+      { error: "name is required" },
+      { status: 400 }
+    );
+  }
+
+  const preset = getPresetByName(name.trim());
+  if (!preset) {
+    return Response.json(
+      { error: `Preset "${name}" not found` },
+      { status: 404 }
+    );
+  }
+
+  if (preset.is_builtin) {
+    return Response.json(
+      { error: `Cannot delete built-in preset "${name}"` },
+      { status: 403 }
+    );
+  }
+
+  const deleted = deletePresetByName(name.trim());
+  if (deleted) {
+    return Response.json({ success: true });
+  }
+  return Response.json({ error: "Failed to delete preset" }, { status: 500 });
 }

@@ -428,4 +428,22 @@ export function deletePreset(id: string): boolean {
   return result.changes > 0;
 }
 
+export function deletePresetByName(name: string): boolean {
+  const result = db.prepare("DELETE FROM presets WHERE name = ? AND is_builtin = 0").run(name);
+  return result.changes > 0;
+}
+
+export function renamePreset(oldName: string, newName: string): boolean {
+  // Check if source exists and is not built-in
+  const preset = db.prepare("SELECT id, is_builtin FROM presets WHERE name = ?").get(oldName) as { id: string; is_builtin: number } | undefined;
+  if (!preset || preset.is_builtin === 1) return false;
+
+  // Check if target name already exists
+  const existing = db.prepare("SELECT id FROM presets WHERE name = ?").get(newName);
+  if (existing) return false;
+
+  const result = db.prepare("UPDATE presets SET name = ? WHERE name = ? AND is_builtin = 0").run(newName, oldName);
+  return result.changes > 0;
+}
+
 export { db, ANIMATIONS_DIR };
