@@ -171,7 +171,21 @@
     "inlinePreview": {
       "before": "Before",
       "after": "After"
-    }
+    },
+    "helpPresets": "Presets",
+    "helpPresetsList": "List saved animation style presets",
+    "helpPresetsSave": "Save current style as a preset",
+    "helpPresetsDelete": "Delete a user-created preset",
+    "helpPresetsRename": "Rename a user-created preset",
+    "helpPresetsInfo": "Show preset details (description, instructions, type)",
+    "helpTheme": "Theme",
+    "helpThemeSet": "Set a theme property (primary, secondary, accent, background, font)",
+    "helpThemeShow": "Show current theme settings",
+    "helpThemeClear": "Reset theme to defaults",
+    "helpVariations": "Variations",
+    "helpVariationsCmd": "Generate multiple animation options from a single prompt",
+    "helpSequence": "Sequence",
+    "helpSequenceCmd": "Append animation after current one (storyboard sequencing)"
   },
   "variations": {
     "gridLabel": "Animation variations",
