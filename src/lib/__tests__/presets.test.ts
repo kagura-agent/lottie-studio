@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseCommand } from "../commands";
 import { buildPresetPrompt } from "../prompts";
-import { getAllPresets, getPresetByName, createPreset, deletePreset } from "../db";
+import { getAllPresets, getPresetByName, createPreset, deletePreset, deletePresetByName, renamePreset } from "../db";
 
 // --- parseCommand: /presets ---
 
@@ -52,6 +52,76 @@ describe("parseCommand /presets", () => {
   it("returns error for unknown subcommand", () => {
     const result = parseCommand("/presets foo");
     expect(result).toEqual({ type: "error", message: expect.stringContaining("Unknown presets subcommand") });
+  });
+
+  // --- /presets delete ---
+
+  it("parses /presets delete mypreset", () => {
+    expect(parseCommand("/presets delete mypreset")).toEqual({
+      type: "presets",
+      subcommand: { action: "delete", name: "mypreset" },
+    });
+  });
+
+  it("parses /presets remove (alias for delete)", () => {
+    expect(parseCommand("/presets remove mypreset")).toEqual({
+      type: "presets",
+      subcommand: { action: "delete", name: "mypreset" },
+    });
+  });
+
+  it("lowercases the preset name on delete", () => {
+    expect(parseCommand("/presets delete MyPreset")).toEqual({
+      type: "presets",
+      subcommand: { action: "delete", name: "mypreset" },
+    });
+  });
+
+  it("returns error for /presets delete without name", () => {
+    const result = parseCommand("/presets delete");
+    expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+  });
+
+  // --- /presets rename ---
+
+  it("parses /presets rename old new", () => {
+    expect(parseCommand("/presets rename old-name new-name")).toEqual({
+      type: "presets",
+      subcommand: { action: "rename", oldName: "old-name", newName: "new-name" },
+    });
+  });
+
+  it("lowercases both names on rename", () => {
+    expect(parseCommand("/presets rename OldName NewName")).toEqual({
+      type: "presets",
+      subcommand: { action: "rename", oldName: "oldname", newName: "newname" },
+    });
+  });
+
+  it("returns error for /presets rename with missing args", () => {
+    expect(parseCommand("/presets rename")).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    expect(parseCommand("/presets rename old")).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+  });
+
+  // --- /presets info ---
+
+  it("parses /presets info mypreset", () => {
+    expect(parseCommand("/presets info mypreset")).toEqual({
+      type: "presets",
+      subcommand: { action: "info", name: "mypreset" },
+    });
+  });
+
+  it("parses /presets show (alias for info)", () => {
+    expect(parseCommand("/presets show mypreset")).toEqual({
+      type: "presets",
+      subcommand: { action: "info", name: "mypreset" },
+    });
+  });
+
+  it("returns error for /presets info without name", () => {
+    const result = parseCommand("/presets info");
+    expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
   });
 });
 
@@ -160,5 +230,85 @@ describe("preset DB functions", () => {
   it("deletePreset returns false for non-existent preset", () => {
     const deleted = deletePreset("non-existent-id");
     expect(deleted).toBe(false);
+  });
+
+  // --- deletePresetByName ---
+
+  it("deletePresetByName deletes a user preset by name", () => {
+    const name = `test-delete-by-name-${Date.now()}`;
+    const preset = createPreset(name, null, "to be deleted by name");
+    expect(preset).toBeDefined();
+
+    const deleted = deletePresetByName(name);
+    expect(deleted).toBe(true);
+
+    const found = getPresetByName(name);
+    expect(found).toBeUndefined();
+  });
+
+  it("deletePresetByName refuses to delete built-in presets", () => {
+    const deleted = deletePresetByName("bounce");
+    expect(deleted).toBe(false);
+
+    const stillExists = getPresetByName("bounce");
+    expect(stillExists).toBeDefined();
+  });
+
+  it("deletePresetByName returns false for non-existent preset", () => {
+    const deleted = deletePresetByName("nonexistent-preset-xyz");
+    expect(deleted).toBe(false);
+  });
+
+  // --- renamePreset ---
+
+  it("renamePreset renames a user preset", () => {
+    const oldName = `test-rename-old-${Date.now()}`;
+    const newName = `test-rename-new-${Date.now()}`;
+    const preset = createPreset(oldName, "rename test", "rename instructions");
+    expect(preset).toBeDefined();
+
+    const renamed = renamePreset(oldName, newName);
+    expect(renamed).toBe(true);
+
+    const found = getPresetByName(newName);
+    expect(found).toBeDefined();
+    expect(found!.instructions).toBe("rename instructions");
+
+    const oldFound = getPresetByName(oldName);
+    expect(oldFound).toBeUndefined();
+
+    // Clean up
+    deletePresetByName(newName);
+  });
+
+  it("renamePreset refuses to rename built-in presets", () => {
+    const renamed = renamePreset("bounce", "my-bounce");
+    expect(renamed).toBe(false);
+
+    const stillExists = getPresetByName("bounce");
+    expect(stillExists).toBeDefined();
+  });
+
+  it("renamePreset returns false for non-existent source", () => {
+    const renamed = renamePreset("nonexistent-preset-xyz", "new-name");
+    expect(renamed).toBe(false);
+  });
+
+  it("renamePreset returns false when target name already exists", () => {
+    const name1 = `test-rename-dup-1-${Date.now()}`;
+    const name2 = `test-rename-dup-2-${Date.now()}`;
+    createPreset(name1, null, "preset 1");
+    createPreset(name2, null, "preset 2");
+
+    const renamed = renamePreset(name1, name2);
+    expect(renamed).toBe(false);
+
+    // Both should still exist with original names
+    expect(getPresetByName(name1)).toBeDefined();
+    expect(getPresetByName(name2)).toBeDefined();
+
+    // Clean up
+    deletePresetByName(name1);
+    deletePresetByName(name2);
   });
 });

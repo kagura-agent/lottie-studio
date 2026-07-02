@@ -35,7 +35,10 @@ export type ThemeSubcommand =
 
 export type PresetsSubcommand =
   | "list"
-  | { action: "save"; name: string; description?: string };
+  | { action: "save"; name: string; description?: string }
+  | { action: "delete"; name: string }
+  | { action: "rename"; oldName: string; newName: string }
+  | { action: "info"; name: string };
 
 export type Command =
   | { type: "play" }
@@ -360,7 +363,29 @@ export function parseCommand(input: string): Command | null {
         const description = args.length > 2 ? args.slice(2).join(" ") : undefined;
         return { type: "presets", subcommand: { action: "save", name, description } };
       }
-      return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list or save.` };
+      if (sub === "delete" || sub === "remove") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /presets delete <name>" };
+        }
+        const name = args[1].toLowerCase();
+        return { type: "presets", subcommand: { action: "delete", name } };
+      }
+      if (sub === "rename") {
+        if (args.length < 3) {
+          return { type: "error", message: "Usage: /presets rename <old-name> <new-name>" };
+        }
+        const oldName = args[1].toLowerCase();
+        const newName = args[2].toLowerCase();
+        return { type: "presets", subcommand: { action: "rename", oldName, newName } };
+      }
+      if (sub === "info" || sub === "show") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /presets info <name>" };
+        }
+        const name = args[1].toLowerCase();
+        return { type: "presets", subcommand: { action: "info", name } };
+      }
+      return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list, save, delete, rename, or info.` };
     }
 
     case "help":

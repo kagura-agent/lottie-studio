@@ -1,4 +1,4 @@
-import { db, ANIMATIONS_DIR, getAllPresets, getPresetByName, createPreset } from "@/lib/db";
+import { db, ANIMATIONS_DIR, getAllPresets, getPresetByName, createPreset, deletePresetByName, renamePreset } from "@/lib/db";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
 import { buildSystemPrompt, buildDesignTokensPrompt, buildPresetPrompt } from "@/lib/prompts";
 import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
@@ -606,6 +606,96 @@ export async function POST(request: Request) {
           },
         });
       }
+    }
+
+    if (typeof parsedCmd.subcommand === "object" && parsedCmd.subcommand.action === "delete") {
+      const presetName = parsedCmd.subcommand.name;
+      const deleted = deletePresetByName(presetName);
+      let reply: string;
+      if (deleted) {
+        reply = `Deleted preset **"${presetName}"**.`;
+      } else {
+        const exists = getPresetByName(presetName);
+        if (exists && exists.is_builtin) {
+          reply = `Cannot delete **"${presetName}"** \u2014 it's a built-in preset.`;
+        } else {
+          reply = `Preset **"${presetName}"** not found.`;
+        }
+      }
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    if (typeof parsedCmd.subcommand === "object" && parsedCmd.subcommand.action === "rename") {
+      const { oldName, newName } = parsedCmd.subcommand;
+      const renamed = renamePreset(oldName, newName);
+      let reply: string;
+      if (renamed) {
+        reply = `Renamed preset **"${oldName}"** \u2192 **"${newName}"**.`;
+      } else {
+        const exists = getPresetByName(oldName);
+        if (!exists) {
+          reply = `Preset **"${oldName}"** not found.`;
+        } else if (exists.is_builtin) {
+          reply = `Cannot rename **"${oldName}"** \u2014 it's a built-in preset.`;
+        } else {
+          reply = `Cannot rename \u2014 a preset named **"${newName}"** already exists.`;
+        }
+      }
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    if (typeof parsedCmd.subcommand === "object" && parsedCmd.subcommand.action === "info") {
+      const presetName = parsedCmd.subcommand.name;
+      const preset = getPresetByName(presetName);
+      let reply: string;
+      if (!preset) {
+        reply = `Preset **"${presetName}"** not found.`;
+      } else {
+        reply = `**${preset.name}**${preset.is_builtin ? " _(built-in)_" : ""}\n\n`;
+        if (preset.description) reply += `${preset.description}\n\n`;
+        reply += `**Instructions:** ${preset.instructions}\n\n`;
+        reply += `**Created:** ${preset.created_at}`;
+      }
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
     }
   }
 
