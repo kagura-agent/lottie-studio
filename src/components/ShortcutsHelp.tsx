@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useMemo } from "react";
 import { useTranslations } from 'next-intl';
+import { resetOnboarding } from "./OnboardingTour";
 
 interface ShortcutsHelpProps {
   open: boolean;
@@ -136,11 +137,22 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
           ))}
         </div>
 
-        {/* Footer hint */}
-        <div className="px-5 py-3 border-t border-zinc-800">
-          <p className="text-zinc-500 text-xs text-center">
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between">
+          <p className="text-zinc-500 text-xs">
             {"Playback shortcuts are disabled when typing in text fields"}
           </p>
+          <button
+            onClick={() => {
+              resetOnboarding();
+              onClose();
+              // Force re-render by reloading the page
+              window.location.reload();
+            }}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors whitespace-nowrap ml-3"
+          >
+            {t('onboarding.restartTour')}
+          </button>
         </div>
       </div>
     </div>

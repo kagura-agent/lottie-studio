@@ -472,5 +472,23 @@
     "presets": "Presets",
     "clearAll": "Clear All Tokens",
     "indicator": "Design tokens active — click to edit"
+  },
+  "onboarding": {
+    "step1Title": "Chat Panel",
+    "step1Description": "Describe what you want — the AI will create or modify your animation",
+    "step2Title": "Canvas",
+    "step2Description": "Your animation renders here in real-time as you chat",
+    "step3Title": "Controls",
+    "step3Description": "Play, pause, adjust speed, and scrub through your animation",
+    "step4Title": "Export",
+    "step4Description": "Export as GIF, MP4, dotLottie, or share with a link",
+    "step5Title": "Slash Commands",
+    "step5Description": "Type / for quick commands — try /random, /style, /import",
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip",
+    "done": "Done",
+    "stepOf": "{current} / {total}",
+    "restartTour": "Restart Tour"
   }
 }

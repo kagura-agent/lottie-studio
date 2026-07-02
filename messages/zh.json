@@ -472,5 +472,23 @@
     "presets": "预设调色板",
     "clearAll": "清除所有令牌",
     "indicator": "设计令牌已激活 — 点击编辑"
+  },
+  "onboarding": {
+    "step1Title": "聊天面板",
+    "step1Description": "描述你想要的效果——AI 会创建或修改你的动画",
+    "step2Title": "画布",
+    "step2Description": "你的动画会在这里实时渲染",
+    "step3Title": "播放控制",
+    "step3Description": "播放、暂停、调整速度并拖动进度条",
+    "step4Title": "导出",
+    "step4Description": "导出为 GIF、MP4、dotLottie，或通过链接分享",
+    "step5Title": "斜杠命令",
+    "step5Description": "输入 / 快速使用命令——试试 /random、/style、/import",
+    "next": "下一步",
+    "back": "上一步",
+    "skip": "跳过",
+    "done": "完成",
+    "stepOf": "{current} / {total}",
+    "restartTour": "重新开始引导"
   }
 }
