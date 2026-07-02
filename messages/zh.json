@@ -171,7 +171,21 @@
     "inlinePreview": {
       "before": "修改前",
       "after": "修改后"
-    }
+    },
+    "helpPresets": "预设",
+    "helpPresetsList": "列出已保存的动画样式预设",
+    "helpPresetsSave": "将当前样式保存为预设",
+    "helpPresetsDelete": "删除用户创建的预设",
+    "helpPresetsRename": "重命名用户创建的预设",
+    "helpPresetsInfo": "显示预设详情（描述、指令、类型）",
+    "helpTheme": "主题",
+    "helpThemeSet": "设置主题属性（primary、secondary、accent、background、font）",
+    "helpThemeShow": "显示当前主题设置",
+    "helpThemeClear": "重置主题为默认值",
+    "helpVariations": "变体",
+    "helpVariationsCmd": "从一个提示词生成多个动画方案",
+    "helpSequence": "序列",
+    "helpSequenceCmd": "将动画追加到当前动画之后（故事板排序）"
   },
   "variations": {
     "gridLabel": "动画变体",

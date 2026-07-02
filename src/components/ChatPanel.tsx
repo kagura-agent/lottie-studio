@@ -763,13 +763,22 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
               content: listing,
             };
             setMessages((prev) => [...prev, assistantMessage]);
-          } else {
+          } else if (command.subcommand.action === "save") {
             // save subcommand: send preset instructions through the LLM
             const controller = new AbortController();
             abortControllerRef.current = controller;
             const savePrompt = `Save the current animation style as a preset named "${command.subcommand.name}"${command.subcommand.description ? ` (${command.subcommand.description})` : ""}.`;
             try {
               await streamResponse(savePrompt, undefined, controller.signal);
+            } finally {
+              abortControllerRef.current = null;
+            }
+          } else {
+            // delete, rename, info subcommands: handled server-side via chat endpoint
+            const controller = new AbortController();
+            abortControllerRef.current = controller;
+            try {
+              await streamResponse(text, undefined, controller.signal);
             } finally {
               abortControllerRef.current = null;
             }
@@ -910,9 +919,20 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
             + `**${t('helpRandom')}**\n`
             + `\`/random\` — ${t('helpRandomCmd')}\n\n`
-            + `**Presets**\n`
-            + `\`/presets\` — List saved animation style presets\n`
-            + `\`/presets save <name>\` — Save current style as a preset\n\n`
+            + `**${t('helpPresets')}**\n`
+            + `\`/presets\` — ${t('helpPresetsList')}\n`
+            + `\`/presets save <name>\` — ${t('helpPresetsSave')}\n`
+            + `\`/presets delete <name>\` — ${t('helpPresetsDelete')}\n`
+            + `\`/presets rename <old> <new>\` — ${t('helpPresetsRename')}\n`
+            + `\`/presets info <name>\` — ${t('helpPresetsInfo')}\n\n`
+            + `**${t('helpTheme')}**\n`
+            + `\`/theme\` — ${t('helpThemeShow')}\n`
+            + `\`/theme set <key> <value>\` — ${t('helpThemeSet')}\n`
+            + `\`/theme clear\` — ${t('helpThemeClear')}\n\n`
+            + `**${t('helpVariations')}**\n`
+            + `\`/variations <prompt>\` — ${t('helpVariationsCmd')}\n\n`
+            + `**${t('helpSequence')}**\n`
+            + `\`/sequence <id>\` — ${t('helpSequenceCmd')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;
