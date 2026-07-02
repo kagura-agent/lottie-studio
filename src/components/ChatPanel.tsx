@@ -910,6 +910,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
             + `**${t('helpRandom')}**\n`
             + `\`/random\` — ${t('helpRandomCmd')}\n\n`
+            + `**Presets**\n`
+            + `\`/presets\` — List saved animation style presets\n`
+            + `\`/presets save <name>\` — Save current style as a preset\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;
