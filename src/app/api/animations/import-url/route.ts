@@ -1,4 +1,8 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { chatCompletion } from "@/lib/llm";
+import { buildSystemPrompt } from "@/lib/prompts";
+import { convertSvgToLottie } from "@/lib/svg-to-lottie";
+import { describeLayersForLLM } from "@/app/api/import-svg/route";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -155,9 +159,29 @@ export async function POST(request: Request) {
     const contentType = response.headers.get("content-type") || "";
     let name: string;
     let data: object;
+    let isSvgImport = false;
 
-    // Try to parse as zip first if content-type suggests it or if it's a .lottie URL
+    // Check if it's SVG content
     if (
+      contentType.includes("image/svg+xml") ||
+      url.toLowerCase().endsWith(".svg")
+    ) {
+      const svgText = new TextDecoder().decode(buffer);
+      if (!svgText.includes("<svg")) {
+        return Response.json({ error: "Invalid SVG: missing <svg> element" }, { status: 400 });
+      }
+      try {
+        const result = convertSvgToLottie(svgText);
+        data = result.data;
+        name = extractNameFromUrl(url).replace(/\.svg$/i, "") || "Imported SVG";
+        isSvgImport = true;
+      } catch (err) {
+        return Response.json(
+          { error: err instanceof Error ? err.message : "SVG conversion failed" },
+          { status: 400 }
+        );
+      }
+    } else if (
       contentType.includes("zip") ||
       contentType.includes("application/octet-stream") ||
       url.toLowerCase().endsWith(".lottie")
@@ -200,17 +224,70 @@ export async function POST(request: Request) {
 
     // Generate ID and save
     const id = randomUUID();
-    const frameCount = (data as Record<string, unknown>).op ?? (data as Record<string, unknown>).totalFrames ?? null;
-    const frameRate = (data as Record<string, unknown>).fr ?? 30;
+    let finalData = data;
+    let importMessage: string | undefined;
+
+    // Auto-animate SVG imports via LLM
+    if (isSvgImport) {
+      const lottieObj = data as Record<string, unknown>;
+      const layers = (lottieObj.layers as unknown[]) || [];
+
+      if (layers.length > 0) {
+        try {
+          const systemPrompt = buildSystemPrompt(data);
+          const layerDescription = describeLayersForLLM(layers);
+          const userMessage = `I just imported an SVG called "${name}" which has been converted to a static Lottie with ${layers.length} layer${layers.length !== 1 ? "s" : ""}:\n\n${layerDescription}\n\nPlease analyze the layer structure and apply contextually appropriate animations. Add entrance animations (fade in, scale up, or slide in with staggered timing), and where appropriate, add subtle looping animations (gentle floating, pulsing, or rotation). Use smooth easing curves. Make it feel alive and polished. Return the complete animated Lottie JSON.`;
+
+          const llmResponse = await chatCompletion([
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ]);
+
+          if (llmResponse.lottieJson && !llmResponse.parseError) {
+            finalData = llmResponse.lottieJson;
+            const replyText = llmResponse.reply || "Applied contextual animations to the imported SVG.";
+            importMessage = `✨ Imported and animated **${name}** (${lottieObj.w}×${lottieObj.h}px, ${layers.length} layer${layers.length !== 1 ? "s" : ""}).\n\n${replyText}`;
+            if (llmResponse.suggestions && llmResponse.suggestions.length > 0) {
+              importMessage += `\n\n**Refinement suggestions:**\n${llmResponse.suggestions.map((s) => `- ${s}`).join("\n")}`;
+            }
+          } else {
+            importMessage = `Imported SVG **${name}** — converted to Lottie (${lottieObj.w}×${lottieObj.h}px, ${layers.length} layer${layers.length !== 1 ? "s" : ""}). Auto-animation couldn't be applied. What would you like to animate?`;
+          }
+        } catch (err) {
+          console.error("Auto-animate LLM error (import-url):", err);
+          const lottieObj2 = data as Record<string, unknown>;
+          importMessage = `Imported SVG **${name}** — converted to Lottie (${lottieObj2.w}×${lottieObj2.h}px, ${layers.length} layer${layers.length !== 1 ? "s" : ""}). Auto-animation unavailable. What would you like to animate?`;
+        }
+      } else {
+        importMessage = `Imported SVG **${name}** — converted to Lottie (${lottieObj.w}×${lottieObj.h}px, 0 layers). This is a static frame ready for animation. What would you like to animate?`;
+      }
+    }
+
+    const finalObj = finalData as Record<string, unknown>;
+    const frameCount = finalObj.op ?? finalObj.totalFrames ?? null;
+    const frameRate = finalObj.fr ?? 30;
     const durationSeconds = frameCount != null ? (frameCount as number) / (frameRate as number) : null;
 
-    fs.writeFileSync(path.join(ANIMATIONS_DIR, `${id}.json`), JSON.stringify(data));
+    fs.writeFileSync(path.join(ANIMATIONS_DIR, `${id}.json`), JSON.stringify(finalData));
 
     db.prepare(
       "INSERT INTO animations (id, name, frame_count, duration_seconds) VALUES (?, ?, ?, ?)"
     ).run(id, name, frameCount, durationSeconds);
 
-    return Response.json({ id, name }, { status: 201 });
+    // Save version record
+    db.prepare(
+      "INSERT INTO versions (animation_id, version_num, lottie_json, trigger_message) VALUES (?, ?, ?, ?)"
+    ).run(id, 1, JSON.stringify(finalData), `URL import: ${name}`);
+
+    // Seed an assistant message
+    if (importMessage) {
+      const messageId = randomUUID();
+      db.prepare(
+        "INSERT INTO messages (id, animation_id, role, content, lottie_json) VALUES (?, ?, 'assistant', ?, ?)"
+      ).run(messageId, id, importMessage, JSON.stringify(finalData));
+    }
+
+    return Response.json({ id, name, message: importMessage }, { status: 201 });
   } catch (err) {
     console.error("Import URL error:", err);
     return Response.json(
