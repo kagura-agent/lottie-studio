@@ -33,6 +33,10 @@ export type ThemeSubcommand =
   | { action: "show" }
   | { action: "clear" };
 
+export type PresetsSubcommand =
+  | "list"
+  | { action: "save"; name: string; description?: string };
+
 export type Command =
   | { type: "play" }
   | { type: "pause" }
@@ -64,6 +68,7 @@ export type Command =
   | { type: "theme"; subcommand: ThemeSubcommand }
   | { type: "variations"; prompt: string }
   | { type: "random" }
+  | { type: "presets"; subcommand: PresetsSubcommand }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -340,6 +345,23 @@ export function parseCommand(input: string): Command | null {
 
     case "random":
       return { type: "random" };
+
+    case "presets":
+    case "preset": {
+      if (args.length === 0 || args[0].toLowerCase() === "list") {
+        return { type: "presets", subcommand: "list" };
+      }
+      const sub = args[0].toLowerCase();
+      if (sub === "save") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /presets save <name> [description...]" };
+        }
+        const name = args[1].toLowerCase();
+        const description = args.length > 2 ? args.slice(2).join(" ") : undefined;
+        return { type: "presets", subcommand: { action: "save", name, description } };
+      }
+      return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list or save.` };
+    }
 
     case "help":
     case "commands":

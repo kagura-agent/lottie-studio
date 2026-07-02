@@ -1,6 +1,6 @@
-import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { db, ANIMATIONS_DIR, getAllPresets, getPresetByName, createPreset } from "@/lib/db";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
-import { buildSystemPrompt, buildDesignTokensPrompt } from "@/lib/prompts";
+import { buildSystemPrompt, buildDesignTokensPrompt, buildPresetPrompt } from "@/lib/prompts";
 import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
 import type { MessageRow } from "@/lib/chat-utils";
 import { animationEvents } from "@/lib/events";
@@ -502,6 +502,113 @@ export async function POST(request: Request) {
     });
   }
 
+  // --- Presets command handling (before LLM call) ---
+  if (parsedCmd && parsedCmd.type === "presets") {
+    const encoder = new TextEncoder();
+
+    if (parsedCmd.subcommand === "list") {
+      // List all presets — no LLM call needed
+      const presets = getAllPresets();
+      let reply: string;
+      if (presets.length === 0) {
+        reply = "No presets available yet. Use `/presets save <name>` after creating an animation to save the current motion as a preset.";
+      } else {
+        const lines = presets.map(
+          (p) => `- **${p.name}**${p.description ? ` — ${p.description}` : ""}${p.is_builtin ? " _(built-in)_" : ""}`
+        );
+        reply = `Available presets:\n${lines.join("\n")}\n\nTo apply a preset, just say "apply bounce" or describe the style you want.`;
+      }
+
+      const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+      const body = encoder.encode(`data: ${doneEvent}\n\n`);
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(body);
+          controller.close();
+        }
+      }), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    if (typeof parsedCmd.subcommand === "object" && parsedCmd.subcommand.action === "save") {
+      const presetName = parsedCmd.subcommand.name;
+      const presetDescription = parsedCmd.subcommand.description || null;
+      const creatorIdHeader = request.headers.get("x-creator-id") || undefined;
+
+      // Extract instructions from the last assistant message in this conversation
+      let instructions: string | null = null;
+      if (animationId) {
+        const lastAssistant = db.prepare(
+          "SELECT content FROM messages WHERE animation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1"
+        ).get(animationId) as { content: string } | undefined;
+        if (lastAssistant) {
+          instructions = lastAssistant.content;
+        }
+      }
+
+      if (!instructions) {
+        const reply = "Cannot save preset — no previous assistant message found. Create an animation first, then save it as a preset.";
+        const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+        const body = encoder.encode(`data: ${doneEvent}\n\n`);
+        return new Response(new ReadableStream({
+          start(controller) {
+            controller.enqueue(body);
+            controller.close();
+          }
+        }), {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      }
+
+      try {
+        createPreset(presetName, presetDescription, instructions, creatorIdHeader);
+        const reply = `Saved preset **"${presetName}"**. You can apply it anytime by saying "apply ${presetName}".`;
+        const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+        const body = encoder.encode(`data: ${doneEvent}\n\n`);
+        return new Response(new ReadableStream({
+          start(controller) {
+            controller.enqueue(body);
+            controller.close();
+          }
+        }), {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Failed to save preset";
+        const reply = errMsg.includes("UNIQUE constraint")
+          ? `A preset named "${presetName}" already exists. Choose a different name.`
+          : `Failed to save preset: ${errMsg}`;
+        const doneEvent = JSON.stringify({ type: "done", reply, animationId: animationId || undefined });
+        const body = encoder.encode(`data: ${doneEvent}\n\n`);
+        return new Response(new ReadableStream({
+          start(controller) {
+            controller.enqueue(body);
+            controller.close();
+          }
+        }), {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      }
+    }
+  }
+
   // Read creator identity headers
   const creatorId = request.headers.get("x-creator-id") || null;
   const creatorName = request.headers.get("x-creator-name") || null;
@@ -586,6 +693,18 @@ export async function POST(request: Request) {
   const animateMatch = message.match(/^\[ANIMATE:\s*([\w-]+)\]/);
   if (animateMatch && currentAnimation) {
     systemPrompt += `\n\nIMPORTANT MOTION INSTRUCTION: The user is applying a motion preset. You MUST preserve ALL existing visual properties (colors, fills, strokes, gradients, opacity). Only modify or add keyframes, timing, and easing. You may add new layers if the effect requires it (e.g., confetti overlay).`;
+  }
+
+  // Detect preset intent in natural language (e.g., "apply bounce", "use the pulse preset")
+  if (!parsedCmd || (parsedCmd.type !== "presets")) {
+    const allPresets = getAllPresets();
+    const messageLower = message.toLowerCase();
+    for (const preset of allPresets) {
+      if (messageLower.includes(preset.name)) {
+        systemPrompt += `\n\n${buildPresetPrompt(preset.instructions)}`;
+        break;
+      }
+    }
   }
 
   const llmMessages: LLMMessage[] = [

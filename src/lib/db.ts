@@ -321,11 +321,111 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_collections_creator ON collections(creator_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_collection_items_animation ON collection_items(animation_id)`);
 
+// --- Presets ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS presets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    instructions TEXT NOT NULL,
+    is_builtin INTEGER DEFAULT 0,
+    creator_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+// Seed built-in presets
+const BUILTIN_PRESETS = [
+  {
+    name: "bounce",
+    description: "Elastic bounce entrance with overshoot and settle",
+    instructions: "Apply a bounce entrance effect. Add scale keyframes: start at [0,0], overshoot to [110,110] at 60% duration, settle back to [100,100]. Use ease-out back easing. Add a subtle squash at the landing point for organic feel.",
+  },
+  {
+    name: "fade-in",
+    description: "Smooth opacity fade from invisible to fully visible",
+    instructions: "Apply a smooth fade-in effect. Animate opacity from 0 to 100 over the full duration using ease-in-out easing. Optionally combine with a subtle upward drift of 10-15 pixels for a polished entrance.",
+  },
+  {
+    name: "slide-up",
+    description: "Element slides upward into its final position",
+    instructions: "Apply a slide-up entrance. Start the element 100-150 pixels below its final position with opacity 0. Animate position Y back to the original value and opacity to 100 over the duration using ease-out easing with slight overshoot.",
+  },
+  {
+    name: "pulse",
+    description: "Rhythmic scale pulse like a heartbeat",
+    instructions: "Apply a pulse/heartbeat effect. Add looping scale keyframes: [100,100] → [115,115] → [95,95] → [100,100]. Use smooth ease-in-out. Make it loop seamlessly with consistent rhythm.",
+  },
+  {
+    name: "wiggle",
+    description: "Playful side-to-side wiggle rotation",
+    instructions: "Apply a wiggle effect. Add rapid rotation keyframes oscillating between -5° and +5° (or -10° and +10° for more intensity) over short intervals. Use ease-in-out easing. Loop seamlessly for a playful, attention-grabbing feel.",
+  },
+  {
+    name: "spin",
+    description: "Continuous 360-degree rotation",
+    instructions: "Apply a continuous rotation. Add rotation keyframes from 0° to 360° over the full duration with linear easing for constant speed. Loop seamlessly. Ensure the anchor point is centered on the element.",
+  },
+];
+
+const seedPreset = db.prepare(`
+  INSERT OR IGNORE INTO presets (id, name, description, instructions, is_builtin)
+  VALUES (?, ?, ?, ?, 1)
+`);
+
+for (const preset of BUILTIN_PRESETS) {
+  seedPreset.run(
+    crypto.createHash("sha256").update(`preset:${preset.name}`).digest("hex").slice(0, 36),
+    preset.name,
+    preset.description,
+    preset.instructions
+  );
+}
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;
 if (ftsCount === 0 && animCount > 0) {
   db.exec("INSERT INTO animations_fts(rowid, name, description, tags) SELECT rowid, name, COALESCE(description, ''), COALESCE(tags, '') FROM animations");
+}
+
+// --- Preset Query Functions ---
+
+export interface Preset {
+  id: string;
+  name: string;
+  description: string | null;
+  instructions: string;
+  is_builtin: number;
+  creator_id: string | null;
+  created_at: string;
+}
+
+export function getAllPresets(): Preset[] {
+  return db.prepare("SELECT * FROM presets ORDER BY is_builtin DESC, name ASC").all() as Preset[];
+}
+
+export function getPresetByName(name: string): Preset | undefined {
+  return db.prepare("SELECT * FROM presets WHERE name = ?").get(name) as Preset | undefined;
+}
+
+export function createPreset(
+  name: string,
+  description: string | null,
+  instructions: string,
+  creatorId?: string
+): Preset {
+  const id = crypto.randomUUID();
+  db.prepare(
+    "INSERT INTO presets (id, name, description, instructions, is_builtin, creator_id) VALUES (?, ?, ?, ?, 0, ?)"
+  ).run(id, name, description, instructions, creatorId || null);
+  return db.prepare("SELECT * FROM presets WHERE id = ?").get(id) as Preset;
+}
+
+export function deletePreset(id: string): boolean {
+  const result = db.prepare("DELETE FROM presets WHERE id = ? AND is_builtin = 0").run(id);
+  return result.changes > 0;
 }
 
 export { db, ANIMATIONS_DIR };
