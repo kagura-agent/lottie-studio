@@ -72,6 +72,10 @@ export type Command =
   | { type: "variations"; prompt: string }
   | { type: "random" }
   | { type: "presets"; subcommand: PresetsSubcommand }
+  | { type: "layers" }
+  | { type: "duplicate_layer"; name: string }
+  | { type: "delete_layer"; name: string }
+  | { type: "rename_layer"; oldName: string; newName: string }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -388,6 +392,33 @@ export function parseCommand(input: string): Command | null {
       return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list, save, delete, rename, or info.` };
     }
 
+    case "layers":
+      return { type: "layers" };
+
+    case "duplicate-layer": {
+      const nameArg = parseQuotedArg(args);
+      if (!nameArg) {
+        return { type: "error", message: "Usage: /duplicate-layer <name> (use quotes for names with spaces)" };
+      }
+      return { type: "duplicate_layer", name: nameArg };
+    }
+
+    case "delete-layer": {
+      const nameArg = parseQuotedArg(args);
+      if (!nameArg) {
+        return { type: "error", message: "Usage: /delete-layer <name> (use quotes for names with spaces)" };
+      }
+      return { type: "delete_layer", name: nameArg };
+    }
+
+    case "rename-layer": {
+      const parsed = parseTwoQuotedArgs(args);
+      if (!parsed) {
+        return { type: "error", message: "Usage: /rename-layer <old-name> <new-name> (use quotes for names with spaces)" };
+      }
+      return { type: "rename_layer", oldName: parsed.first, newName: parsed.second };
+    }
+
     case "help":
     case "commands":
     case "?":
@@ -396,4 +427,57 @@ export function parseCommand(input: string): Command | null {
     default:
       return null;
   }
+}
+
+/**
+ * Parse a single argument that may be quoted.
+ * Examples: `["My Layer"]` → `"My Layer"`, `["Background"]` → `"Background"`
+ */
+function parseQuotedArg(args: string[]): string | null {
+  if (args.length === 0) return null;
+  const joined = args.join(" ");
+  // Check for quoted string
+  const quoteMatch = joined.match(/^(["'])(.+?)\1(?:\s|$)/);
+  if (quoteMatch) return quoteMatch[2];
+  // Unquoted: take the whole remaining text as the name
+  return joined.trim() || null;
+}
+
+/**
+ * Parse two arguments that may each be quoted.
+ * Examples:
+ *   `["\"Old Name\"", "\"New Name\""]` → `{ first: "Old Name", second: "New Name" }`
+ *   `["oldName", "newName"]` → `{ first: "oldName", second: "newName" }`
+ */
+function parseTwoQuotedArgs(args: string[]): { first: string; second: string } | null {
+  if (args.length === 0) return null;
+  const joined = args.join(" ").trim();
+  if (!joined) return null;
+
+  let first: string;
+  let rest: string;
+
+  // Check if first arg is quoted
+  const firstQuoteMatch = joined.match(/^(["'])(.+?)\1\s+(.+)$/);
+  if (firstQuoteMatch) {
+    first = firstQuoteMatch[2];
+    rest = firstQuoteMatch[3];
+  } else {
+    // Unquoted first arg: take first whitespace-delimited token
+    const spaceIdx = joined.indexOf(" ");
+    if (spaceIdx === -1) return null; // need two args
+    first = joined.slice(0, spaceIdx);
+    rest = joined.slice(spaceIdx + 1).trim();
+  }
+
+  if (!rest) return null;
+
+  // Check if second arg is quoted
+  const secondQuoteMatch = rest.match(/^(["'])(.+?)\1$/);
+  if (secondQuoteMatch) {
+    return { first, second: secondQuoteMatch[2] };
+  }
+
+  // Unquoted second arg: take the rest
+  return { first, second: rest };
 }

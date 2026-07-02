@@ -833,6 +833,39 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Layer commands: send to server via streaming API
+      if (command.type === "layers" || command.type === "duplicate_layer" || command.type === "delete_layer" || command.type === "rename_layer") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(text, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       const userMessage: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -933,6 +966,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/variations <prompt>\` — ${t('helpVariationsCmd')}\n\n`
             + `**${t('helpSequence')}**\n`
             + `\`/sequence <id>\` — ${t('helpSequenceCmd')}\n\n`
+            + `**${t('helpLayers')}**\n`
+            + `\`/layers\` — ${t('helpLayersList')}\n`
+            + `\`/duplicate-layer <name>\` — ${t('helpDuplicateLayer')}\n`
+            + `\`/delete-layer <name>\` — ${t('helpDeleteLayer')}\n`
+            + `\`/rename-layer <old> <new>\` — ${t('helpRenameLayer')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

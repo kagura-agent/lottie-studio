@@ -185,7 +185,12 @@
     "helpVariations": "Variations",
     "helpVariationsCmd": "Generate multiple animation options from a single prompt",
     "helpSequence": "Sequence",
-    "helpSequenceCmd": "Append animation after current one (storyboard sequencing)"
+    "helpSequenceCmd": "Append animation after current one (storyboard sequencing)",
+    "helpLayers": "Layers",
+    "helpLayersList": "List all layers in the current animation",
+    "helpDuplicateLayer": "Duplicate a layer by name",
+    "helpDeleteLayer": "Delete a layer by name",
+    "helpRenameLayer": "Rename a layer (use quotes for names with spaces)"
   },
   "variations": {
     "gridLabel": "Animation variations",

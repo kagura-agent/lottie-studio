@@ -5,7 +5,7 @@ describe("filterCommands", () => {
   it("returns all commands for '/'", () => {
     const result = filterCommands("/");
     expect(result).toEqual(COMMANDS);
-    expect(result.length).toBe(21);
+    expect(result.length).toBe(25);
   });
 
   it("filters by prefix '/sp'", () => {
@@ -22,10 +22,11 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/re'", () => {
     const result = filterCommands("/re");
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(3);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/redo");
     expect(commands).toContain("/resize");
+    expect(commands).toContain("/rename-layer");
   });
 
   it("is case-insensitive", () => {
