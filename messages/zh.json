@@ -185,7 +185,12 @@
     "helpVariations": "变体",
     "helpVariationsCmd": "从一个提示词生成多个动画方案",
     "helpSequence": "序列",
-    "helpSequenceCmd": "将动画追加到当前动画之后（故事板排序）"
+    "helpSequenceCmd": "将动画追加到当前动画之后（故事板排序）",
+    "helpLayers": "图层",
+    "helpLayersList": "列出当前动画的所有图层",
+    "helpDuplicateLayer": "按名称复制图层",
+    "helpDeleteLayer": "按名称删除图层",
+    "helpRenameLayer": "重命名图层（带空格的名称用引号包裹）"
   },
   "variations": {
     "gridLabel": "动画变体",

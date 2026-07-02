@@ -28,6 +28,10 @@ export const COMMANDS: CommandDef[] = [
   { command: "/marker", description: "Add/remove named segments (add, remove, list, clear)", hasParams: true },
   { command: "/compose", description: "Import layers from another animation", hasParams: true },
   { command: "/sequence", description: "Append animation after current one (storyboard)", hasParams: true },
+  { command: "/layers", description: "List all layers in the current animation", hasParams: false },
+  { command: "/duplicate-layer", description: "Duplicate a layer by name", hasParams: true },
+  { command: "/delete-layer", description: "Delete a layer by name", hasParams: true },
+  { command: "/rename-layer", description: "Rename a layer (old name → new name)", hasParams: true },
   { command: "/presets", description: "Manage animation presets (list, save, delete, rename, info)", hasParams: true },
   { command: "/random", description: "Generate a surprise animation from a random prompt", hasParams: false },
 ];

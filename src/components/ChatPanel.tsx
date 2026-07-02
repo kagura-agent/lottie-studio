@@ -933,6 +933,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/variations <prompt>\` — ${t('helpVariationsCmd')}\n\n`
             + `**${t('helpSequence')}**\n`
             + `\`/sequence <id>\` — ${t('helpSequenceCmd')}\n\n`
+            + `**${t('helpLayers')}**\n`
+            + `\`/layers\` — ${t('helpLayersList')}\n`
+            + `\`/duplicate-layer <name>\` — ${t('helpDuplicateLayer')}\n`
+            + `\`/delete-layer <name>\` — ${t('helpDeleteLayer')}\n`
+            + `\`/rename-layer <old> <new>\` — ${t('helpRenameLayer')}\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

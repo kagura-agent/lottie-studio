@@ -525,4 +525,113 @@ describe("parseCommand", () => {
       expect(parseCommand("/compose id-1 extra-arg")).toEqual({ type: "compose", id: "id-1" });
     });
   });
+
+  describe("/layers", () => {
+    it("parses /layers", () => {
+      expect(parseCommand("/layers")).toEqual({ type: "layers" });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/LAYERS")).toEqual({ type: "layers" });
+      expect(parseCommand("/Layers")).toEqual({ type: "layers" });
+    });
+  });
+
+  describe("/duplicate-layer", () => {
+    it("parses with unquoted name", () => {
+      expect(parseCommand("/duplicate-layer Background")).toEqual({ type: "duplicate_layer", name: "Background" });
+    });
+
+    it("parses with quoted name", () => {
+      expect(parseCommand('/duplicate-layer "My Layer"')).toEqual({ type: "duplicate_layer", name: "My Layer" });
+    });
+
+    it("parses with single-quoted name", () => {
+      expect(parseCommand("/duplicate-layer 'Shape Layer 1'")).toEqual({ type: "duplicate_layer", name: "Shape Layer 1" });
+    });
+
+    it("is case-insensitive for command", () => {
+      expect(parseCommand("/DUPLICATE-LAYER circle")).toEqual({ type: "duplicate_layer", name: "circle" });
+    });
+
+    it("returns error for missing name", () => {
+      const result = parseCommand("/duplicate-layer");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("takes multi-word unquoted input as full name", () => {
+      expect(parseCommand("/duplicate-layer Shape Layer 1")).toEqual({ type: "duplicate_layer", name: "Shape Layer 1" });
+    });
+  });
+
+  describe("/delete-layer", () => {
+    it("parses with unquoted name", () => {
+      expect(parseCommand("/delete-layer Background")).toEqual({ type: "delete_layer", name: "Background" });
+    });
+
+    it("parses with quoted name", () => {
+      expect(parseCommand('/delete-layer "My Layer"')).toEqual({ type: "delete_layer", name: "My Layer" });
+    });
+
+    it("is case-insensitive for command", () => {
+      expect(parseCommand("/DELETE-LAYER test")).toEqual({ type: "delete_layer", name: "test" });
+    });
+
+    it("returns error for missing name", () => {
+      const result = parseCommand("/delete-layer");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+  });
+
+  describe("/rename-layer", () => {
+    it("parses with two unquoted names", () => {
+      expect(parseCommand("/rename-layer OldName NewName")).toEqual({
+        type: "rename_layer",
+        oldName: "OldName",
+        newName: "NewName",
+      });
+    });
+
+    it("parses with two quoted names", () => {
+      expect(parseCommand('/rename-layer "Old Name" "New Name"')).toEqual({
+        type: "rename_layer",
+        oldName: "Old Name",
+        newName: "New Name",
+      });
+    });
+
+    it("parses with first quoted, second unquoted", () => {
+      expect(parseCommand('/rename-layer "Shape Layer" Background')).toEqual({
+        type: "rename_layer",
+        oldName: "Shape Layer",
+        newName: "Background",
+      });
+    });
+
+    it("parses with first unquoted, second quoted", () => {
+      expect(parseCommand('/rename-layer Circle "My Circle"')).toEqual({
+        type: "rename_layer",
+        oldName: "Circle",
+        newName: "My Circle",
+      });
+    });
+
+    it("is case-insensitive for command", () => {
+      expect(parseCommand("/RENAME-LAYER old new")).toEqual({
+        type: "rename_layer",
+        oldName: "old",
+        newName: "new",
+      });
+    });
+
+    it("returns error for missing arguments", () => {
+      const result = parseCommand("/rename-layer");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for single argument", () => {
+      const result = parseCommand("/rename-layer OnlyOne");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+  });
 });
