@@ -119,9 +119,11 @@ export default function OnboardingTour({ forceOpen }: OnboardingTourProps) {
   // Check localStorage on mount
   useEffect(() => {
     if (forceOpen) {
-      setActive(true);
-      setCurrentStep(0);
-      return;
+      const timer = setTimeout(() => {
+        setActive(true);
+        setCurrentStep(0);
+      }, 0);
+      return () => clearTimeout(timer);
     }
     try {
       const done = localStorage.getItem(STORAGE_KEY);
@@ -161,12 +163,13 @@ export default function OnboardingTour({ forceOpen }: OnboardingTourProps) {
 
   useEffect(() => {
     if (!active) return;
-    updatePosition();
+    const frameId = requestAnimationFrame(updatePosition);
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
     return () => {
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
+      cancelAnimationFrame(frameId);
     };
   }, [active, updatePosition]);
 

@@ -115,7 +115,7 @@ describe("OnboardingTour", () => {
     });
 
     it("advancing from last step should complete the tour", () => {
-      let current = 4;
+      const current = 4;
       const totalSteps = 5;
       const isLast = current === totalSteps - 1;
       expect(isLast).toBe(true);
