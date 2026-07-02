@@ -734,6 +734,61 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Presets command: list or save animation style presets
+      if (command.type === "presets") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const assistantMsgId = crypto.randomUUID();
+
+        try {
+          if (command.subcommand === "list") {
+            const res = await apiFetch("/api/presets");
+            const presets = await res.json();
+            const listing = presets.length === 0
+              ? "No animation style presets saved yet. Use `/presets save <name>` after creating an animation to save its style."
+              : `**Animation Style Presets** (${presets.length}):\n\n` + presets.map((p: { name: string; description?: string; is_builtin?: number }) =>
+                  `- **${p.name}**${p.description ? ` — ${p.description}` : ""}${p.is_builtin ? " _(built-in)_" : ""}`
+                ).join("\n");
+            const assistantMessage: Message = {
+              id: assistantMsgId,
+              role: "assistant",
+              content: listing,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          } else {
+            // save subcommand: send preset instructions through the LLM
+            const controller = new AbortController();
+            abortControllerRef.current = controller;
+            const savePrompt = `Save the current animation style as a preset named "${command.subcommand.name}"${command.subcommand.description ? ` (${command.subcommand.description})` : ""}.`;
+            try {
+              await streamResponse(savePrompt, undefined, controller.signal);
+            } finally {
+              abortControllerRef.current = null;
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       // Random command: pick a random prompt and send it to the LLM
       if (command.type === "random") {
         const randomPrompt = getRandomPrompt();
@@ -855,6 +910,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
             + `**${t('helpRandom')}**\n`
             + `\`/random\` — ${t('helpRandomCmd')}\n\n`
+            + `**Presets**\n`
+            + `\`/presets\` — List saved animation style presets\n`
+            + `\`/presets save <name>\` — Save current style as a preset\n\n`
             + `**${t('helpHelpSection')}**\n`
             + `\`/help\` — ${t('helpHelp')}`;
           break;

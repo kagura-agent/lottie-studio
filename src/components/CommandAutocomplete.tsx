@@ -28,6 +28,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/marker", description: "Add/remove named segments (add, remove, list, clear)", hasParams: true },
   { command: "/compose", description: "Import layers from another animation", hasParams: true },
   { command: "/sequence", description: "Append animation after current one (storyboard)", hasParams: true },
+  { command: "/presets", description: "List or save animation style presets (list, save <name>)", hasParams: true },
   { command: "/random", description: "Generate a surprise animation from a random prompt", hasParams: false },
 ];
 

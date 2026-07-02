@@ -5,7 +5,7 @@ describe("filterCommands", () => {
   it("returns all commands for '/'", () => {
     const result = filterCommands("/");
     expect(result).toEqual(COMMANDS);
-    expect(result.length).toBe(20);
+    expect(result.length).toBe(21);
   });
 
   it("filters by prefix '/sp'", () => {
@@ -53,12 +53,13 @@ describe("filterCommands", () => {
     expect(result[0].command).toBe("/fullscreen");
   });
 
-  it("filters '/p' to play and pause", () => {
+  it("filters '/p' to play, pause, and presets", () => {
     const result = filterCommands("/p");
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(3);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/play");
     expect(commands).toContain("/pause");
+    expect(commands).toContain("/presets");
   });
 
   it("exact match '/loop' returns one result", () => {

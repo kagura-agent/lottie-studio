@@ -21,6 +21,12 @@ export function buildDesignTokensPrompt(tokens: DesignTokensForPrompt): string {
   return `The user has set brand design tokens: ${parts.join(", ")}. Use these colors by default when generating animations unless the user explicitly specifies different colors.`;
 }
 
+// ─── Preset Prompt Builder ───
+
+export function buildPresetPrompt(presetInstructions: string): string {
+  return `The user wants to apply the following motion preset. Follow these instructions to create or modify the animation:\n${presetInstructions}`;
+}
+
 // ─── Spec Sections (selectively injected based on user intent) ───
 
 const SPEC_CORE = `
