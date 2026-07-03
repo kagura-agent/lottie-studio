@@ -422,7 +422,7 @@ export default function ShareView({ id, name, description, animationData, messag
       setIsRemixing(false);
       toast({ message: "Failed to remix animation. Please try again.", type: "error" });
     }
-  }, [id, router]);
+  }, [id, router, toast]);
 
   if (isEmbed) {
     return (

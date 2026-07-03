@@ -141,7 +141,7 @@ export default function ImportLottie({ onImported }: ImportLottieProps) {
     } finally {
       setImporting(false);
     }
-  }, [onImported]);
+  }, [onImported, t]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

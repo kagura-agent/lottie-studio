@@ -550,7 +550,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     } finally {
       setDuplicating(false);
     }
-  }, [currentId, duplicating, router]);
+  }, [currentId, duplicating, router, toast]);
 
   const handleToggleShareChat = useCallback(async () => {
     if (!currentId || shareChatSaving) return;
@@ -1143,7 +1143,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             totalFrames={totalFrames}
             onSeek={handleSeek}
             markers={animationData ? ((animationData as Record<string, unknown>).markers as Array<{ cm: string; tm: number; dr: number }>) ?? undefined : undefined}
-            onPlaySegment={(start, end) => {
+            onPlaySegment={(start) => {
               setSeekFrame(start);
               setIsPlaying(true);
             }}

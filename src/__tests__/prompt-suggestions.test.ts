@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   promptSuggestionCategories,
-  type PromptSuggestion,
-  type SuggestionCategory,
 } from "@/data/prompt-suggestions";
 
 // ─── Suggestion data validation ───

@@ -136,7 +136,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
         setRemixing(false);
       }
     },
-    [animation.id, remixing, router]
+    [animation.id, remixing, router, toast]
   );
 
   const handleDownload = useCallback(
@@ -162,7 +162,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
         toast({ message: "Failed to download animation. Please try again.", type: "error" });
       }
     },
-    [animation.id, animation.name]
+    [animation.id, animation.name, toast]
   );
 
   const handleFavorite = useCallback(

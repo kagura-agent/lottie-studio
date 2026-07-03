@@ -145,7 +145,6 @@ describe("Embed Interactivity - Hover Mode", () => {
     // This test validates the expected state transitions:
     let playing = false;
     let currentFrame = 0;
-    const totalFrames = 60;
 
     // Simulate mouseenter
     const onMouseEnter = () => {

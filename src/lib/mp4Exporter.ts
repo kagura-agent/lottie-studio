@@ -103,11 +103,9 @@ export async function exportToMp4({
     const frameDurationMicros = Math.round(1_000_000 / nativeFps);
     const keyframeInterval = Math.round(nativeFps * 2); // keyframe every 2 seconds
 
-    let encodedFrames = 0;
     const encoder = new VideoEncoder({
       output: (chunk, meta) => {
         muxer.addVideoChunk(chunk, meta);
-        encodedFrames++;
       },
       error: (err) => {
         throw new Error(`VideoEncoder error: ${err.message}`);

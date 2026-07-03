@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { exportToTgs, validateForTgs } from "../tgsExporter";
 
 // Polyfill CompressionStream for Node.js test environment
 beforeAll(async () => {
   if (typeof globalThis.CompressionStream === "undefined") {
     const { createGzip } = await import("node:zlib");
-    const { Readable } = await import("node:stream");
+    await import("node:stream");
 
     class MockCompressionStream {
       readable: ReadableStream<Uint8Array>;
       writable: WritableStream<Uint8Array>;
 
-      constructor(_format: string) {
+      constructor() {
         const chunks: Uint8Array[] = [];
         let resolveReadable: (stream: ReadableStream<Uint8Array>) => void;
         const readablePromise = new Promise<ReadableStream<Uint8Array>>(
