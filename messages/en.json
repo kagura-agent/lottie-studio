@@ -492,5 +492,14 @@
     "done": "Done",
     "stepOf": "{current} / {total}",
     "restartTour": "Restart Tour"
+  },
+  "error": {
+    "notFoundTitle": "Page Not Found",
+    "notFoundDescription": "The page you're looking for doesn't exist or has been moved.",
+    "runtimeTitle": "Something Went Wrong",
+    "runtimeDescription": "An unexpected error occurred. Please try again.",
+    "tryAgain": "Try Again",
+    "backToGallery": "Back to Gallery",
+    "createNew": "Create New"
   }
 }
