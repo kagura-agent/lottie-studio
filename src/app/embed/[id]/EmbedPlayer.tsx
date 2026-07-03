@@ -48,7 +48,6 @@ export default function EmbedPlayer({
       anim.destroy();
       animRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationData, loop, autoplay]);
 
   // Scroll mode: map scroll position to frame

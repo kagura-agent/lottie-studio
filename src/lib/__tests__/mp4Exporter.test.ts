@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isMP4ExportSupported, formatFileSize, exportToMp4 } from "../mp4Exporter";
 
 // Track mock instances for assertions
-let mockMuxerInstance: { addVideoChunk: ReturnType<typeof vi.fn>; finalize: ReturnType<typeof vi.fn> };
-let mockTargetInstance: { buffer: ArrayBuffer };
+let mockMuxerInstance: { addVideoChunk: ReturnType<typeof vi.fn>; finalize: ReturnType<typeof vi.fn> }; // eslint-disable-line @typescript-eslint/no-unused-vars
+let mockTargetInstance: { buffer: ArrayBuffer }; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 // Mock mp4-muxer with real classes
 vi.mock("mp4-muxer", () => {
@@ -18,7 +18,7 @@ vi.mock("mp4-muxer", () => {
   class MockMuxer {
     addVideoChunk = vi.fn();
     finalize = vi.fn();
-    constructor(_opts: unknown) {
+    constructor() {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       mockMuxerInstance = this;
     }

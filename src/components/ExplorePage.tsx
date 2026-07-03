@@ -191,7 +191,7 @@ export default function ExplorePage() {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [hasMore, page, searchQuery, sortOption, activeTag, showMyAnimations, fetchAnimations]);
+  }, [hasMore, page, searchQuery, sortOption, activeTag, showMyAnimations, fetchAnimations, myCreatorIdValue]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);

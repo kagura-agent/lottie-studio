@@ -6,7 +6,7 @@ import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
-import { parseCommand, type Command, VALID_STYLES, type StyleName, type AnimationPreset } from "@/lib/commands";
+import { parseCommand, type Command, type StyleName, type AnimationPreset } from "@/lib/commands";
 import { getRandomPrompt } from "@/data/randomPrompts";
 import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
@@ -1025,7 +1025,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand, designTokens, setDesignToken, clearDesignTokens]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand, designTokens, setDesignToken, clearDesignTokens, onAnimationCreated, t]);
 
   // Keep handleSendRef in sync for use in async callbacks (e.g. auto-describe)
   useEffect(() => {
@@ -1200,7 +1200,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setPendingImage(reader.result as string);
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [t]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;

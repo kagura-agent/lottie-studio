@@ -244,16 +244,6 @@ describe("gifExporter", () => {
       // We need to do this before the test calls exportToGif
       // The mock class render() fires "finished" by default;
       // we'll patch it in the constructor callback via the instance
-      const origExport = exportToGif;
-
-      // Patch: after GIF instance is created, override its render
-      const patchedExport = async (opts: Parameters<typeof origExport>[0]) => {
-        // Set a flag to make the next GIF render call "abort"
-        const promise = origExport(opts);
-        // The instance is already created by now; override render behavior
-        // Actually, we need a different approach: override before the promise settles
-        return promise;
-      };
 
       // Instead, let's use a different approach: mock the render to call abort
       // We need to intercept after instance creation. Let's use vi.mock override.

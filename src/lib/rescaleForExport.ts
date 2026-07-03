@@ -112,7 +112,7 @@ function applyTransformToLayer(
 
   // Scale the position
   if (ks.p) {
-    scaleProperty(ks.p, scaleX, scaleY, offsetX, offsetY, "position");
+    scaleProperty(ks.p, scaleX, scaleY, offsetX, offsetY);
   }
 
   // Scale the anchor point
@@ -138,8 +138,7 @@ function scaleProperty(
   scaleX: number,
   scaleY: number,
   offsetX: number,
-  offsetY: number,
-  _type: string
+  offsetY: number
 ): void {
   if (prop.a === 1 && Array.isArray(prop.k)) {
     // Animated property - array of keyframes

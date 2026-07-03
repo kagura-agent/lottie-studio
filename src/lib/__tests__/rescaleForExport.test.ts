@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rescaleForExport, FitMode } from "../rescaleForExport";
+import { rescaleForExport } from "../rescaleForExport";
 
 describe("rescaleForExport", () => {
   const baseLottie = {
