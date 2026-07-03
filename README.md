@@ -9,6 +9,8 @@
 
 [**Try it live →**](https://lottie.kagura-agent.com)
 
+![Lottie Studio — describe any animation and watch it come to life](public/screenshots/hero.png)
+
 ---
 
 ## ✨ Features
