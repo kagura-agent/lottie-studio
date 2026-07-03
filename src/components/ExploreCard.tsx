@@ -25,6 +25,9 @@ interface ExploreCardProps {
     like_count?: number;
     creator_id?: string | null;
     creation_prompt?: string | null;
+    remix_count?: number;
+    remixed_from?: string | null;
+    remixed_from_name?: string | null;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
@@ -292,6 +295,15 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
             </span>
           )}
         </h3>
+        {animation.remixed_from && animation.remixed_from_name && (
+          <Link
+            href={`/editor/${animation.remixed_from}`}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-0.5 block text-[11px] text-zinc-500 hover:text-zinc-300 truncate transition-colors"
+          >
+            {t('explore.remixedFrom', { name: animation.remixed_from_name })}
+          </Link>
+        )}
         {animation.description && (
           <p className="mt-1 text-xs text-zinc-400 line-clamp-2">
             {animation.description}
@@ -318,6 +330,11 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           {frames && <span>{frames}</span>}
           {layers && <span>{layers}</span>}
           {views && <span>{views}</span>}
+          {(animation.remix_count ?? 0) > 0 && (
+            <span title={t('explore.remixCount', { count: animation.remix_count! })}>
+              {"🔀 "}{animation.remix_count}
+            </span>
+          )}
           <button
             onClick={handleLike}
             aria-label={liked ? t('explore.liked') : t('explore.like')}

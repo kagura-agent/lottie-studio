@@ -225,7 +225,9 @@
     "featuredView": "View",
     "featuredRemix": "Remix",
     "tryThis": "Try this",
-    "createdWithPrompt": "Created with prompt:"
+    "createdWithPrompt": "Created with prompt:",
+    "remixCount": "{count} remixes",
+    "remixedFrom": "Remixed from {name}"
   },
   "share": {
     "title": "Share Animation",
