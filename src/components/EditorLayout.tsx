@@ -32,6 +32,7 @@ import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import ThemePanel, { ThemeIndicator } from "./ThemePanel";
+import OnboardingTour from "./OnboardingTour";
 import { optimizeLottie } from "@/lib/optimizer";
 import { rescaleDuration } from "@/lib/rescaleDuration";
 import { rescaleForExport } from "@/lib/rescaleForExport";
@@ -907,6 +908,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           </Link>
         )}
         {/* Desktop export dropdown */}
+        <div data-tour="export" className="shrink-0">
         <ExportDropdown
           animationData={animationData}
           isNewMode={isNewMode}
@@ -932,6 +934,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           onDuplicate={handleDuplicate}
           isDuplicating={duplicating}
         />
+        </div>
         {!isNewMode && animationData && (
           <QualityPanel
             animationData={animationData}
@@ -1113,7 +1116,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <div className={`flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
           mobileView === "canvas" ? "flex flex-1" : "hidden md:flex"
         }`}>
-          <div className="flex-1 p-4 min-h-0">
+          <div className="flex-1 p-4 min-h-0" data-tour="canvas">
             <ErrorBoundary
               key={currentId ?? "new"}
               fallbackMessage={t('common.error')}
@@ -1148,7 +1151,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               setIsPlaying(true);
             }}
           />
-          <div className="flex items-center border-t border-zinc-800">
+          <div className="flex items-center border-t border-zinc-800" data-tour="controls">
             <Controls
               isPlaying={isPlaying}
               onTogglePlay={() => setIsPlaying((p) => !p)}
@@ -1305,7 +1308,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               </svg>
             </button>
           </div>
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" data-tour="chat-input">
             {rightPanel === "chat" ? (
               <ErrorBoundary fallbackMessage={t('common.error')}>
                 <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
@@ -1380,6 +1383,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         />
       )}
       <ThemePanel open={themePanelOpen} onClose={() => setThemePanelOpen(false)} />
+      <OnboardingTour />
     </div>
   );
 }
