@@ -225,7 +225,9 @@
     "featuredView": "查看",
     "featuredRemix": "混音",
     "tryThis": "试试看",
-    "createdWithPrompt": "创作提示词："
+    "createdWithPrompt": "创作提示词：",
+    "remixCount": "{count} 次混音",
+    "remixedFrom": "混音自 {name}"
   },
   "share": {
     "title": "分享动画",
