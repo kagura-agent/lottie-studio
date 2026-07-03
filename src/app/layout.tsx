@@ -17,9 +17,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description =
+  "Create Lottie animations by chatting with AI — describe what you want, see it instantly, refine with conversation.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://lottie.kagura-agent.com"),
   title: "Lottie Studio",
-  description: "Interactive Lottie animation editor and preview",
+  description,
+  keywords: [
+    "lottie",
+    "animation",
+    "ai",
+    "chat",
+    "motion design",
+    "json",
+    "web animation",
+  ],
+  openGraph: {
+    title: "Lottie Studio — AI-Powered Animation Creator",
+    description,
+    type: "website",
+    url: "/",
+    images: [{ url: "/screenshots/hero.png", width: 1280, height: 720 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lottie Studio — AI-Powered Animation Creator",
+    description,
+    images: ["/screenshots/hero.png"],
+  },
 };
 
 export default async function RootLayout({
