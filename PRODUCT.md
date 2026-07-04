@@ -158,7 +158,7 @@ User: "make a pink sakura petal falling and spinning"
 - [ ] Animation sequences/storyboards (chain multiple scenes)
 - [ ] Collaborative editing (real-time multi-user sessions)
 - [ ] Public API with keys (generate animations programmatically)
-- [ ] Server-side animation thumbnails (render actual animation frames for OG cards)
+- [x] Server-side animation thumbnails (render actual animation frames for OG cards)
 - [ ] Advanced LLM features (multi-turn planning, animation critique, style transfer)
 - [ ] Plugin system (community-contributed animation effects)
 - [ ] Analytics dashboard (views, popular animations, usage patterns)
