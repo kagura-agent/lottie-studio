@@ -141,6 +141,8 @@
     "helpRandom": "Random",
     "helpRandomCmd": "Generate a surprise animation from a random creative prompt",
     "randomSelected": "Random prompt: {prompt}",
+    "helpCritique": "Critique",
+    "helpCritiqueCmd": "Get expert feedback on the current animation's quality",
     "helpHelpSection": "Help",
     "helpHelp": "Show this help message",
     "starterChips": {
