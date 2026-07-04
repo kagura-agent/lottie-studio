@@ -146,6 +146,7 @@
     "randomSelected": "随机提示词：{prompt}",
     "helpCritique": "评审",
     "helpCritiqueCmd": "获取当前动画质量的专业反馈",
+    "helpPolishCmd": "自动分析并改进当前动画质量",
     "helpHelpSection": "帮助",
     "helpHelp": "显示此帮助信息",
     "starterChips": {
