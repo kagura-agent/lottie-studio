@@ -6,7 +6,7 @@ import MarkdownMessage from "./MarkdownMessage";
 import InlineLottiePreview from "./InlineLottiePreview";
 import CommandAutocomplete, { type CommandDef } from "./CommandAutocomplete";
 import VoiceInput from "./VoiceInput";
-import { parseCommand, type Command, type StyleName, type AnimationPreset } from "@/lib/commands";
+import { parseCommand, type Command, type StyleName, type AnimationPreset, VALID_STYLES, STYLE_DESCRIPTIONS } from "@/lib/commands";
 import { getRandomPrompt } from "@/data/randomPrompts";
 import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
@@ -449,6 +449,65 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       // Style command is special: it sends a message to the LLM for processing
       if (command.type === "style") {
         const styleMessage = `[STYLE: ${command.style}] ${STYLE_INSTRUCTIONS[command.style]}`;
+
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(styleMessage, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
+      // Style list: display available presets with descriptions
+      if (command.type === "style_list") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+
+        const lines = VALID_STYLES.map(
+          (s) => `- **${s}** — ${STYLE_DESCRIPTIONS[s]}`
+        );
+        const listing = `**${t('helpStyle')}**\n\n${lines.join("\n")}\n\n${t('styleListHint')}`;
+
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: listing,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        return;
+      }
+
+      // Style custom: free-form style description sent to LLM
+      if (command.type === "style_custom") {
+        const styleMessage = `[STYLE_CUSTOM: ${command.description}] Restyle the animation to match this visual style description: ${command.description}. Preserve all motion/keyframes/timing. Only modify visual properties (colors, fills, strokes, gradients, opacity, stroke widths).`;
 
         const userMessage: Message = {
           id: crypto.randomUUID(),
@@ -971,7 +1030,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/redo\` — ${t('helpRedo')}\n`
             + `\`/optimize\` — ${t('helpOptimize')}\n\n`
             + `**${t('helpStyle')}**\n`
-            + `\`/style <name>\` — ${t('helpStyleCmd')}\n\n`
+            + `\`/style\` — ${t('helpStyleList')}\n`
+            + `\`/style <name>\` — ${t('helpStyleCmd')}\n`
+            + `\`/style <description>\` — ${t('helpStyleCustom')}\n\n`
             + `**${t('helpAnimate')}**\n`
             + `\`/animate <preset>\` — ${t('helpAnimateCmd')}\n\n`
             + `**Markers**\n`
