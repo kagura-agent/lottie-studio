@@ -80,7 +80,12 @@ export type Command =
   | { type: "marker_clear" }
   | { type: "import"; url: string }
   | { type: "compose"; id: string }
-  | { type: "sequence"; id: string }
+  | { type: "sequence_create"; name: string }
+  | { type: "sequence_add"; name?: string }
+  | { type: "sequence_list" }
+  | { type: "sequence_show"; name: string }
+  | { type: "sequence_reorder"; name: string; positions: string }
+  | { type: "sequence_delete"; name: string }
   | { type: "theme"; subcommand: ThemeSubcommand }
   | { type: "variations"; prompt: string }
   | { type: "random" }
@@ -324,9 +329,48 @@ export function parseCommand(input: string): Command | null {
 
     case "sequence": {
       if (args.length === 0) {
-        return { type: "error", message: "Usage: /sequence <animation-id>" };
+        return { type: "error", message: "Usage: /sequence create|add|list|show|reorder|delete" };
       }
-      return { type: "sequence", id: args[0] };
+      const sub = args[0].toLowerCase();
+      switch (sub) {
+        case "create": {
+          if (args.length < 2) {
+            return { type: "error", message: "Usage: /sequence create <name>" };
+          }
+          const name = args.slice(1).join(" ");
+          return { type: "sequence_create", name };
+        }
+        case "add": {
+          const name = args.length > 1 ? args.slice(1).join(" ") : undefined;
+          return { type: "sequence_add", name };
+        }
+        case "list":
+          return { type: "sequence_list" };
+        case "show": {
+          if (args.length < 2) {
+            return { type: "error", message: "Usage: /sequence show <name>" };
+          }
+          const name = args.slice(1).join(" ");
+          return { type: "sequence_show", name };
+        }
+        case "reorder": {
+          if (args.length < 3) {
+            return { type: "error", message: "Usage: /sequence reorder <name> <positions>" };
+          }
+          const name = args[1];
+          const positions = args.slice(2).join(" ");
+          return { type: "sequence_reorder", name, positions };
+        }
+        case "delete": {
+          if (args.length < 2) {
+            return { type: "error", message: "Usage: /sequence delete <name>" };
+          }
+          const name = args.slice(1).join(" ");
+          return { type: "sequence_delete", name };
+        }
+        default:
+          return { type: "error", message: `Unknown sequence subcommand "${sub}". Use create, add, list, show, reorder, or delete.` };
+      }
     }
 
     case "theme": {
