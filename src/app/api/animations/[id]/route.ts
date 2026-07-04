@@ -1,5 +1,6 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { animationEvents } from "@/lib/events";
+import { renderLottieThumbnail } from "@/lib/thumbnail-renderer";
 import _has from "lodash/has";
 import _set from "lodash/set";
 import fs from "node:fs";
@@ -50,6 +51,11 @@ export async function PUT(
     db.prepare(
       "UPDATE animations SET name = COALESCE(?, name), frame_count = ?, duration_seconds = ?, updated_at = datetime('now') WHERE id = ?"
     ).run(name, frameCount, durationSeconds, id);
+
+    const thumbnailPath = path.join(process.cwd(), "data", "thumbnails", `${id}.rendered.png`);
+    renderLottieThumbnail(data, thumbnailPath).catch((err) =>
+      console.error(`[thumbnail] Background generation failed for ${id}:`, err)
+    );
   } else if (name) {
     db.prepare("UPDATE animations SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name, id);
   }

@@ -1,4 +1,5 @@
-import { db } from "@/lib/db";
+import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { renderLottieThumbnail } from "@/lib/thumbnail-renderer";
 import { createCanvas } from "canvas";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,22 +8,20 @@ import { NextResponse } from "next/server";
 const THUMBNAILS_DIR = path.join(process.cwd(), "data", "thumbnails");
 fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
 
-const WIDTH = 1200;
-const HEIGHT = 630;
+const FALLBACK_WIDTH = 1200;
+const FALLBACK_HEIGHT = 630;
 
-function generateThumbnail(name: string): Buffer {
-  const canvas = createCanvas(WIDTH, HEIGHT);
+function generateFallbackThumbnail(name: string): Buffer {
+  const canvas = createCanvas(FALLBACK_WIDTH, FALLBACK_HEIGHT);
   const ctx = canvas.getContext("2d");
 
-  // Gradient background
-  const gradient = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
+  const gradient = ctx.createLinearGradient(0, 0, FALLBACK_WIDTH, FALLBACK_HEIGHT);
   gradient.addColorStop(0, "#1a1a2e");
   gradient.addColorStop(0.5, "#16213e");
   gradient.addColorStop(1, "#0f3460");
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillRect(0, 0, FALLBACK_WIDTH, FALLBACK_HEIGHT);
 
-  // Decorative circles
   ctx.globalAlpha = 0.1;
   ctx.fillStyle = "#e94560";
   ctx.beginPath();
@@ -34,8 +33,7 @@ function generateThumbnail(name: string): Buffer {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Animation name
-  const maxWidth = WIDTH - 160;
+  const maxWidth = FALLBACK_WIDTH - 160;
   let fontSize = 56;
   ctx.font = `bold ${fontSize}px sans-serif`;
   while (ctx.measureText(name).width > maxWidth && fontSize > 28) {
@@ -45,17 +43,15 @@ function generateThumbnail(name: string): Buffer {
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(name, WIDTH / 2, HEIGHT / 2 - 20, maxWidth);
+  ctx.fillText(name, FALLBACK_WIDTH / 2, FALLBACK_HEIGHT / 2 - 20, maxWidth);
 
-  // Branding
   ctx.font = "24px sans-serif";
   ctx.fillStyle = "#e94560";
-  ctx.fillText("🎬 Lottie Studio", WIDTH / 2, HEIGHT / 2 + 50);
+  ctx.fillText("🎬 Lottie Studio", FALLBACK_WIDTH / 2, FALLBACK_HEIGHT / 2 + 50);
 
-  // Subtle border
   ctx.strokeStyle = "rgba(233, 69, 96, 0.3)";
   ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, WIDTH - 40, HEIGHT - 40);
+  ctx.strokeRect(20, 20, FALLBACK_WIDTH - 40, FALLBACK_HEIGHT - 40);
 
   return canvas.toBuffer("image/png");
 }
@@ -66,12 +62,10 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  // Validate id to prevent path traversal
   if (!/^[\w-]+$/.test(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
-  // Check if animation exists
   const row = db.prepare("SELECT name FROM animations WHERE id = ?").get(id) as
     | { name: string }
     | undefined;
@@ -80,7 +74,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Check for a real captured thumbnail first
+  // Priority 1: client-captured thumbnail
   const capturedPath = path.join(THUMBNAILS_DIR, `${id}.captured.png`);
   if (fs.existsSync(capturedPath)) {
     const captured = fs.readFileSync(capturedPath);
@@ -92,10 +86,42 @@ export async function GET(
     });
   }
 
-  // Fall back to generated text-on-gradient thumbnail
-  const cachePath = path.join(THUMBNAILS_DIR, `${id}.png`);
-  if (fs.existsSync(cachePath)) {
-    const cached = fs.readFileSync(cachePath);
+  // Priority 2: server-rendered Lottie thumbnail
+  const renderedPath = path.join(THUMBNAILS_DIR, `${id}.rendered.png`);
+  if (fs.existsSync(renderedPath)) {
+    const rendered = fs.readFileSync(renderedPath);
+    return new NextResponse(new Uint8Array(rendered), {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      },
+    });
+  }
+
+  // Priority 3: try to render on-demand (if animation JSON exists)
+  const animPath = path.join(ANIMATIONS_DIR, `${id}.json`);
+  if (fs.existsSync(animPath)) {
+    try {
+      const animationJson = JSON.parse(fs.readFileSync(animPath, "utf-8"));
+      const success = await renderLottieThumbnail(animationJson, renderedPath);
+      if (success && fs.existsSync(renderedPath)) {
+        const rendered = fs.readFileSync(renderedPath);
+        return new NextResponse(new Uint8Array(rendered), {
+          headers: {
+            "Content-Type": "image/png",
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        });
+      }
+    } catch (err) {
+      console.error(`[thumbnail] On-demand render failed for ${id}:`, err);
+    }
+  }
+
+  // Priority 4: text-on-gradient fallback
+  const fallbackPath = path.join(THUMBNAILS_DIR, `${id}.png`);
+  if (fs.existsSync(fallbackPath)) {
+    const cached = fs.readFileSync(fallbackPath);
     return new NextResponse(new Uint8Array(cached), {
       headers: {
         "Content-Type": "image/png",
@@ -104,12 +130,9 @@ export async function GET(
     });
   }
 
-  // Generate text-on-gradient thumbnail
   const name = row.name || "Untitled";
-  const buffer = generateThumbnail(name);
-
-  // Cache to filesystem
-  fs.writeFileSync(cachePath, buffer);
+  const buffer = generateFallbackThumbnail(name);
+  fs.writeFileSync(fallbackPath, buffer);
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
@@ -119,7 +142,7 @@ export async function GET(
   });
 }
 
-const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024;
 
 export async function PUT(
   request: Request,
@@ -127,12 +150,10 @@ export async function PUT(
 ) {
   const { id } = await params;
 
-  // Validate id to prevent path traversal
   if (!/^[\w-]+$/.test(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
-  // Check if animation exists
   const row = db.prepare("SELECT id FROM animations WHERE id = ?").get(id) as
     | { id: string }
     | undefined;
@@ -155,7 +176,6 @@ export async function PUT(
     );
   }
 
-  // Strip data URL prefix if present
   const base64Match = body.thumbnail.match(
     /^data:image\/png;base64,(.+)$/
   );
@@ -178,7 +198,6 @@ export async function PUT(
     );
   }
 
-  // Minimal PNG signature check
   const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   if (buffer.length < 8 || !buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
     return NextResponse.json(
@@ -187,7 +206,6 @@ export async function PUT(
     );
   }
 
-  // Save as captured thumbnail (separate from generated cache)
   const capturedPath = path.join(THUMBNAILS_DIR, `${id}.captured.png`);
   fs.writeFileSync(capturedPath, buffer);
 

@@ -46,11 +46,11 @@ function formatViewCount(count: number): string {
 
 export default function ExploreCard({ animation, isFavorite, onToggleFavorite, isOwnAnimation }: ExploreCardProps) {
   const router = useRouter();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const lottieContainerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [animLoaded, setAnimLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [remixing, setRemixing] = useState(false);
   const [liked, setLiked] = useState(() => {
     if (typeof window !== "undefined") {
@@ -64,61 +64,41 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
   const { toast } = useToast();
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (!hovering || !lottieContainerRef.current) return;
 
     let cancelled = false;
 
-    const loadAnim = () => {
-      fetch(`/api/animations/${animation.id}`)
-        .then((res) => res.json())
-        .then((json) => {
-          if (cancelled || !containerRef.current || !json.data) return;
-          try {
-            animRef.current = lottie.loadAnimation({
-              container: containerRef.current,
-              renderer: "svg",
-              loop: true,
-              autoplay: true,
-              animationData: json.data,
-            });
-            setLoaded(true);
-          } catch {
-            setError(true);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setError(true);
-        });
-    };
-
-    const destroyAnim = () => {
-      if (animRef.current) {
-        animRef.current.destroy();
-        animRef.current = null;
-        setLoaded(false);
-      }
-    };
-
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          if (!animRef.current && !loaded) loadAnim();
-        } else {
-          destroyAnim();
+    fetch(`/api/animations/${animation.id}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled || !lottieContainerRef.current || !json.data) return;
+        try {
+          animRef.current = lottie.loadAnimation({
+            container: lottieContainerRef.current,
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            animationData: json.data,
+          });
+          setAnimLoaded(true);
+        } catch {
+          // Lottie load failed — keep showing thumbnail
         }
-      },
-      { threshold: 0.1 }
-    );
-
-    observerRef.current.observe(el);
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;
-      observerRef.current?.disconnect();
-      destroyAnim();
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+      setAnimLoaded(false);
     };
-  }, [animation.id, loaded]);
+  }, [hovering, animation.id]);
+
+  const handleMouseEnter = useCallback(() => setHovering(true), []);
+  const handleMouseLeave = useCallback(() => setHovering(false), []);
 
   const handleRemix = useCallback(
     async (e: React.MouseEvent) => {
@@ -184,7 +164,6 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
       if (liked) return;
       setLiked(true);
       setLikeCount((c) => c + 1);
-      // Persist to localStorage
       const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
       if (!likedIds.includes(animation.id)) {
         likedIds.push(animation.id);
@@ -222,6 +201,8 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
     >
       <div
         className="relative aspect-square bg-zinc-950 flex items-center justify-center overflow-hidden"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         style={{
           backgroundImage:
             "linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%)",
@@ -229,19 +210,36 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
         }}
       >
-        <div ref={containerRef} className="w-full h-full p-4" />
-        {!loaded && !error && (
+        {(!hovering || !animLoaded) && (
+          <img
+            src={`/api/animations/${animation.id}/thumbnail`}
+            alt={animation.name}
+            className="w-full h-full object-contain p-4"
+            loading="lazy"
+            onError={() => setImgError(true)}
+            style={{ display: imgError ? "none" : undefined }}
+          />
+        )}
+
+        {hovering && (
+          <div
+            ref={lottieContainerRef}
+            className={`absolute inset-0 p-4 ${animLoaded ? "" : "pointer-events-none"}`}
+          />
+        )}
+
+        {hovering && !animLoaded && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
           </div>
         )}
-        {error && (
+
+        {imgError && !hovering && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
             {t('common.failedToLoad')}
           </div>
         )}
 
-        {/* Favorite button */}
         {onToggleFavorite && (
           <button
             onClick={handleFavorite}
@@ -265,7 +263,6 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           </button>
         )}
 
-        {/* Quick-action buttons */}
         <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 p-2 bg-black/60 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
           <button
             onClick={handleRemix}
@@ -273,7 +270,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
             aria-label="Remix animation"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
-            <span aria-hidden="true">✨</span>
+            <span aria-hidden="true">{"✨"}</span>
             {remixing ? t('explore.remixing') : t('explore.remix')}
           </button>
           <button
@@ -281,7 +278,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
             aria-label="Download animation as JSON"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-zinc-700/80 hover:bg-zinc-600 text-zinc-100 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
-            <span aria-hidden="true">⬇️</span>
+            <span aria-hidden="true">{"⬇️"}</span>
             {"Download"}
           </button>
         </div>
@@ -323,7 +320,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
             onClick={(e) => e.stopPropagation()}
             className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-violet-500/15 text-violet-400 border border-violet-500/25 hover:bg-violet-500/25 transition-colors"
           >
-            {t('explore.tryThis')} ✨
+            {t('explore.tryThis')} {"✨"}
           </Link>
         )}
         <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
