@@ -1,4 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { renderLottieThumbnail } from "@/lib/thumbnail-renderer";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -32,6 +33,11 @@ export async function POST(request: Request) {
   db.prepare(
     "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source, creator_id, creator_name) VALUES (?, ?, ?, ?, ?, ?, ?)"
   ).run(id, name, frameCount, durationSeconds, templateName || null, creatorId, creatorName);
+
+  const thumbnailPath = path.join(process.cwd(), "data", "thumbnails", `${id}.rendered.png`);
+  renderLottieThumbnail(data, thumbnailPath).catch((err) =>
+    console.error(`[thumbnail] Background generation failed for ${id}:`, err)
+  );
 
   // Persist seed assistant message when created from a template
   if (templateName) {
