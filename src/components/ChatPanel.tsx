@@ -892,8 +892,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
-      // Critique command: send to server for LLM-based analysis
-      if (command.type === "critique") {
+      // Critique and Polish commands: send to server for LLM-based analysis/improvement
+      if (command.type === "critique" || command.type === "polish") {
         const userMessage: Message = {
           id: crypto.randomUUID(),
           role: "user",
@@ -1047,7 +1047,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `**${t('helpRandom')}**\n`
             + `\`/random\` — ${t('helpRandomCmd')}\n\n`
             + `**${t('helpCritique')}**\n`
-            + `\`/critique\` — ${t('helpCritiqueCmd')}\n\n`
+            + `\`/critique\` — ${t('helpCritiqueCmd')}\n`
+            + `\`/polish\` — ${t('helpPolishCmd')}\n\n`
             + `**${t('helpPresets')}**\n`
             + `\`/presets\` — ${t('helpPresetsList')}\n`
             + `\`/presets save <name>\` — ${t('helpPresetsSave')}\n`

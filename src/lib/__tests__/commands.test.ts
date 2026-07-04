@@ -655,4 +655,19 @@ describe("parseCommand", () => {
       expect(parseCommand("  /critique  ")).toEqual({ type: "critique" });
     });
   });
+
+  describe("/polish", () => {
+    it("parses /polish", () => {
+      expect(parseCommand("/polish")).toEqual({ type: "polish" });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/POLISH")).toEqual({ type: "polish" });
+      expect(parseCommand("/Polish")).toEqual({ type: "polish" });
+    });
+
+    it("handles leading/trailing whitespace", () => {
+      expect(parseCommand("  /polish  ")).toEqual({ type: "polish" });
+    });
+  });
 });

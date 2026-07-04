@@ -146,6 +146,7 @@
     "randomSelected": "Random prompt: {prompt}",
     "helpCritique": "Critique",
     "helpCritiqueCmd": "Get expert feedback on the current animation's quality",
+    "helpPolishCmd": "Auto-analyze and improve the current animation's quality",
     "helpHelpSection": "Help",
     "helpHelp": "Show this help message",
     "starterChips": {
