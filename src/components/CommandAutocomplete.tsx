@@ -34,6 +34,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/rename-layer", description: "Rename a layer (old name → new name)", hasParams: true },
   { command: "/presets", description: "Manage animation presets (list, save, delete, rename, info)", hasParams: true },
   { command: "/random", description: "Generate a surprise animation from a random prompt", hasParams: false },
+  { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];
 
 export function filterCommands(query: string): CommandDef[] {

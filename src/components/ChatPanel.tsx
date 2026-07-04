@@ -833,6 +833,39 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
+      // Critique command: send to server for LLM-based analysis
+      if (command.type === "critique") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          await streamResponse(text, undefined, controller.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // User cancelled — not an error
+          } else {
+            const errMsg = err instanceof Error ? err.message : "An unexpected error occurred";
+            setError(errMsg);
+          }
+        } finally {
+          abortControllerRef.current = null;
+          setIsRepairing(false);
+          setIsThinking(false);
+          setIsStreaming(false);
+        }
+        return;
+      }
+
       // Layer commands: send to server via streaming API
       if (command.type === "layers" || command.type === "duplicate_layer" || command.type === "delete_layer" || command.type === "rename_layer") {
         const userMessage: Message = {
@@ -952,6 +985,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `\`/compose <id>\` — Compose layers from another animation into this one\n\n`
             + `**${t('helpRandom')}**\n`
             + `\`/random\` — ${t('helpRandomCmd')}\n\n`
+            + `**${t('helpCritique')}**\n`
+            + `\`/critique\` — ${t('helpCritiqueCmd')}\n\n`
             + `**${t('helpPresets')}**\n`
             + `\`/presets\` — ${t('helpPresetsList')}\n`
             + `\`/presets save <name>\` — ${t('helpPresetsSave')}\n`

@@ -634,4 +634,19 @@ describe("parseCommand", () => {
       expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
     });
   });
+
+  describe("/critique", () => {
+    it("parses /critique", () => {
+      expect(parseCommand("/critique")).toEqual({ type: "critique" });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/CRITIQUE")).toEqual({ type: "critique" });
+      expect(parseCommand("/Critique")).toEqual({ type: "critique" });
+    });
+
+    it("handles leading/trailing whitespace", () => {
+      expect(parseCommand("  /critique  ")).toEqual({ type: "critique" });
+    });
+  });
 });

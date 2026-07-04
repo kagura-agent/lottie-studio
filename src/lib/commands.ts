@@ -76,6 +76,7 @@ export type Command =
   | { type: "duplicate_layer"; name: string }
   | { type: "delete_layer"; name: string }
   | { type: "rename_layer"; oldName: string; newName: string }
+  | { type: "critique" }
   | { type: "help" }
   | { type: "error"; message: string };
 
@@ -418,6 +419,9 @@ export function parseCommand(input: string): Command | null {
       }
       return { type: "rename_layer", oldName: parsed.first, newName: parsed.second };
     }
+
+    case "critique":
+      return { type: "critique" };
 
     case "help":
     case "commands":
