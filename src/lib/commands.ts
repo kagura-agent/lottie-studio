@@ -13,6 +13,17 @@ export const VALID_STYLES = [
 
 export type StyleName = (typeof VALID_STYLES)[number];
 
+export const STYLE_DESCRIPTIONS: Record<StyleName, string> = {
+  neon: "Glowing edges, electric colors (cyan/magenta/purple), dark background",
+  pastel: "Soft muted pastels (light pink, baby blue, lavender, mint), gentle fills",
+  monochrome: "Single-color palette with varying shades and opacities for depth",
+  gradient: "Smooth gradient fills with flowing color transitions",
+  retro: "Warm vintage tones (amber, burnt orange, mustard), rounded shapes",
+  minimal: "Essential shapes, thin strokes, ample white space, muted colors",
+  bold: "Thick strokes, highly saturated colors, high contrast",
+  nature: "Earth tones (forest green, sky blue, terracotta, sand), organic curves",
+};
+
 export const VALID_ANIMATIONS = [
   "bounce",
   "pulse",
@@ -60,6 +71,8 @@ export type Command =
   | { type: "optimize" }
   | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
   | { type: "style"; style: StyleName }
+  | { type: "style_list" }
+  | { type: "style_custom"; description: string }
   | { type: "animate"; animation: AnimationPreset }
   | { type: "marker_add"; name: string; startFrame: number; endFrame: number }
   | { type: "marker_remove"; name: string }
@@ -226,13 +239,13 @@ export function parseCommand(input: string): Command | null {
 
     case "style": {
       if (args.length === 0) {
-        return { type: "error", message: `Usage: /style <name>. Available styles: ${VALID_STYLES.join(", ")}` };
+        return { type: "style_list" };
       }
       const styleName = args[0].toLowerCase();
       if (VALID_STYLES.includes(styleName as StyleName)) {
         return { type: "style", style: styleName as StyleName };
       }
-      return { type: "error", message: `Unknown style "${args[0]}". Available styles: ${VALID_STYLES.join(", ")}` };
+      return { type: "style_custom", description: args.join(" ") };
     }
 
     case "animate": {

@@ -23,7 +23,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/bg", description: "Set background color (e.g. /bg #ff0000)", hasParams: true },
   { command: "/fullscreen", description: "Toggle fullscreen", hasParams: false },
   { command: "/optimize", description: "Optimize animation (reduce file size)", hasParams: false },
-  { command: "/style", description: "Apply visual style (neon, pastel, monochrome, gradient, retro, minimal, bold, nature)", hasParams: true },
+  { command: "/style", description: "Apply visual style — no args to list, preset name, or free-form description", hasParams: true },
   { command: "/animate", description: "Apply motion preset (bounce, pulse, shake, float, spin, slide-in, fade-in, elastic, wiggle, typewriter)", hasParams: true },
   { command: "/marker", description: "Add/remove named segments (add, remove, list, clear)", hasParams: true },
   { command: "/compose", description: "Import layers from another animation", hasParams: true },

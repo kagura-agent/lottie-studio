@@ -1129,6 +1129,12 @@ Be honest but constructive. Reference specific layers by name when possible. Do 
     systemPrompt += `\n\nIMPORTANT STYLE INSTRUCTION: The user is applying a visual style preset. You MUST preserve ALL existing motion, keyframes, timing, easing, and animation structure exactly as-is. Only modify visual properties: colors (fill/stroke), gradients, opacity values, stroke widths, and background. Do NOT add, remove, or reorder layers. Do NOT change any position/rotation/scale keyframes or timing.`;
   }
 
+  // Custom style command: add instructions for free-form style description
+  const styleCustomMatch = message.match(/^\[STYLE_CUSTOM:\s*(.+?)\]/);
+  if (styleCustomMatch && currentAnimation) {
+    systemPrompt += `\n\nIMPORTANT STYLE INSTRUCTION: The user is applying a custom visual style. You MUST preserve ALL existing motion, keyframes, timing, easing, and animation structure exactly as-is. Only modify visual properties: colors (fill/stroke), gradients, opacity values, stroke widths, and background. Do NOT add, remove, or reorder layers. Do NOT change any position/rotation/scale keyframes or timing.`;
+  }
+
   // Animate command: add extra instructions to preserve visual properties
   const animateMatch = message.match(/^\[ANIMATE:\s*([\w-]+)\]/);
   if (animateMatch && currentAnimation) {

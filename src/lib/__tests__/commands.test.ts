@@ -374,6 +374,10 @@ describe("parseCommand", () => {
   });
 
   describe("/style", () => {
+    it("parses /style with no args as style_list", () => {
+      expect(parseCommand("/style")).toEqual({ type: "style_list" });
+    });
+
     it("parses /style neon", () => {
       expect(parseCommand("/style neon")).toEqual({ type: "style", style: "neon" });
     });
@@ -412,23 +416,25 @@ describe("parseCommand", () => {
       expect(parseCommand("/STYLE bold")).toEqual({ type: "style", style: "bold" });
     });
 
-    it("returns error for invalid style", () => {
-      const result = parseCommand("/style foo");
-      expect(result).toEqual({
-        type: "error",
-        message: expect.stringContaining("Unknown style"),
+    it("treats unknown single word as style_custom", () => {
+      expect(parseCommand("/style foo")).toEqual({
+        type: "style_custom",
+        description: "foo",
       });
-      expect((result as { message: string }).message).toContain("neon");
-      expect((result as { message: string }).message).toContain("nature");
     });
 
-    it("returns error for missing argument", () => {
-      const result = parseCommand("/style");
-      expect(result).toEqual({
-        type: "error",
-        message: expect.stringContaining("Usage"),
+    it("treats multi-word text as style_custom", () => {
+      expect(parseCommand("/style dark gothic horror")).toEqual({
+        type: "style_custom",
+        description: "dark gothic horror",
       });
-      expect((result as { message: string }).message).toContain("neon");
+    });
+
+    it("treats mixed-case unknown as style_custom", () => {
+      expect(parseCommand("/style Cyberpunk Neon City")).toEqual({
+        type: "style_custom",
+        description: "Cyberpunk Neon City",
+      });
     });
   });
 
