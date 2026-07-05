@@ -86,6 +86,7 @@ export type Command =
   | { type: "sequence_show"; name: string }
   | { type: "sequence_reorder"; name: string; positions: string }
   | { type: "sequence_delete"; name: string }
+  | { type: "sequence_play"; name: string }
   | { type: "theme"; subcommand: ThemeSubcommand }
   | { type: "variations"; prompt: string }
   | { type: "random" }
@@ -329,7 +330,7 @@ export function parseCommand(input: string): Command | null {
 
     case "sequence": {
       if (args.length === 0) {
-        return { type: "error", message: "Usage: /sequence create|add|list|show|reorder|delete" };
+        return { type: "error", message: "Usage: /sequence create|add|list|show|play|reorder|delete" };
       }
       const sub = args[0].toLowerCase();
       switch (sub) {
@@ -368,8 +369,15 @@ export function parseCommand(input: string): Command | null {
           const name = args.slice(1).join(" ");
           return { type: "sequence_delete", name };
         }
+        case "play": {
+          if (args.length < 2) {
+            return { type: "error", message: "Usage: /sequence play <name>" };
+          }
+          const name = args.slice(1).join(" ");
+          return { type: "sequence_play", name };
+        }
         default:
-          return { type: "error", message: `Unknown sequence subcommand "${sub}". Use create, add, list, show, reorder, or delete.` };
+          return { type: "error", message: `Unknown sequence subcommand "${sub}". Use create, add, list, show, play, reorder, or delete.` };
       }
     }
 

@@ -765,5 +765,17 @@ describe("parseCommand", () => {
         name: "test",
       });
     });
+
+    it("parses /sequence play <name>", () => {
+      expect(parseCommand("/sequence play My Storyboard")).toEqual({
+        type: "sequence_play",
+        name: "My Storyboard",
+      });
+    });
+
+    it("returns error for /sequence play without name", () => {
+      const result = parseCommand("/sequence play");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
   });
 });
