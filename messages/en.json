@@ -196,7 +196,8 @@
     "helpLayersList": "List all layers in the current animation",
     "helpDuplicateLayer": "Duplicate a layer by name",
     "helpDeleteLayer": "Delete a layer by name",
-    "helpRenameLayer": "Rename a layer (use quotes for names with spaces)"
+    "helpRenameLayer": "Rename a layer (use quotes for names with spaces)",
+    "helpSequencePlayCmd": "Play an animation sequence by name"
   },
   "variations": {
     "gridLabel": "Animation variations",
@@ -411,6 +412,21 @@
     "exportDotLottieDesc": "Export as dotLottie file",
     "applyStyleDesc": "Apply {style} visual style",
     "applyAnimationDesc": "Apply {animation} motion preset"
+  },
+  "sequencePlayer": {
+    "loading": "Loading sequence...",
+    "playing": "Playing",
+    "paused": "Paused",
+    "scene": "Scene {current} of {total}",
+    "noAnimations": "This sequence has no animations",
+    "loop": "Loop",
+    "play": "Play",
+    "pause": "Pause",
+    "restart": "Restart",
+    "nextScene": "Next scene",
+    "prevScene": "Previous scene",
+    "sequenceNotFound": "Sequence \"{name}\" not found",
+    "playSequence": "Play sequence"
   },
   "codeSnippets": {
     "title": "Integration Code",
