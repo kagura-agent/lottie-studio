@@ -13,6 +13,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import PromptSuggestions from "./PromptSuggestions";
 import VariationGrid, { type Variation } from "./VariationGrid";
+import SequencePlayer from "./SequencePlayer";
 
 interface Message {
   id: string;
@@ -26,6 +27,7 @@ interface Message {
   previousLottieJson?: object;
   variations?: Variation[];
   variationsLoading?: boolean;
+  sequenceId?: string;
 }
 
 interface ChatPanelProps {
@@ -72,6 +74,7 @@ const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
 
 export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt }: ChatPanelProps) {
   const t = useTranslations('chat');
+  const tSeq = useTranslations('sequencePlayer');
   const { tokens: designTokens, setToken: setDesignToken, clearTokens: clearDesignTokens, hasTokens: hasDesignTokens } = useDesignTokens();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState(initialPrompt ?? "");
@@ -658,8 +661,97 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         return;
       }
 
-      // Sequence command: send to server for temporal composition
-      if (command.type === "sequence") {
+      // Sequence play: render player inline
+      if (command.type === "sequence_play") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        try {
+          const res = await fetch(`/api/sequences?name=${encodeURIComponent(command.name)}`);
+          const sequences = await res.json();
+          if (!res.ok || !sequences.length) {
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: tSeq('sequenceNotFound', { name: command.name }),
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          } else {
+            const seq = sequences[0];
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `▶ ${seq.name}`,
+              sequenceId: seq.id,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          }
+        } catch {
+          setError("Failed to load sequence");
+        } finally {
+          setIsThinking(false);
+        }
+        return;
+      }
+
+      // Sequence show: display details with play button
+      if (command.type === "sequence_show") {
+        const userMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: text,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput("");
+        setError(null);
+        setIsThinking(true);
+
+        try {
+          const res = await fetch(`/api/sequences?name=${encodeURIComponent(command.name)}`);
+          const sequences = await res.json();
+          if (!res.ok || !sequences.length) {
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: tSeq('sequenceNotFound', { name: command.name }),
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          } else {
+            const seq = sequences[0];
+            const items = seq.items || [];
+            const details = `**${seq.name}**${seq.description ? ` — ${seq.description}` : ""}\n\n` +
+              (items.length === 0
+                ? "No animations in this sequence yet."
+                : items.map((item: { animation_name: string | null; position: number; transition_type: string }, i: number) =>
+                    `${i + 1}. ${item.animation_name || "Untitled"} _(${item.transition_type})_`
+                  ).join("\n"));
+            const assistantMessage: Message = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: details,
+              sequenceId: items.length > 0 ? seq.id : undefined,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          }
+        } catch {
+          setError("Failed to load sequence");
+        } finally {
+          setIsThinking(false);
+        }
+        return;
+      }
+
+      // Other sequence commands: send to server via streaming API
+      if (command.type === "sequence_create" || command.type === "sequence_add" ||
+          command.type === "sequence_list" || command.type === "sequence_reorder" ||
+          command.type === "sequence_delete") {
         const userMessage: Message = {
           id: crypto.randomUUID(),
           role: "user",
@@ -1062,7 +1154,8 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             + `**${t('helpVariations')}**\n`
             + `\`/variations <prompt>\` — ${t('helpVariationsCmd')}\n\n`
             + `**${t('helpSequence')}**\n`
-            + `\`/sequence <id>\` — ${t('helpSequenceCmd')}\n\n`
+            + `\`/sequence <id>\` — ${t('helpSequenceCmd')}\n`
+            + `\`/sequence play <name>\` — ${t('helpSequencePlayCmd')}\n\n`
             + `**${t('helpLayers')}**\n`
             + `\`/layers\` — ${t('helpLayersList')}\n`
             + `\`/duplicate-layer <name>\` — ${t('helpDuplicateLayer')}\n`
@@ -1630,6 +1723,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                         loading={msg.variationsLoading}
                         onSelect={(v) => handleVariationSelect(msg.id, v)}
                       />
+                    </div>
+                  )}
+                  {msg.role === "assistant" && msg.sequenceId && (
+                    <div className="mt-2">
+                      <SequencePlayer sequenceId={msg.sequenceId} />
                     </div>
                   )}
                   {retryingMsgId === msg.id && !msg.content ? (

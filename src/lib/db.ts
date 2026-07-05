@@ -555,6 +555,29 @@ export function listSequences(
     .all(creatorId) as (Sequence & { item_count: number })[];
 }
 
+export function findSequencesByName(
+  name: string
+): SequenceWithItems[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM sequences WHERE LOWER(name) = LOWER(?) ORDER BY updated_at DESC LIMIT 5"
+    )
+    .all(name) as Sequence[];
+
+  return rows.map((seq) => {
+    const items = db
+      .prepare(
+        `SELECT si.*, a.name as animation_name, a.duration_seconds
+         FROM sequence_items si
+         LEFT JOIN animations a ON a.id = si.animation_id
+         WHERE si.sequence_id = ?
+         ORDER BY si.position ASC, si.added_at ASC`
+      )
+      .all(seq.id) as (SequenceItem & { animation_name: string | null; duration_seconds: number | null })[];
+    return { ...seq, items };
+  });
+}
+
 export function updateSequence(
   id: string,
   fields: { name?: string; description?: string }

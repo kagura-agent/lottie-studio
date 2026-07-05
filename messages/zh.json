@@ -196,7 +196,8 @@
     "helpLayersList": "列出当前动画的所有图层",
     "helpDuplicateLayer": "按名称复制图层",
     "helpDeleteLayer": "按名称删除图层",
-    "helpRenameLayer": "重命名图层（带空格的名称用引号包裹）"
+    "helpRenameLayer": "重命名图层（带空格的名称用引号包裹）",
+    "helpSequencePlayCmd": "按名称播放动画序列"
   },
   "variations": {
     "gridLabel": "动画变体",
@@ -411,6 +412,21 @@
     "exportDotLottieDesc": "导出为 dotLottie 文件",
     "applyStyleDesc": "应用 {style} 视觉样式",
     "applyAnimationDesc": "应用 {animation} 动效预设"
+  },
+  "sequencePlayer": {
+    "loading": "加载序列中...",
+    "playing": "播放中",
+    "paused": "已暂停",
+    "scene": "场景 {current} / {total}",
+    "noAnimations": "该序列没有动画",
+    "loop": "循环",
+    "play": "播放",
+    "pause": "暂停",
+    "restart": "重新开始",
+    "nextScene": "下一场景",
+    "prevScene": "上一场景",
+    "sequenceNotFound": "未找到序列 \"{name}\"",
+    "playSequence": "播放序列"
   },
   "codeSnippets": {
     "title": "集成代码",
