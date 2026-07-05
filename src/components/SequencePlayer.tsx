@@ -43,9 +43,11 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
   const isLoopingRef = useRef(false);
 
   // Keep refs in sync
-  currentSceneRef.current = currentScene;
-  isPlayingRef.current = isPlaying;
-  isLoopingRef.current = isLooping;
+  useEffect(() => {
+    currentSceneRef.current = currentScene;
+    isPlayingRef.current = isPlaying;
+    isLoopingRef.current = isLooping;
+  }, [currentScene, isPlaying, isLooping]);
 
   // Fetch sequence data and all animation JSONs
   useEffect(() => {
@@ -354,9 +356,11 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
 
   // Cleanup on unmount
   useEffect(() => {
+    const animA = animARef.current;
+    const animB = animBRef.current;
     return () => {
-      animARef.current?.destroy();
-      animBRef.current?.destroy();
+      animA?.destroy();
+      animB?.destroy();
     };
   }, []);
 
