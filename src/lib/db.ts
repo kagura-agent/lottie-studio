@@ -413,6 +413,20 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_sequences_creator ON sequences(creator_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_sequence_items_sequence ON sequence_items(sequence_id, position)`);
 
+// --- API Keys ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    key_hash TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_used_at TEXT,
+    rate_limit INTEGER DEFAULT 60,
+    enabled INTEGER DEFAULT 1
+  )
+`);
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;
