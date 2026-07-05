@@ -1,12 +1,29 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { renderLottieThumbnail } from "@/lib/thumbnail-renderer";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const mine = searchParams.get("mine");
+
+  if (mine === "true") {
+    const user = getAuthUser(request);
+    if (!user) {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
+    const rows = db
+      .prepare(
+        "SELECT id, name, description, created_at, updated_at, frame_count, duration_seconds FROM animations WHERE user_id = ? AND frame_count IS NOT NULL ORDER BY created_at DESC"
+      )
+      .all(user.id);
+    return Response.json(rows);
+  }
+
   const rows = db.prepare("SELECT id, name, description, created_at, updated_at, frame_count, duration_seconds FROM animations WHERE frame_count IS NOT NULL ORDER BY created_at DESC").all();
   return Response.json(rows);
 }
@@ -23,6 +40,10 @@ export async function POST(request: Request) {
   const creatorId = request.headers.get("x-creator-id") || null;
   const creatorName = request.headers.get("x-creator-name") || null;
 
+  // Set user_id if authenticated
+  const authUser = getAuthUser(request);
+  const userId = authUser?.id || null;
+
   const id = randomUUID();
   const frameCount = data.op ?? data.totalFrames ?? null;
   const frameRate = data.fr ?? 30;
@@ -31,8 +52,8 @@ export async function POST(request: Request) {
   fs.writeFileSync(path.join(ANIMATIONS_DIR, `${id}.json`), JSON.stringify(data));
 
   db.prepare(
-    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source, creator_id, creator_name) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run(id, name, frameCount, durationSeconds, templateName || null, creatorId, creatorName);
+    "INSERT INTO animations (id, name, frame_count, duration_seconds, template_source, creator_id, creator_name, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, name, frameCount, durationSeconds, templateName || null, creatorId, creatorName, userId);
 
   const thumbnailPath = path.join(process.cwd(), "data", "thumbnails", `${id}.rendered.png`);
   renderLottieThumbnail(data, thumbnailPath).catch((err) =>

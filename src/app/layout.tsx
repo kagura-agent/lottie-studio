@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { ToastWrapper } from "@/components/ToastWrapper";
 import { DesignTokensProvider } from "@/contexts/DesignTokensContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -70,12 +71,14 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-white">
         <NextIntlClientProvider messages={messages}>
+          <AuthProvider>
           <DesignTokensProvider>
           <ToastWrapper>
             <ServiceWorkerRegistration />
             {children}
           </ToastWrapper>
           </DesignTokensProvider>
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

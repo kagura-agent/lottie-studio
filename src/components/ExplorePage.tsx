@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import UserMenu from '@/components/auth/UserMenu';
 import ExploreCard from "@/components/ExploreCard";
 import { useFavorites } from "@/hooks/useFavorites";
 import { getCreatorId } from "@/lib/creatorId";
@@ -257,6 +258,7 @@ export default function ExplorePage() {
                 {t('gallery.createAnimation')}
               </Link>
               <LanguageSwitcher />
+              <UserMenu />
             </div>
           </div>
         </div>

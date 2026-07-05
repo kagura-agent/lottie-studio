@@ -21,6 +21,7 @@ import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserMenu from "./auth/UserMenu";
 import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
 import ErrorBoundary from "./ErrorBoundary";
 import VersionHistory from "./VersionHistory";
@@ -1073,6 +1074,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           )}
         </div>
         <LanguageSwitcher />
+        <UserMenu />
       </header>
 
       {/* Mobile view toggle */}
