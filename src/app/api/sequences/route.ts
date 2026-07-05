@@ -1,10 +1,16 @@
-import { createSequence, listSequences } from "@/lib/db";
+import { createSequence, listSequences, findSequencesByName } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const creatorId = searchParams.get("creator_id");
+  const name = searchParams.get("name");
+
+  if (name) {
+    const rows = findSequencesByName(name);
+    return Response.json(rows);
+  }
 
   if (!creatorId) {
     return Response.json(
