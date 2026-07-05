@@ -82,7 +82,7 @@ describe("SequencePlayer rendering", () => {
   });
 
   it("shows loading state initially", async () => {
-    global.fetch = vi.fn(() => new Promise(() => {}));
+    global.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch;
 
     const mod = await import("@/components/SequencePlayer");
     expect(mod.default).toBeDefined();
