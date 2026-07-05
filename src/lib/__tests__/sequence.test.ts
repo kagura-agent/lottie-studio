@@ -467,23 +467,34 @@ describe("offsetKeyframes", () => {
 });
 
 describe("parseCommand - /sequence", () => {
-  it("parses /sequence with id", () => {
-    const result = parseCommand("/sequence abc123");
-    expect(result).toEqual({ type: "sequence", id: "abc123" });
-  });
-
-  it("parses /sequence with UUID-like id", () => {
-    const result = parseCommand("/sequence 550e8400-e29b-41d4-a716-446655440000");
-    expect(result).toEqual({ type: "sequence", id: "550e8400-e29b-41d4-a716-446655440000" });
-  });
-
-  it("returns error for /sequence with no id", () => {
+  it("returns error for /sequence with no subcommand", () => {
     const result = parseCommand("/sequence");
-    expect(result).toEqual({ type: "error", message: "Usage: /sequence <animation-id>" });
+    expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
   });
 
-  it("takes first word as id when spaces present", () => {
-    const result = parseCommand("/sequence abc123 extra stuff");
-    expect(result).toEqual({ type: "sequence", id: "abc123" });
+  it("parses /sequence create", () => {
+    expect(parseCommand("/sequence create intro")).toEqual({
+      type: "sequence_create",
+      name: "intro",
+    });
+  });
+
+  it("parses /sequence list", () => {
+    expect(parseCommand("/sequence list")).toEqual({ type: "sequence_list" });
+  });
+
+  it("returns error for unknown subcommand", () => {
+    const result = parseCommand("/sequence abc123");
+    expect(result).toEqual({
+      type: "error",
+      message: expect.stringContaining("Unknown sequence subcommand"),
+    });
+  });
+
+  it("parses /sequence delete with name", () => {
+    expect(parseCommand("/sequence delete my-seq")).toEqual({
+      type: "sequence_delete",
+      name: "my-seq",
+    });
   });
 });

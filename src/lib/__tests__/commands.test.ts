@@ -670,4 +670,100 @@ describe("parseCommand", () => {
       expect(parseCommand("  /polish  ")).toEqual({ type: "polish" });
     });
   });
+
+  describe("/sequence", () => {
+    it("returns error for no subcommand", () => {
+      const result = parseCommand("/sequence");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("parses /sequence create <name>", () => {
+      expect(parseCommand("/sequence create My Storyboard")).toEqual({
+        type: "sequence_create",
+        name: "My Storyboard",
+      });
+    });
+
+    it("returns error for /sequence create without name", () => {
+      const result = parseCommand("/sequence create");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("parses /sequence add with name", () => {
+      expect(parseCommand("/sequence add My Sequence")).toEqual({
+        type: "sequence_add",
+        name: "My Sequence",
+      });
+    });
+
+    it("parses /sequence add without name", () => {
+      expect(parseCommand("/sequence add")).toEqual({
+        type: "sequence_add",
+        name: undefined,
+      });
+    });
+
+    it("parses /sequence list", () => {
+      expect(parseCommand("/sequence list")).toEqual({ type: "sequence_list" });
+    });
+
+    it("parses /sequence show <name>", () => {
+      expect(parseCommand("/sequence show Intro Sequence")).toEqual({
+        type: "sequence_show",
+        name: "Intro Sequence",
+      });
+    });
+
+    it("returns error for /sequence show without name", () => {
+      const result = parseCommand("/sequence show");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("parses /sequence reorder <name> <positions>", () => {
+      expect(parseCommand("/sequence reorder intro 3 1 2")).toEqual({
+        type: "sequence_reorder",
+        name: "intro",
+        positions: "3 1 2",
+      });
+    });
+
+    it("returns error for /sequence reorder without enough args", () => {
+      expect(parseCommand("/sequence reorder")).toEqual({
+        type: "error",
+        message: expect.stringContaining("Usage"),
+      });
+      expect(parseCommand("/sequence reorder intro")).toEqual({
+        type: "error",
+        message: expect.stringContaining("Usage"),
+      });
+    });
+
+    it("parses /sequence delete <name>", () => {
+      expect(parseCommand("/sequence delete My Sequence")).toEqual({
+        type: "sequence_delete",
+        name: "My Sequence",
+      });
+    });
+
+    it("returns error for /sequence delete without name", () => {
+      const result = parseCommand("/sequence delete");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for unknown subcommand", () => {
+      const result = parseCommand("/sequence foo");
+      expect(result).toEqual({
+        type: "error",
+        message: expect.stringContaining("Unknown sequence subcommand"),
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/SEQUENCE LIST")).toEqual({ type: "sequence_list" });
+      expect(parseCommand("/Sequence Create test")).toEqual({
+        type: "sequence_create",
+        name: "test",
+      });
+    });
+  });
 });
