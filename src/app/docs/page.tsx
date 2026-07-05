@@ -358,6 +358,100 @@ function TryItPanel() {
   );
 }
 
+// --- API Key Generator ---
+
+function ApiKeyGenerator() {
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ id: string; key: string; name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = useCallback(async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to generate key");
+      } else {
+        setResult(data);
+        setName("");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [name]);
+
+  const copyKey = useCallback(() => {
+    if (!result) return;
+    navigator.clipboard.writeText(result.key);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [result]);
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 space-y-4">
+      <h3 className="text-sm font-semibold text-zinc-200">Generate API Key</h3>
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Key name (e.g. my-app)"
+          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleGenerate(); }}
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={loading || !name.trim()}
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Generating..." : "Generate"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="text-sm font-semibold text-emerald-300">Save this key — it won&apos;t be shown again</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm font-mono text-zinc-200 break-all">
+              {result.key}
+            </code>
+            <button
+              onClick={copyKey}
+              className="px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors shrink-0"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Main Page ---
 
 export default function DocsPage() {
@@ -756,9 +850,233 @@ export default function DocsPage() {
         {/* Footer note */}
         <div className="mt-12 pt-8 border-t border-zinc-800">
           <p className="text-sm text-zinc-500 text-center">
-            All endpoints return JSON. No authentication is required.
-            Animations are publicly accessible once created.
+            All endpoints return JSON. Public endpoints require no authentication.
+            v1 API endpoints require an API key.
           </p>
+        </div>
+
+        {/* ─── v1 API Section ─── */}
+        <div className="mt-16 pt-12 border-t border-zinc-800">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-zinc-100 tracking-tight">
+              v1 API
+            </h2>
+            <p className="mt-2 text-zinc-400">
+              Authenticated API for programmatic animation generation and management. All v1 endpoints require an API key.
+            </p>
+          </div>
+
+          {/* Authentication info */}
+          <div className="mb-8 rounded-xl border border-indigo-500/20 bg-indigo-950/10 px-6 py-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-indigo-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              <div>
+                <h3 className="text-sm font-semibold text-indigo-300">Authentication</h3>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Include your API key in the <code className="text-indigo-400/80">Authorization</code> header:
+                </p>
+                <pre className="mt-2 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-sm font-mono text-zinc-300">
+                  Authorization: Bearer ls_your_api_key_here
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Rate limiting info */}
+          <div className="mb-8 rounded-xl border border-amber-500/20 bg-amber-950/10 px-6 py-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h3 className="text-sm font-semibold text-amber-300">Rate Limiting</h3>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Each API key has a per-key rate limit (default: <strong className="text-zinc-200">60 requests per minute</strong>).
+                  When exceeded, the API returns <code className="text-amber-400/80">429</code> with a <code className="text-amber-400/80">Retry-After</code> header.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* API Key Generator */}
+          <div className="mb-8">
+            <ApiKeyGenerator />
+          </div>
+
+          {/* v1 Endpoints */}
+          <div className="space-y-4">
+            {/* POST /api/v1/generate */}
+            <EndpointSection
+              method="POST"
+              path="/api/v1/generate"
+              title="Generate animation (authenticated)"
+              defaultOpen={false}
+            >
+              <p className="text-sm text-zinc-400">
+                Generate a Lottie animation from a text prompt. The animation is saved and can be retrieved later by ID.
+              </p>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Request</h4>
+                <JsonHighlight code={JSON.stringify({ prompt: "A spinning gear icon", width: 512, height: 512 }, null, 2)} />
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <code className="text-indigo-400 font-mono shrink-0">prompt</code>
+                    <span className="text-zinc-500">string, required</span>
+                    <span className="text-zinc-400">— Description of the animation</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <code className="text-indigo-400 font-mono shrink-0">width</code>
+                    <span className="text-zinc-500">number, optional</span>
+                    <span className="text-zinc-400">— Width in pixels (64-2048, default: 512)</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <code className="text-indigo-400 font-mono shrink-0">height</code>
+                    <span className="text-zinc-500">number, optional</span>
+                    <span className="text-zinc-400">— Height in pixels (64-2048, default: 512)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Response</h4>
+                <JsonHighlight code={JSON.stringify({ id: "uuid-here", lottieJson: { "...": "Lottie JSON" }, description: "A metallic gear rotating clockwise" }, null, 2)} />
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Example</h4>
+                <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`curl -X POST ${baseUrl}/api/v1/generate \\
+  -H "Authorization: Bearer ls_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"prompt": "A spinning gear icon"}'`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`const res = await fetch("${baseUrl}/api/v1/generate", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer ls_your_key",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ prompt: "A spinning gear icon" }),
+});
+const { id, lottieJson, description } = await res.json();`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`import requests
+
+res = requests.post(
+    "${baseUrl}/api/v1/generate",
+    headers={"Authorization": "Bearer ls_your_key"},
+    json={"prompt": "A spinning gear icon"},
+)
+data = res.json()
+animation_id = data["id"]
+lottie_json = data["lottieJson"]`}</pre>
+              </div>
+            </EndpointSection>
+
+            {/* GET /api/v1/animations/[id] */}
+            <EndpointSection
+              method="GET"
+              path="/api/v1/animations/{id}"
+              title="Get animation by ID"
+              defaultOpen={false}
+            >
+              <p className="text-sm text-zinc-400">
+                Retrieve an animation&apos;s metadata and Lottie JSON by its ID.
+              </p>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Response</h4>
+                <JsonHighlight code={JSON.stringify({ id: "uuid-here", name: "A spinning gear icon", lottieJson: { "...": "Lottie JSON" }, created_at: "2025-07-05 12:00:00" }, null, 2)} />
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Example</h4>
+                <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`curl ${baseUrl}/api/v1/animations/YOUR_ID \\
+  -H "Authorization: Bearer ls_your_key"`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`const res = await fetch("${baseUrl}/api/v1/animations/YOUR_ID", {
+  headers: { "Authorization": "Bearer ls_your_key" },
+});
+const { id, name, lottieJson, created_at } = await res.json();`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/animations/YOUR_ID",
+    headers={"Authorization": "Bearer ls_your_key"},
+)
+data = res.json()
+lottie_json = data["lottieJson"]`}</pre>
+              </div>
+            </EndpointSection>
+
+            {/* GET /api/v1/templates */}
+            <EndpointSection
+              method="GET"
+              path="/api/v1/templates"
+              title="List templates"
+              defaultOpen={false}
+            >
+              <p className="text-sm text-zinc-400">
+                List all available animation templates.
+              </p>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Response</h4>
+                <JsonHighlight code={JSON.stringify({ templates: [{ id: "bouncing-ball", name: "Bouncing Ball", category: "Motion" }] }, null, 2)} />
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Example</h4>
+                <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`curl ${baseUrl}/api/v1/templates \\
+  -H "Authorization: Bearer ls_your_key"`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`const res = await fetch("${baseUrl}/api/v1/templates", {
+  headers: { "Authorization": "Bearer ls_your_key" },
+});
+const { templates } = await res.json();`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/templates",
+    headers={"Authorization": "Bearer ls_your_key"},
+)
+templates = res.json()["templates"]`}</pre>
+              </div>
+            </EndpointSection>
+
+            {/* GET /api/v1/templates/[id] */}
+            <EndpointSection
+              method="GET"
+              path="/api/v1/templates/{id}"
+              title="Get template by ID"
+              defaultOpen={false}
+            >
+              <p className="text-sm text-zinc-400">
+                Get a specific template with its full Lottie JSON data.
+              </p>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Response</h4>
+                <JsonHighlight code={JSON.stringify({ id: "bouncing-ball", name: "Bouncing Ball", category: "Motion", lottieJson: { "...": "Lottie JSON" } }, null, 2)} />
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Example</h4>
+                <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`curl ${baseUrl}/api/v1/templates/bouncing-ball \\
+  -H "Authorization: Bearer ls_your_key"`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`const res = await fetch("${baseUrl}/api/v1/templates/bouncing-ball", {
+  headers: { "Authorization": "Bearer ls_your_key" },
+});
+const { id, name, category, lottieJson } = await res.json();`}</pre>
+                <pre className="mt-3 overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300">{`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/templates/bouncing-ball",
+    headers={"Authorization": "Bearer ls_your_key"},
+)
+data = res.json()
+lottie_json = data["lottieJson"]`}</pre>
+              </div>
+            </EndpointSection>
+          </div>
         </div>
       </main>
     </div>
