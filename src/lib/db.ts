@@ -693,4 +693,18 @@ export function reorderSequenceItems(sequenceId: string, itemIds: string[]): voi
   db.prepare("UPDATE sequences SET updated_at = datetime('now') WHERE id = ?").run(sequenceId);
 }
 
+// --- API Keys ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    key_hash TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT,
+    rate_limit INTEGER NOT NULL DEFAULT 60,
+    enabled INTEGER NOT NULL DEFAULT 1
+  )
+`);
+
 export { db, ANIMATIONS_DIR };

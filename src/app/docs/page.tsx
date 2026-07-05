@@ -15,6 +15,14 @@ interface GenerateResponse {
   error?: string;
 }
 
+interface KeyResponse {
+  id: string;
+  key: string;
+  name: string;
+  message: string;
+  error?: string;
+}
+
 // --- Syntax Highlighting ---
 
 function JsonHighlight({ code }: { code: string }) {
@@ -354,6 +362,143 @@ function TryItPanel() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// --- API Key Generator ---
+
+function ApiKeyGenerator() {
+  const [keyName, setKeyName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState<KeyResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = useCallback(async () => {
+    if (!keyName.trim()) return;
+    setLoading(true);
+    setError(null);
+    setGeneratedKey(null);
+
+    try {
+      const res = await fetch("/api/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: keyName.trim() }),
+      });
+
+      const data: KeyResponse = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to generate key");
+      } else {
+        setGeneratedKey(data);
+        setKeyName("");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [keyName]);
+
+  const handleCopy = useCallback(() => {
+    if (generatedKey) {
+      navigator.clipboard.writeText(generatedKey.key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [generatedKey]);
+
+  return (
+    <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-5 space-y-4">
+      <h4 className="text-sm font-semibold text-indigo-300 flex items-center gap-2">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+        </svg>
+        Generate API Key
+      </h4>
+
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={keyName}
+          onChange={(e) => setKeyName(e.target.value)}
+          placeholder="Key name (e.g. my-app)"
+          maxLength={100}
+          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !loading) handleGenerate();
+          }}
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={loading || !keyName.trim()}
+          className="px-5 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:from-indigo-500 hover:to-violet-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Generating..." : "Generate"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {generatedKey && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium text-emerald-300">
+              Key created — save it now, it won&apos;t be shown again
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-sm font-mono text-zinc-200 bg-zinc-900 px-3 py-2 rounded-lg break-all">
+              {generatedKey.key}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="px-3 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors shrink-0"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Code Example Tabs ---
+
+function CodeExamples({ curl, js, python }: { curl: string; js: string; python: string }) {
+  const [tab, setTab] = useState<"curl" | "js" | "python">("curl");
+  const code = tab === "curl" ? curl : tab === "js" ? js : python;
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-2">
+        {(["curl", "js", "python"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              tab === t
+                ? "bg-indigo-600 text-white"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+            }`}
+          >
+            {t === "curl" ? "cURL" : t === "js" ? "JavaScript" : "Python"}
+          </button>
+        ))}
+      </div>
+      <pre className="overflow-x-auto rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm font-mono text-zinc-300 leading-relaxed">
+        {code}
+      </pre>
     </div>
   );
 }
@@ -753,11 +898,245 @@ export default function DocsPage() {
           </EndpointSection>
         </div>
 
+        {/* ─── API Keys (v1) ─── */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold text-zinc-100 mb-2">API Keys</h2>
+          <p className="text-zinc-400 mb-6">
+            Generate an API key to access the v1 endpoints programmatically.
+            All <code className="text-indigo-400/80">/api/v1/*</code> routes require a
+            valid API key passed as a <code className="text-indigo-400/80">Bearer</code> token.
+            Rate limited to 60 requests/minute per key.
+          </p>
+
+          <ApiKeyGenerator />
+        </div>
+
+        {/* v1 Endpoints */}
+        <div className="mt-10 space-y-4">
+          <h3 className="text-lg font-semibold text-zinc-200 mb-4">v1 Endpoints</h3>
+
+          {/* POST /api/v1/generate */}
+          <EndpointSection
+            method="POST"
+            path="/api/v1/generate"
+            title="Generate animation (authenticated)"
+          >
+            <p className="text-sm text-zinc-400">
+              Generate a Lottie animation from a text prompt. Requires API key authentication.
+            </p>
+
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                Request
+              </h4>
+              <JsonHighlight
+                code={JSON.stringify(
+                  {
+                    prompt: "bouncing red ball",
+                    width: 512,
+                    height: 512,
+                  },
+                  null,
+                  2
+                )}
+              />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                Response
+              </h4>
+              <JsonHighlight
+                code={JSON.stringify(
+                  {
+                    id: "a1b2c3d4-...",
+                    lottieJson: { "...": "Lottie JSON" },
+                    description: "A red ball bouncing with squash and stretch",
+                  },
+                  null,
+                  2
+                )}
+              />
+            </div>
+
+            <CodeExamples
+              curl={`curl -X POST ${baseUrl}/api/v1/generate \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"prompt": "bouncing red ball", "width": 512, "height": 512}'`}
+              js={`const res = await fetch("${baseUrl}/api/v1/generate", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    prompt: "bouncing red ball",
+    width: 512,
+    height: 512,
+  }),
+});
+const data = await res.json();
+console.log(data.lottieJson);`}
+              python={`import requests
+
+res = requests.post(
+    "${baseUrl}/api/v1/generate",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+    json={"prompt": "bouncing red ball", "width": 512, "height": 512},
+)
+data = res.json()
+print(data["lottieJson"])`}
+            />
+          </EndpointSection>
+
+          {/* GET /api/v1/animations/:id */}
+          <EndpointSection
+            method="GET"
+            path="/api/v1/animations/{id}"
+            title="Get animation by ID"
+          >
+            <p className="text-sm text-zinc-400">
+              Retrieve an animation by its ID, including the Lottie JSON data.
+            </p>
+
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                Response
+              </h4>
+              <JsonHighlight
+                code={JSON.stringify(
+                  {
+                    id: "a1b2c3d4-...",
+                    name: "Bouncing Ball",
+                    lottieJson: { "...": "Lottie JSON" },
+                    created_at: "2025-01-15 08:30:00",
+                  },
+                  null,
+                  2
+                )}
+              />
+            </div>
+
+            <CodeExamples
+              curl={`curl ${baseUrl}/api/v1/animations/ANIMATION_ID \\
+  -H "Authorization: Bearer YOUR_API_KEY"`}
+              js={`const res = await fetch("${baseUrl}/api/v1/animations/ANIMATION_ID", {
+  headers: { "Authorization": "Bearer YOUR_API_KEY" },
+});
+const data = await res.json();
+console.log(data.name, data.lottieJson);`}
+              python={`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/animations/ANIMATION_ID",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+)
+data = res.json()
+print(data["name"], data["lottieJson"])`}
+            />
+          </EndpointSection>
+
+          {/* GET /api/v1/templates */}
+          <EndpointSection
+            method="GET"
+            path="/api/v1/templates"
+            title="List templates"
+          >
+            <p className="text-sm text-zinc-400">
+              List all available animation templates.
+            </p>
+
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                Response
+              </h4>
+              <JsonHighlight
+                code={JSON.stringify(
+                  {
+                    templates: [
+                      { id: "bouncing-ball", name: "Bouncing Ball", description: "Classic bounce...", category: "Motion" },
+                    ],
+                  },
+                  null,
+                  2
+                )}
+              />
+            </div>
+
+            <CodeExamples
+              curl={`curl ${baseUrl}/api/v1/templates \\
+  -H "Authorization: Bearer YOUR_API_KEY"`}
+              js={`const res = await fetch("${baseUrl}/api/v1/templates", {
+  headers: { "Authorization": "Bearer YOUR_API_KEY" },
+});
+const { templates } = await res.json();
+console.log(templates);`}
+              python={`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/templates",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+)
+templates = res.json()["templates"]
+print(templates)`}
+            />
+          </EndpointSection>
+
+          {/* GET /api/v1/templates/:id */}
+          <EndpointSection
+            method="GET"
+            path="/api/v1/templates/{id}"
+            title="Get template with JSON"
+          >
+            <p className="text-sm text-zinc-400">
+              Get a specific template including its full Lottie JSON data.
+            </p>
+
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">
+                Response
+              </h4>
+              <JsonHighlight
+                code={JSON.stringify(
+                  {
+                    id: "bouncing-ball",
+                    name: "Bouncing Ball",
+                    description: "Classic bounce with squash & stretch",
+                    category: "Motion",
+                    lottieJson: { "...": "Lottie JSON" },
+                  },
+                  null,
+                  2
+                )}
+              />
+            </div>
+
+            <CodeExamples
+              curl={`curl ${baseUrl}/api/v1/templates/bouncing-ball \\
+  -H "Authorization: Bearer YOUR_API_KEY"`}
+              js={`const res = await fetch("${baseUrl}/api/v1/templates/bouncing-ball", {
+  headers: { "Authorization": "Bearer YOUR_API_KEY" },
+});
+const template = await res.json();
+console.log(template.lottieJson);`}
+              python={`import requests
+
+res = requests.get(
+    "${baseUrl}/api/v1/templates/bouncing-ball",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+)
+template = res.json()
+print(template["lottieJson"])`}
+            />
+          </EndpointSection>
+        </div>
+
         {/* Footer note */}
         <div className="mt-12 pt-8 border-t border-zinc-800">
           <p className="text-sm text-zinc-500 text-center">
-            All endpoints return JSON. No authentication is required.
-            Animations are publicly accessible once created.
+            Public endpoints require no authentication.
+            v1 API endpoints require an API key.
           </p>
         </div>
       </main>
