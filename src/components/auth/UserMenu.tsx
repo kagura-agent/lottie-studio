@@ -80,11 +80,18 @@ export default function UserMenu() {
             )}
           </div>
           <Link
-            href="/?mine=true"
+            href="/profile"
             className="block px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
             onClick={() => setShowDropdown(false)}
           >
             {t("myAnimations")}
+          </Link>
+          <Link
+            href="/profile#settings"
+            className="block px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+            onClick={() => setShowDropdown(false)}
+          >
+            {t("settings")}
           </Link>
           <button
             onClick={async () => {
