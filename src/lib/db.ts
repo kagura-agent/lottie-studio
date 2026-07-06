@@ -413,6 +413,40 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_sequences_creator ON sequences(creator_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_sequence_items_sequence ON sequence_items(sequence_id, position)`);
 
+// --- Users & Sessions (Auth) ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT,
+    avatar_url TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    token TEXT UNIQUE NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`);
+
+// Migration: add user_id column to animations for authenticated ownership
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN user_id TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
 // --- API Keys ---
 
 db.exec(`

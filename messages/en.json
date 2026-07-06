@@ -523,5 +523,24 @@
     "tryAgain": "Try Again",
     "backToGallery": "Back to Gallery",
     "createNew": "Create New"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Optional display name",
+    "myAnimations": "My Animations",
+    "signInToSave": "Sign in to save your animations",
+    "signingIn": "Signing in...",
+    "signingUp": "Signing up...",
+    "invalidEmail": "Invalid email address",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "emailTaken": "Email already in use",
+    "wrongCredentials": "Invalid email or password",
+    "genericError": "Something went wrong. Please try again.",
+    "rateLimited": "Too many attempts. Please try again later."
   }
 }

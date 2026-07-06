@@ -10,6 +10,8 @@ import HeroWelcome from "@/components/HeroWelcome";
 import QuickGenerate from "@/components/QuickGenerate";
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import CollectionSidebar from "@/components/CollectionSidebar";
+import UserMenu from "@/components/auth/UserMenu";
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { parseLottieFile } from "@/lib/importLottie";
 
@@ -57,10 +59,12 @@ export default function GalleryPage() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [collectionAnimationIds, setCollectionAnimationIds] = useState<string[] | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [showMine, setShowMine] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
   const router = useRouter();
   const t = useTranslations();
+  const { user } = useAuth();
 
   const handleHeroDismiss = useCallback(() => {
     localStorage.setItem("lottie-hero-dismissed", "true");
@@ -124,9 +128,10 @@ export default function GalleryPage() {
   }, []);
 
   useEffect(() => {
+    const animUrl = showMine ? "/api/animations?mine=true" : "/api/animations";
     Promise.all([
-      fetch("/api/animations")
-        .then((res) => res.json())
+      fetch(animUrl)
+        .then((res) => res.ok ? res.json() : [])
         .catch(() => []),
       fetch("/templates/index.json")
         .then((res) => res.json())
@@ -137,7 +142,7 @@ export default function GalleryPage() {
         setTemplates(templateData);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [showMine]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -335,6 +340,7 @@ export default function GalleryPage() {
                 aria-label="Import Lottie file"
               />
               <LanguageSwitcher />
+              <UserMenu />
               {selectedCollectionId && (
                 <button
                   onClick={handleExportCollection}
@@ -479,10 +485,22 @@ export default function GalleryPage() {
             {templates.length > 0 && (
               <div className="border-t border-zinc-800 my-8" />
             )}
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-medium text-zinc-200">
-                {t('gallery.yourAnimations')}
+                {showMine ? t('auth.myAnimations') : t('gallery.yourAnimations')}
               </h2>
+              {user && (
+                <button
+                  onClick={() => { setShowMine((v) => !v); setLoading(true); }}
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                    showMine
+                      ? "border-violet-500 bg-violet-600/20 text-violet-300"
+                      : "border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  }`}
+                >
+                  {showMine ? t('gallery.yourAnimations') : t('auth.myAnimations')}
+                </button>
+              )}
             </div>
             {/* Search and Sort Controls */}
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
