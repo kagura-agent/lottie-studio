@@ -18,6 +18,18 @@ interface Animation {
   duration_seconds: number | null;
 }
 
+interface FavoriteAnimation {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  frame_count: number | null;
+  duration_seconds: number | null;
+  like_count: number;
+  view_count: number;
+  liked_at: string;
+}
+
 interface ProfileData {
   user: {
     id: string;
@@ -144,6 +156,14 @@ export default function ProfilePage() {
   const [sort, setSort] = useState<SortOption>("recent");
   const [loadingAnimations, setLoadingAnimations] = useState(true);
 
+  // Favorites tab
+  const [activeTab, setActiveTab] = useState<"animations" | "favorites">("animations");
+  const [favoriteAnimations, setFavoriteAnimations] = useState<FavoriteAnimation[]>([]);
+  const [favoritesTotal, setFavoritesTotal] = useState(0);
+  const [favoritesPage, setFavoritesPage] = useState(1);
+  const [favoritesTotalPages, setFavoritesTotalPages] = useState(1);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
   // Display name editing
   const [editingName, setEditingName] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState("");
@@ -191,9 +211,29 @@ export default function ProfilePage() {
       .finally(() => setLoadingAnimations(false));
   }, [page, sort]);
 
+  const fetchFavorites = useCallback(() => {
+    if (!user) return;
+    setLoadingFavorites(true);
+    fetch(`/api/users/${user.id}/favorites?page=${favoritesPage}&limit=24`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setFavoriteAnimations(data.animations);
+          setFavoritesTotal(data.total);
+          setFavoritesTotalPages(data.totalPages);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingFavorites(false));
+  }, [user, favoritesPage]);
+
   useEffect(() => {
     if (user) fetchAnimations();
   }, [user, fetchAnimations]);
+
+  useEffect(() => {
+    if (user && activeTab === "favorites") fetchFavorites();
+  }, [user, activeTab, fetchFavorites]);
 
   useEffect(() => {
     if (window.location.hash === "#settings" && settingsRef.current) {
@@ -334,91 +374,203 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* My Animations */}
+        {/* Tabs */}
         <section className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-zinc-100">
-              {t("myAnimations")}
-            </h2>
-            <select
-              value={sort}
-              onChange={(e) => {
-                setSort(e.target.value as SortOption);
-                setPage(1);
-              }}
-              className="bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm rounded-lg px-3 py-1.5 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
+          <div className="flex items-center gap-6 border-b border-zinc-800 mb-4">
+            <button
+              onClick={() => setActiveTab("animations")}
+              className={`pb-3 text-sm font-medium transition-colors relative ${
+                activeTab === "animations"
+                  ? "text-white"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
             >
-              <option value="recent">{t("sortRecent")}</option>
-              <option value="oldest">{t("sortOldest")}</option>
-              <option value="name">{t("sortName")}</option>
-            </select>
+              {t("myAnimations")}
+              {activeTab === "animations" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("favorites")}
+              className={`pb-3 text-sm font-medium transition-colors relative flex items-center gap-1.5 ${
+                activeTab === "favorites"
+                  ? "text-white"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={activeTab === "favorites" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-500">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+              </svg>
+              Favorites
+              {favoritesTotal > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-zinc-800 text-zinc-400 text-xs rounded-full leading-none">
+                  {favoritesTotal}
+                </span>
+              )}
+              {activeTab === "favorites" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500" />
+              )}
+            </button>
+            {activeTab === "animations" && (
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as SortOption);
+                  setPage(1);
+                }}
+                className="ml-auto mb-3 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm rounded-lg px-3 py-1.5 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
+              >
+                <option value="recent">{t("sortRecent")}</option>
+                <option value="oldest">{t("sortOldest")}</option>
+                <option value="name">{t("sortName")}</option>
+              </select>
+            )}
           </div>
 
-          {loadingAnimations ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden"
-                >
-                  <div className="aspect-square bg-zinc-800 animate-pulse" />
-                  <div className="p-4 space-y-2">
-                    <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4" />
-                    <div className="h-3 bg-zinc-800 rounded animate-pulse w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : animations.length === 0 ? (
-            <div className="text-center py-16 border border-zinc-800 rounded-xl bg-zinc-900/50">
-              <div className="text-zinc-500 text-4xl mb-4">✨</div>
-              <h3 className="text-lg font-medium text-zinc-300 mb-2">
-                {t("noAnimationsYet")}
-              </h3>
-              <p className="text-sm text-zinc-500 mb-6">
-                {t("noAnimationsDescription")}
-              </p>
-              <Link
-                href="/editor/new"
-                className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                {t("createFirstAnimation")}
-              </Link>
-            </div>
-          ) : (
+          {activeTab === "animations" && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {animations.map((anim) => (
-                  <ProfileAnimationCard
-                    key={anim.id}
-                    id={anim.id}
-                    name={anim.name}
-                    frameCount={anim.frame_count}
-                    durationSeconds={anim.duration_seconds}
-                  />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-8">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    ←
-                  </button>
-                  <span className="text-sm text-zinc-400">
-                    {page} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    →
-                  </button>
+              {loadingAnimations ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden"
+                    >
+                      <div className="aspect-square bg-zinc-800 animate-pulse" />
+                      <div className="p-4 space-y-2">
+                        <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-zinc-800 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : animations.length === 0 ? (
+                <div className="text-center py-16 border border-zinc-800 rounded-xl bg-zinc-900/50">
+                  <div className="text-zinc-500 text-4xl mb-4">✨</div>
+                  <h3 className="text-lg font-medium text-zinc-300 mb-2">
+                    {t("noAnimationsYet")}
+                  </h3>
+                  <p className="text-sm text-zinc-500 mb-6">
+                    {t("noAnimationsDescription")}
+                  </p>
+                  <Link
+                    href="/editor/new"
+                    className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {t("createFirstAnimation")}
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {animations.map((anim) => (
+                      <ProfileAnimationCard
+                        key={anim.id}
+                        id={anim.id}
+                        name={anim.name}
+                        frameCount={anim.frame_count}
+                        durationSeconds={anim.duration_seconds}
+                      />
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        ←
+                      </button>
+                      <span className="text-sm text-zinc-400">
+                        {page} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {activeTab === "favorites" && (
+            <>
+              {loadingFavorites ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden"
+                    >
+                      <div className="aspect-square bg-zinc-800 animate-pulse" />
+                      <div className="p-4 space-y-2">
+                        <div className="h-4 bg-zinc-800 rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-zinc-800 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : favoriteAnimations.length === 0 ? (
+                <div className="text-center py-16 border border-zinc-800 rounded-xl bg-zinc-900/50">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12 mx-auto text-zinc-500 mb-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-zinc-300 mb-2">
+                    No favorites yet
+                  </h3>
+                  <p className="text-sm text-zinc-500 mb-6">
+                    Animations you like will appear here.
+                  </p>
+                  <Link
+                    href="/explore"
+                    className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Explore animations
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {favoriteAnimations.map((anim) => (
+                      <ProfileAnimationCard
+                        key={anim.id}
+                        id={anim.id}
+                        name={anim.name}
+                        frameCount={anim.frame_count}
+                        durationSeconds={anim.duration_seconds}
+                      />
+                    ))}
+                  </div>
+
+                  {favoritesTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                      <button
+                        onClick={() => setFavoritesPage((p) => Math.max(1, p - 1))}
+                        disabled={favoritesPage === 1}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        ←
+                      </button>
+                      <span className="text-sm text-zinc-400">
+                        {favoritesPage} / {favoritesTotalPages}
+                      </span>
+                      <button
+                        onClick={() => setFavoritesPage((p) => Math.min(favoritesTotalPages, p + 1))}
+                        disabled={favoritesPage === favoritesTotalPages}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
