@@ -440,6 +440,21 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`);
 
+// --- OAuth Accounts ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS oauth_accounts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    provider TEXT NOT NULL,
+    provider_account_id TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(provider, provider_account_id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_oauth_user ON oauth_accounts(user_id)`);
+
 // Migration: add user_id column to animations for authenticated ownership
 try {
   db.exec(`ALTER TABLE animations ADD COLUMN user_id TEXT`);
