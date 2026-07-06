@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -150,7 +150,6 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [animations, setAnimations] = useState<Animation[]>([]);
-  const [totalAnimations, setTotalAnimations] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sort, setSort] = useState<SortOption>("recent");
@@ -196,44 +195,44 @@ export default function ProfilePage() {
       .catch(() => {});
   }, [user]);
 
-  const fetchAnimations = useCallback(() => {
-    setLoadingAnimations(true);
-    fetch(`/api/user/animations?page=${page}&limit=24&sort=${sort}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingAnimations(true);
+      try {
+        const res = await fetch(`/api/user/animations?page=${page}&limit=24&sort=${sort}`);
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled && data) {
           setAnimations(data.animations);
-          setTotalAnimations(data.total);
           setTotalPages(data.totalPages);
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingAnimations(false));
-  }, [page, sort]);
+      } catch {}
+      if (!cancelled) setLoadingAnimations(false);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [user, page, sort]);
 
-  const fetchFavorites = useCallback(() => {
-    if (!user) return;
-    setLoadingFavorites(true);
-    fetch(`/api/users/${user.id}/favorites?page=${favoritesPage}&limit=24`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
+  useEffect(() => {
+    if (!user || activeTab !== "favorites") return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingFavorites(true);
+      try {
+        const res = await fetch(`/api/users/${user.id}/favorites?page=${favoritesPage}&limit=24`);
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled && data) {
           setFavoriteAnimations(data.animations);
           setFavoritesTotal(data.total);
           setFavoritesTotalPages(data.totalPages);
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingFavorites(false));
-  }, [user, favoritesPage]);
-
-  useEffect(() => {
-    if (user) fetchAnimations();
-  }, [user, fetchAnimations]);
-
-  useEffect(() => {
-    if (user && activeTab === "favorites") fetchFavorites();
-  }, [user, activeTab, fetchFavorites]);
+      } catch {}
+      if (!cancelled) setLoadingFavorites(false);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [user, activeTab, favoritesPage]);
 
   useEffect(() => {
     if (window.location.hash === "#settings" && settingsRef.current) {
@@ -313,12 +312,6 @@ export default function ProfilePage() {
   const initials = (profile.user.display_name || profile.user.email)
     .slice(0, 2)
     .toUpperCase();
-
-  const hasPassword = !profile.providers.length || profile.providers.length < 1 || true;
-  const isOAuthOnly =
-    profile.providers.length > 0 &&
-    !profile.user.display_name &&
-    profile.animationCount === 0;
 
   return (
     <div className="min-h-screen bg-zinc-950">
