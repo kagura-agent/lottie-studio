@@ -541,6 +541,9 @@
     "emailTaken": "Email already in use",
     "wrongCredentials": "Invalid email or password",
     "genericError": "Something went wrong. Please try again.",
-    "rateLimited": "Too many attempts. Please try again later."
+    "rateLimited": "Too many attempts. Please try again later.",
+    "continueWithGithub": "Continue with GitHub",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or"
   }
 }

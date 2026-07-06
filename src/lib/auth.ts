@@ -100,3 +100,89 @@ export function findUserByEmail(email: string): UserRow | null {
 }
 
 export const SESSION_MAX_AGE_SECONDS = SESSION_DURATION_DAYS * 24 * 60 * 60;
+
+// --- OAuth ---
+
+const OAUTH_PASSWORD_PLACEHOLDER = "";
+
+interface OAuthAccount {
+  id: string;
+  user_id: string;
+  provider: string;
+  provider_account_id: string;
+  created_at: string;
+}
+
+export function findOAuthAccount(
+  provider: string,
+  providerAccountId: string
+): OAuthAccount | null {
+  const row = db
+    .prepare(
+      "SELECT * FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?"
+    )
+    .get(provider, providerAccountId) as OAuthAccount | undefined;
+  return row ?? null;
+}
+
+export function linkOAuthAccount(
+  userId: string,
+  provider: string,
+  providerAccountId: string
+): void {
+  const id = crypto.randomUUID();
+  db.prepare(
+    "INSERT OR IGNORE INTO oauth_accounts (id, user_id, provider, provider_account_id) VALUES (?, ?, ?, ?)"
+  ).run(id, userId, provider, providerAccountId);
+}
+
+export function findOrCreateOAuthUser(
+  provider: string,
+  providerAccountId: string,
+  email: string,
+  displayName: string | null,
+  avatarUrl: string | null
+): AuthUser {
+  const existing = findOAuthAccount(provider, providerAccountId);
+  if (existing) {
+    const user = db
+      .prepare(
+        "SELECT id, email, display_name, avatar_url, created_at FROM users WHERE id = ?"
+      )
+      .get(existing.user_id) as AuthUser | undefined;
+    if (user) return user;
+  }
+
+  const existingUser = findUserByEmail(email);
+  if (existingUser) {
+    linkOAuthAccount(existingUser.id, provider, providerAccountId);
+    if (avatarUrl && !existingUser.avatar_url) {
+      db.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").run(
+        avatarUrl,
+        existingUser.id
+      );
+    }
+    return {
+      id: existingUser.id,
+      email: existingUser.email,
+      display_name: existingUser.display_name,
+      avatar_url: avatarUrl || existingUser.avatar_url,
+      created_at: existingUser.created_at,
+    };
+  }
+
+  const user = createUser(
+    email,
+    OAUTH_PASSWORD_PLACEHOLDER,
+    displayName || undefined
+  );
+  if (avatarUrl) {
+    db.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").run(
+      avatarUrl,
+      user.id
+    );
+    user.avatar_url = avatarUrl;
+  }
+  linkOAuthAccount(user.id, provider, providerAccountId);
+  return user;
+}
