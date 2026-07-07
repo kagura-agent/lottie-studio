@@ -13,7 +13,6 @@ export default function FollowButton({ userId, className = "" }: FollowButtonPro
   const { user } = useAuth();
   const router = useRouter();
   const [following, setFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -23,7 +22,6 @@ export default function FollowButton({ userId, className = "" }: FollowButtonPro
       .then((data) => {
         if (data) {
           setFollowing(data.following);
-          setFollowerCount(data.followerCount);
         }
         setLoaded(true);
       })
@@ -42,21 +40,17 @@ export default function FollowButton({ userId, className = "" }: FollowButtonPro
 
     const wasFollowing = following;
     setFollowing(!wasFollowing);
-    setFollowerCount((c) => (wasFollowing ? Math.max(0, c - 1) : c + 1));
 
     try {
       const res = await fetch(`/api/users/${userId}/follow`, { method: "POST" });
       if (!res.ok) {
         setFollowing(wasFollowing);
-        setFollowerCount((c) => (wasFollowing ? c + 1 : Math.max(0, c - 1)));
         return;
       }
       const data = await res.json();
       setFollowing(data.following);
-      setFollowerCount(data.followerCount);
     } catch {
       setFollowing(wasFollowing);
-      setFollowerCount((c) => (wasFollowing ? c + 1 : Math.max(0, c - 1)));
     }
   };
 

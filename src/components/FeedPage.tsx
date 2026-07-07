@@ -74,8 +74,31 @@ export default function FeedPage() {
   );
 
   useEffect(() => {
-    if (user) fetchFeed(1);
-  }, [user, fetchFeed]);
+    if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/feed?page=1&limit=24");
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setAnimations(data.animations);
+          setPage(1);
+          setTotalPages(data.totalPages);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     if (!sentinelRef.current) return;
