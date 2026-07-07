@@ -160,7 +160,7 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Public API with keys (generate animations programmatically)
 - [x] Server-side animation thumbnails (render actual animation frames for OG cards)
 - [x] Advanced LLM features (/critique, /polish, /style with free-form descriptions)
-- [ ] Plugin system (community-contributed animation effects)
+- [x] Plugin system (community-contributed animation effects)
 - [x] Analytics dashboard (views, popular animations, usage patterns)
 - [ ] Monetization foundation (premium templates, API tiers)
 
