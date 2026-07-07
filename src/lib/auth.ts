@@ -11,6 +11,8 @@ export interface AuthUser {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  follower_count: number;
+  following_count: number;
 }
 
 interface SessionRow {
@@ -64,7 +66,7 @@ export function validateSession(token: string): AuthUser | null {
 
   const user = db
     .prepare(
-      "SELECT id, email, display_name, avatar_url, created_at FROM users WHERE id = ?"
+      "SELECT id, email, display_name, avatar_url, created_at, COALESCE(follower_count, 0) as follower_count, COALESCE(following_count, 0) as following_count FROM users WHERE id = ?"
     )
     .get(session.user_id) as AuthUser | undefined;
 
@@ -87,7 +89,7 @@ export function createUser(
 
   return db
     .prepare(
-      "SELECT id, email, display_name, avatar_url, created_at FROM users WHERE id = ?"
+      "SELECT id, email, display_name, avatar_url, created_at, COALESCE(follower_count, 0) as follower_count, COALESCE(following_count, 0) as following_count FROM users WHERE id = ?"
     )
     .get(id) as AuthUser;
 }
@@ -147,7 +149,7 @@ export function findOrCreateOAuthUser(
   if (existing) {
     const user = db
       .prepare(
-        "SELECT id, email, display_name, avatar_url, created_at FROM users WHERE id = ?"
+        "SELECT id, email, display_name, avatar_url, created_at, COALESCE(follower_count, 0) as follower_count, COALESCE(following_count, 0) as following_count FROM users WHERE id = ?"
       )
       .get(existing.user_id) as AuthUser | undefined;
     if (user) return user;
@@ -168,6 +170,8 @@ export function findOrCreateOAuthUser(
       display_name: existingUser.display_name,
       avatar_url: avatarUrl || existingUser.avatar_url,
       created_at: existingUser.created_at,
+      follower_count: existingUser.follower_count ?? 0,
+      following_count: existingUser.following_count ?? 0,
     };
   }
 

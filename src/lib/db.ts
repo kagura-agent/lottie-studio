@@ -512,6 +512,35 @@ try {
   // Column already exists — ignore
 }
 
+// --- Follows ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS follows (
+    id TEXT PRIMARY KEY,
+    follower_id TEXT NOT NULL,
+    following_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (follower_id) REFERENCES users(id),
+    FOREIGN KEY (following_id) REFERENCES users(id),
+    UNIQUE(follower_id, following_id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)`);
+
+// Migration: add follower_count and following_count to users
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN follower_count INTEGER DEFAULT 0`);
+} catch {
+  // Column already exists — ignore
+}
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN following_count INTEGER DEFAULT 0`);
+} catch {
+  // Column already exists — ignore
+}
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;

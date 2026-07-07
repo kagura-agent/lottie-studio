@@ -12,6 +12,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
 import CommentsSection from "./CommentsSection";
+import FollowButton from "./FollowButton";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -263,7 +264,7 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
   );
 }
 
-export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName }: ShareViewProps) {
+export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName, creatorId }: ShareViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
@@ -464,6 +465,9 @@ export default function ShareView({ id, name, description, animationData, messag
             </svg>
             {creatorName}
           </span>
+        )}
+        {creatorId && (
+          <FollowButton userId={creatorId} />
         )}
         <span className="text-zinc-500 text-sm flex items-center gap-1 shrink-0" title={`${viewCount} views`}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
