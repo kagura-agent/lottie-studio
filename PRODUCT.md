@@ -154,7 +154,7 @@ User: "make a pink sakura petal falling and spinning"
 
 ### Phase 4: Growth & Depth (planned)
 - [x] User accounts (save personal galleries, attribution, preferences)
-- [ ] Social features (comments, likes, follows, activity feed)
+- [x] Social features (comments, likes, follows, activity feed)
 - [x] Animation sequences/storyboards (data model, API, /sequence chat commands)
 - [ ] Collaborative editing (real-time multi-user sessions)
 - [x] Public API with keys (generate animations programmatically)
