@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createHash } from "node:crypto";
 
 // --- Pure helper functions extracted from analytics logic ---
 
@@ -25,6 +26,10 @@ function shouldSkipSelfView(
 ): boolean {
   if (!viewerId) return false;
   return viewerId === animationOwnerId;
+}
+
+function hashIp(ip: string): string {
+  return `anon:${createHash("sha256").update(ip).digest("hex")}`;
 }
 
 function isDuplicateView(
@@ -175,8 +180,21 @@ describe("View tracking: deduplication", () => {
     expect(isDuplicateView(views, "anim-2", "user-1", today)).toBe(false);
   });
 
-  it("does not deduplicate anonymous views", () => {
-    expect(isDuplicateView(views, "anim-1", null, today)).toBe(false);
+  it("deduplicates anonymous views with same hashed IP", () => {
+    const anonId = hashIp("192.168.1.1");
+    const viewsWithAnon: ViewRecord[] = [
+      { id: 1, animation_id: "anim-1", viewer_id: anonId, created_at: "2025-06-15T10:00:00Z" },
+    ];
+    expect(isDuplicateView(viewsWithAnon, "anim-1", anonId, today)).toBe(true);
+  });
+
+  it("does not deduplicate anonymous views from different IPs", () => {
+    const anonId1 = hashIp("192.168.1.1");
+    const anonId2 = hashIp("10.0.0.1");
+    const viewsWithAnon: ViewRecord[] = [
+      { id: 1, animation_id: "anim-1", viewer_id: anonId1, created_at: "2025-06-15T10:00:00Z" },
+    ];
+    expect(isDuplicateView(viewsWithAnon, "anim-1", anonId2, today)).toBe(false);
   });
 });
 
@@ -213,15 +231,26 @@ describe("View tracking: recordView integration", () => {
     expect(result.views).toHaveLength(2);
   });
 
-  it("records anonymous view", () => {
-    const result = recordView([], "anim-1", null, "user-1", "2025-06-15");
+  it("records anonymous view with hashed IP", () => {
+    const anonId = hashIp("192.168.1.1");
+    const result = recordView([], "anim-1", anonId, "user-1", "2025-06-15");
     expect(result.recorded).toBe(true);
-    expect(result.views[0].viewer_id).toBeNull();
+    expect(result.views[0].viewer_id).toBe(anonId);
   });
 
-  it("records multiple anonymous views same day", () => {
-    const r1 = recordView([], "anim-1", null, "user-1", "2025-06-15");
-    const r2 = recordView(r1.views, "anim-1", null, "user-1", "2025-06-15");
+  it("deduplicates same anonymous viewer same day", () => {
+    const anonId = hashIp("192.168.1.1");
+    const r1 = recordView([], "anim-1", anonId, "user-1", "2025-06-15");
+    const r2 = recordView(r1.views, "anim-1", anonId, "user-1", "2025-06-15");
+    expect(r2.recorded).toBe(false);
+    expect(r2.views).toHaveLength(1);
+  });
+
+  it("records views from different anonymous IPs same day", () => {
+    const anonId1 = hashIp("192.168.1.1");
+    const anonId2 = hashIp("10.0.0.1");
+    const r1 = recordView([], "anim-1", anonId1, "user-1", "2025-06-15");
+    const r2 = recordView(r1.views, "anim-1", anonId2, "user-1", "2025-06-15");
     expect(r2.recorded).toBe(true);
     expect(r2.views).toHaveLength(2);
   });

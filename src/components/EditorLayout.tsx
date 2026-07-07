@@ -229,6 +229,11 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     return () => { cancelled = true; };
   }, [currentId]);
 
+  useEffect(() => {
+    if (!currentId || !shareChat) return;
+    fetch(`/api/animations/${currentId}/view`, { method: "POST" }).catch(() => {});
+  }, [currentId, shareChat]);
+
   // Callback for ChatPanel when a new animation is created (blank-canvas flow)
   const handleAnimationCreated = useCallback(async (newId: string, newData?: object) => {
     setCurrentId(newId);
