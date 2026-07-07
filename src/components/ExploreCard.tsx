@@ -29,6 +29,7 @@ interface ExploreCardProps {
     remix_count?: number;
     remixed_from?: string | null;
     remixed_from_name?: string | null;
+    comment_count?: number;
   };
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
@@ -348,6 +349,14 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           {(animation.remix_count ?? 0) > 0 && (
             <span title={t('explore.remixCount', { count: animation.remix_count! })}>
               {"🔀 "}{animation.remix_count}
+            </span>
+          )}
+          {(animation.comment_count ?? 0) > 0 && (
+            <span className="flex items-center gap-0.5" title={`${animation.comment_count} comments`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+              </svg>
+              {animation.comment_count}
             </span>
           )}
           <button

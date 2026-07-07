@@ -89,6 +89,7 @@ export async function GET(request: Request) {
     remixed_from: string | null;
     remix_count: number;
     remixed_from_name: string | null;
+    comment_count: number;
   }[] = [];
 
   // Use FTS5 when a search query is provided
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count, animations.creator_id,
+          `SELECT animations.id, animations.name, animations.description, animations.created_at, animations.frame_count, animations.tags, COALESCE(animations.view_count, 0) as view_count, COALESCE(animations.like_count, 0) as like_count, COALESCE(animations.comment_count, 0) as comment_count, animations.creator_id,
            (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt,
            animations.remixed_from,
            (SELECT COUNT(*) FROM animations a2 WHERE a2.remixed_from = animations.id) as remix_count,
@@ -142,7 +143,7 @@ export async function GET(request: Request) {
 
       rows = db
         .prepare(
-          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id,
+          `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, COALESCE(comment_count, 0) as comment_count, creator_id,
            (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt,
            animations.remixed_from,
            (SELECT COUNT(*) FROM animations a2 WHERE a2.remixed_from = animations.id) as remix_count,
@@ -167,7 +168,7 @@ export async function GET(request: Request) {
 
     rows = db
       .prepare(
-        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, creator_id,
+        `SELECT id, name, description, created_at, frame_count, tags, COALESCE(view_count, 0) as view_count, COALESCE(like_count, 0) as like_count, COALESCE(comment_count, 0) as comment_count, creator_id,
          (SELECT m.content FROM messages m WHERE m.animation_id = animations.id AND m.role = 'user' ORDER BY m.created_at ASC LIMIT 1) as creation_prompt,
          animations.remixed_from,
          (SELECT COUNT(*) FROM animations a2 WHERE a2.remixed_from = animations.id) as remix_count,
