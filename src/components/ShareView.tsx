@@ -11,6 +11,7 @@ import { exportDotLottie } from "@/lib/dotlottieExporter";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
+import CommentsSection from "./CommentsSection";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -610,6 +611,7 @@ export default function ShareView({ id, name, description, animationData, messag
         {messages && messages.length > 0 && (
           <ChatHistory messages={messages} />
         )}
+        <CommentsSection animationId={id} />
       </div>
 
       {showEmbed && <EmbedModal id={id} onClose={() => setShowEmbed(false)} />}
