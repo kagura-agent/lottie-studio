@@ -63,9 +63,9 @@ export async function PATCH(request: Request) {
 
     const updated = db
       .prepare(
-        "SELECT id, email, display_name, avatar_url, created_at FROM users WHERE id = ?"
+        "SELECT id, email, display_name, avatar_url, created_at, COALESCE(follower_count, 0) as follower_count, COALESCE(following_count, 0) as following_count FROM users WHERE id = ?"
       )
-      .get(user.id) as { id: string; email: string; display_name: string | null; avatar_url: string | null; created_at: string };
+      .get(user.id) as { id: string; email: string; display_name: string | null; avatar_url: string | null; created_at: string; follower_count: number; following_count: number };
 
     return Response.json({ user: updated });
   } catch (e) {

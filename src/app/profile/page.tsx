@@ -37,6 +37,8 @@ interface ProfileData {
     display_name: string | null;
     avatar_url: string | null;
     created_at: string;
+    follower_count: number;
+    following_count: number;
   };
   animationCount: number;
   providers: string[];
@@ -357,6 +359,12 @@ export default function ProfilePage() {
             <div className="mt-2 flex items-center gap-4 text-sm text-zinc-500">
               <span>
                 {t("animationCount", { count: profile.animationCount })}
+              </span>
+              <span>
+                {profile.user.follower_count ?? 0} followers
+              </span>
+              <span>
+                {profile.user.following_count ?? 0} following
               </span>
               <span>
                 {t("memberSince", {
