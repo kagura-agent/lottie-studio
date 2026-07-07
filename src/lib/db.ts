@@ -855,4 +855,36 @@ export function reorderSequenceItems(sequenceId: string, itemIds: string[]): voi
   db.prepare("UPDATE sequences SET updated_at = datetime('now') WHERE id = ?").run(sequenceId);
 }
 
+// --- Collaborations ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collaborations (
+    id TEXT PRIMARY KEY,
+    animation_id TEXT NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    permission TEXT NOT NULL CHECK (permission IN ('edit', 'view')),
+    created_by TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (animation_id) REFERENCES animations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_collaborations_animation ON collaborations(animation_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_collaborations_token ON collaborations(token)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS collaboration_members (
+    id TEXT PRIMARY KEY,
+    collaboration_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    joined_at TEXT DEFAULT (datetime('now')),
+    last_seen_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(collaboration_id, user_id)
+  )
+`);
+
 export { db, ANIMATIONS_DIR };
