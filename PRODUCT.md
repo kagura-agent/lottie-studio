@@ -161,7 +161,7 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Server-side animation thumbnails (render actual animation frames for OG cards)
 - [x] Advanced LLM features (/critique, /polish, /style with free-form descriptions)
 - [ ] Plugin system (community-contributed animation effects)
-- [ ] Analytics dashboard (views, popular animations, usage patterns)
+- [x] Analytics dashboard (views, popular animations, usage patterns)
 - [ ] Monetization foundation (premium templates, API tiers)
 
 ## LLM Integration Design
