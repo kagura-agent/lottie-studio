@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-middleware";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,8 @@ export async function POST(
   db.prepare("INSERT INTO follows (id, follower_id, following_id) VALUES (?, ?, ?)").run(followId, user.id, id);
   db.prepare("UPDATE users SET follower_count = COALESCE(follower_count, 0) + 1 WHERE id = ?").run(id);
   db.prepare("UPDATE users SET following_count = COALESCE(following_count, 0) + 1 WHERE id = ?").run(user.id);
+
+  createNotification({ userId: id, type: "follow", actorId: user.id });
 
   const updated = db
     .prepare("SELECT COALESCE(follower_count, 0) as follower_count FROM users WHERE id = ?")

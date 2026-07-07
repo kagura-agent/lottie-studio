@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-middleware";
 import crypto from "node:crypto";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,14 @@ export async function POST(
   db.prepare(
     "UPDATE animations SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?"
   ).run(id);
+
+  const owner = db
+    .prepare("SELECT creator_id, user_id FROM animations WHERE id = ?")
+    .get(id) as { creator_id: string | null; user_id: string | null } | undefined;
+  const ownerId = owner?.user_id || owner?.creator_id;
+  if (ownerId) {
+    createNotification({ userId: ownerId, type: "comment", actorId: user.id, animationId: id, commentId });
+  }
 
   return Response.json({
     id: commentId,

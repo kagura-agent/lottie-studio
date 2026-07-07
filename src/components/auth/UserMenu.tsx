@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "./AuthModal";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function UserMenu() {
   const t = useTranslations("auth");
@@ -48,7 +49,9 @@ export default function UserMenu() {
     .toUpperCase();
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="flex items-center gap-1">
+      <NotificationBell />
+      <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown((v) => !v)}
         className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 transition-colors"
@@ -111,6 +114,7 @@ export default function UserMenu() {
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 }

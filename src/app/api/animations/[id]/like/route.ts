@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { extractIp } from "@/lib/rateLimit";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,14 @@ export async function POST(
     // Like — insert and increment count
     db.prepare("INSERT INTO likes (animation_id, user_id, ip) VALUES (?, ?, '')").run(id, user.id);
     db.prepare("UPDATE animations SET like_count = COALESCE(like_count, 0) + 1 WHERE id = ?").run(id);
+
+    const owner = db
+      .prepare("SELECT creator_id, user_id FROM animations WHERE id = ?")
+      .get(id) as { creator_id: string | null; user_id: string | null } | undefined;
+    const ownerId = owner?.user_id || owner?.creator_id;
+    if (ownerId) {
+      createNotification({ userId: ownerId, type: "like", actorId: user.id, animationId: id });
+    }
 
     const updated = db
       .prepare("SELECT COALESCE(like_count, 0) as like_count FROM animations WHERE id = ?")
