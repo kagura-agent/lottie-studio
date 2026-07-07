@@ -887,4 +887,43 @@ db.exec(`
   )
 `);
 
+// --- Plugins ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS plugins (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    description TEXT DEFAULT '',
+    version TEXT DEFAULT '1.0.0',
+    author_id TEXT NOT NULL,
+    code TEXT NOT NULL,
+    config_schema TEXT DEFAULT '{}',
+    category TEXT NOT NULL CHECK (category IN ('transition', 'effect', 'generator', 'modifier', 'utility')),
+    downloads INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (author_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_plugins_slug ON plugins(slug)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_plugins_author ON plugins(author_id)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS plugin_installs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    plugin_id TEXT NOT NULL,
+    installed_at TEXT DEFAULT (datetime('now')),
+    enabled INTEGER DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (plugin_id) REFERENCES plugins(id) ON DELETE CASCADE,
+    UNIQUE(user_id, plugin_id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_plugin_installs_user ON plugin_installs(user_id)`);
+
 export { db, ANIMATIONS_DIR };

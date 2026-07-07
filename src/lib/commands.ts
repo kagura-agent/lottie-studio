@@ -98,6 +98,9 @@ export type Command =
   | { type: "critique" }
   | { type: "polish" }
   | { type: "help" }
+  | { type: "plugins_list" }
+  | { type: "plugin_install"; slug: string }
+  | { type: "plugin_remove"; slug: string }
   | { type: "error"; message: string };
 
 export function parseCommand(input: string): Command | null {
@@ -496,6 +499,29 @@ export function parseCommand(input: string): Command | null {
     case "commands":
     case "?":
       return { type: "help" };
+
+    case "plugins":
+      return { type: "plugins_list" };
+
+    case "plugin": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /plugin install <slug> | /plugin remove <slug>" };
+      }
+      const sub = args[0].toLowerCase();
+      if (sub === "install") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /plugin install <slug>" };
+        }
+        return { type: "plugin_install", slug: args[1] };
+      }
+      if (sub === "remove" || sub === "uninstall") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /plugin remove <slug>" };
+        }
+        return { type: "plugin_remove", slug: args[1] };
+      }
+      return { type: "error", message: `Unknown plugin subcommand "${sub}". Use install or remove.` };
+    }
 
     default:
       return null;
