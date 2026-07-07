@@ -8,7 +8,7 @@ const CATEGORIES = ["transition", "effect", "generator", "modifier", "utility"];
 
 export default function PluginCreator() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("effect");
@@ -23,7 +23,7 @@ export default function PluginCreator() {
     e.preventDefault();
 
     if (!user) {
-      showToast("Please log in to publish plugins", "error");
+      toast({ message: "Please log in to publish plugins", type: "error" });
       return;
     }
 
@@ -31,7 +31,7 @@ export default function PluginCreator() {
     try {
       parsedSchema = JSON.parse(configSchema);
     } catch {
-      showToast("Invalid config schema JSON", "error");
+      toast({ message: "Invalid config schema JSON", type: "error" });
       return;
     }
 
@@ -51,14 +51,14 @@ export default function PluginCreator() {
       });
 
       if (res.ok) {
-        showToast("Plugin published successfully!", "success");
+        toast({ message: "Plugin published successfully!", type: "success" });
         setName("");
         setDescription("");
         setCode(`function transform(animation, config) {\n  // Modify and return the animation JSON\n  return animation;\n}`);
         setConfigSchema("{}");
       } else {
         const data = await res.json();
-        showToast(data.error || "Failed to publish plugin", "error");
+        toast({ message: data.error || "Failed to publish plugin", type: "error" });
       }
     } finally {
       setSubmitting(false);

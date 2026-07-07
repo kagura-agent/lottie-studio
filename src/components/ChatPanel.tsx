@@ -1059,7 +1059,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setInput("");
 
       // Build feedback message based on command type
-      let feedback: string;
+      let feedback: string = "";
       switch (command.type) {
         case "play": feedback = "\u25b6\ufe0f Playing"; break;
         case "pause": feedback = "\u23f8\ufe0f Paused"; break;

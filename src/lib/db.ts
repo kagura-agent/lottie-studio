@@ -926,4 +926,55 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_plugin_installs_user ON plugin_installs(user_id)`);
 
+// --- Monetization: Template Tiers ---
+
+try {
+  db.exec(`ALTER TABLE animations ADD COLUMN template_tier TEXT DEFAULT 'free'`);
+} catch {
+  // Column already exists — ignore
+}
+
+// --- Monetization: User API Tiers ---
+
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN api_tier TEXT DEFAULT 'free'`);
+} catch {
+  // Column already exists — ignore
+}
+
+// --- Monetization: API Usage Tracking ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_usage (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+    tokens_used INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_api_usage_user_timestamp ON api_usage(user_id, timestamp)`);
+
+// --- Monetization: Subscriptions (Stripe-ready skeleton) ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    status TEXT DEFAULT 'active',
+    current_period_start TEXT,
+    current_period_end TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id)`);
+
 export { db, ANIMATIONS_DIR };
