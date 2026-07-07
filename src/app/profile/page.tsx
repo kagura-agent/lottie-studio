@@ -18,6 +18,28 @@ interface Animation {
   duration_seconds: number | null;
 }
 
+interface AnalyticsOverview {
+  totalViews: number;
+  totalAnimations: number;
+  totalLikes: number;
+  totalComments: number;
+  totalFollowers: number;
+}
+
+interface TopAnimation {
+  id: string;
+  name: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at: string;
+}
+
+interface ViewDataPoint {
+  date: string;
+  count: number;
+}
+
 interface FavoriteAnimation {
   id: string;
   name: string;
@@ -158,12 +180,19 @@ export default function ProfilePage() {
   const [loadingAnimations, setLoadingAnimations] = useState(true);
 
   // Favorites tab
-  const [activeTab, setActiveTab] = useState<"animations" | "favorites">("animations");
+  const [activeTab, setActiveTab] = useState<"animations" | "favorites" | "analytics">("animations");
   const [favoriteAnimations, setFavoriteAnimations] = useState<FavoriteAnimation[]>([]);
   const [favoritesTotal, setFavoritesTotal] = useState(0);
   const [favoritesPage, setFavoritesPage] = useState(1);
   const [favoritesTotalPages, setFavoritesTotalPages] = useState(1);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  // Analytics tab
+  const [analyticsOverview, setAnalyticsOverview] = useState<AnalyticsOverview | null>(null);
+  const [topAnimations, setTopAnimations] = useState<TopAnimation[]>([]);
+  const [viewsData, setViewsData] = useState<ViewDataPoint[]>([]);
+  const [viewsPeriod, setViewsPeriod] = useState<"7d" | "30d">("7d");
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
   // Display name editing
   const [editingName, setEditingName] = useState(false);
@@ -235,6 +264,34 @@ export default function ProfilePage() {
     load();
     return () => { cancelled = true; };
   }, [user, activeTab, favoritesPage]);
+
+  useEffect(() => {
+    if (!user || activeTab !== "analytics") return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingAnalytics(true);
+      try {
+        const [overviewRes, animsRes, viewsRes] = await Promise.all([
+          fetch("/api/analytics/overview"),
+          fetch("/api/analytics/animations?limit=10"),
+          fetch(`/api/analytics/views?period=${viewsPeriod}`),
+        ]);
+        if (cancelled) return;
+        if (overviewRes.ok) setAnalyticsOverview(await overviewRes.json());
+        if (animsRes.ok) {
+          const data = await animsRes.json();
+          setTopAnimations(data.animations);
+        }
+        if (viewsRes.ok) {
+          const data = await viewsRes.json();
+          setViewsData(data.views);
+        }
+      } catch {}
+      if (!cancelled) setLoadingAnalytics(false);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [user, activeTab, viewsPeriod]);
 
   useEffect(() => {
     if (window.location.hash === "#settings" && settingsRef.current) {
@@ -412,6 +469,22 @@ export default function ProfilePage() {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("analytics")}
+              className={`pb-3 text-sm font-medium transition-colors relative flex items-center gap-1.5 ${
+                activeTab === "analytics"
+                  ? "text-white"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+              </svg>
+              Analytics
+              {activeTab === "analytics" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500" />
+              )}
+            </button>
             {activeTab === "animations" && (
               <select
                 value={sort}
@@ -572,6 +645,175 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </>
+              )}
+            </>
+          )}
+
+          {activeTab === "analytics" && (
+            <>
+              {loadingAnalytics ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                        <div className="h-4 bg-zinc-800 rounded animate-pulse w-1/2 mb-2" />
+                        <div className="h-8 bg-zinc-800 rounded animate-pulse w-3/4" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-48 bg-zinc-900 border border-zinc-800 rounded-xl animate-pulse" />
+                </div>
+              ) : !analyticsOverview || analyticsOverview.totalAnimations === 0 ? (
+                <div className="text-center py-16 border border-zinc-800 rounded-xl bg-zinc-900/50">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12 mx-auto text-zinc-500 mb-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-zinc-300 mb-2">
+                    No analytics yet
+                  </h3>
+                  <p className="text-sm text-zinc-500 mb-6">
+                    Create and share animations to see analytics here.
+                  </p>
+                  <Link
+                    href="/editor/new"
+                    className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Create an animation
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Overview cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {[
+                      { label: "Total Views", value: analyticsOverview.totalViews },
+                      { label: "Animations", value: analyticsOverview.totalAnimations },
+                      { label: "Likes", value: analyticsOverview.totalLikes },
+                      { label: "Comments", value: analyticsOverview.totalComments },
+                      { label: "Followers", value: analyticsOverview.totalFollowers },
+                    ].map((card) => (
+                      <div
+                        key={card.label}
+                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4"
+                      >
+                        <div className="text-xs text-zinc-500 mb-1">{card.label}</div>
+                        <div className="text-2xl font-bold text-white">
+                          {card.value.toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Views chart */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-medium text-zinc-300">Views over time</h3>
+                      <div className="flex gap-1 bg-zinc-800 rounded-lg p-0.5">
+                        {(["7d", "30d"] as const).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => setViewsPeriod(p)}
+                            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                              viewsPeriod === p
+                                ? "bg-violet-600 text-white"
+                                : "text-zinc-400 hover:text-zinc-200"
+                            }`}
+                          >
+                            {p === "7d" ? "7 days" : "30 days"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {viewsData.length === 0 ? (
+                      <div className="h-32 flex items-center justify-center text-sm text-zinc-500">
+                        No view data for this period
+                      </div>
+                    ) : (
+                      <div className="h-40">
+                        {(() => {
+                          const maxCount = Math.max(...viewsData.map((d) => d.count), 1);
+                          return (
+                            <div className="flex items-end gap-1 h-full">
+                              {viewsData.map((d) => {
+                                const pct = (d.count / maxCount) * 100;
+                                return (
+                                  <div
+                                    key={d.date}
+                                    className="flex-1 flex flex-col items-center gap-1 min-w-0"
+                                  >
+                                    <span className="text-[10px] text-zinc-500">
+                                      {d.count}
+                                    </span>
+                                    <div
+                                      className="w-full bg-violet-600 rounded-t-sm transition-all"
+                                      style={{
+                                        height: `${Math.max(pct, 2)}%`,
+                                        minHeight: "2px",
+                                      }}
+                                    />
+                                    <span className="text-[10px] text-zinc-600 truncate w-full text-center">
+                                      {new Date(d.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top animations table */}
+                  {topAnimations.length > 0 && (
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                      <div className="px-6 py-4 border-b border-zinc-800">
+                        <h3 className="text-sm font-medium text-zinc-300">Top animations</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-800 text-zinc-500 text-xs">
+                              <th className="text-left px-6 py-3 font-medium">#</th>
+                              <th className="text-left px-6 py-3 font-medium">Name</th>
+                              <th className="text-right px-6 py-3 font-medium">Views</th>
+                              <th className="text-right px-6 py-3 font-medium">Likes</th>
+                              <th className="text-right px-6 py-3 font-medium">Comments</th>
+                              <th className="text-right px-6 py-3 font-medium">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topAnimations.map((anim, idx) => (
+                              <tr
+                                key={anim.id}
+                                className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                                onClick={() => router.push(`/editor/${anim.id}`)}
+                              >
+                                <td className="px-6 py-3 text-zinc-500">{idx + 1}</td>
+                                <td className="px-6 py-3 text-zinc-200 font-medium truncate max-w-[200px]">
+                                  {anim.name}
+                                </td>
+                                <td className="px-6 py-3 text-right text-zinc-300">
+                                  {(anim.view_count ?? 0).toLocaleString()}
+                                </td>
+                                <td className="px-6 py-3 text-right text-zinc-300">
+                                  {(anim.like_count ?? 0).toLocaleString()}
+                                </td>
+                                <td className="px-6 py-3 text-right text-zinc-300">
+                                  {(anim.comment_count ?? 0).toLocaleString()}
+                                </td>
+                                <td className="px-6 py-3 text-right text-zinc-500">
+                                  {new Date(anim.created_at).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}

@@ -560,6 +560,21 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at DESC)`);
 
+// --- Animation Views (per-viewer-per-day deduplication) ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS animation_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    animation_id TEXT NOT NULL,
+    viewer_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (animation_id) REFERENCES animations(id) ON DELETE CASCADE
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_animation_views_anim_date ON animation_views(animation_id, created_at)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_animation_views_viewer ON animation_views(animation_id, viewer_id, created_at)`);
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;

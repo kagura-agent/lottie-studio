@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 interface NotificationItem {
@@ -56,23 +56,28 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications/unread-count");
-      if (res.ok) {
-        const data = await res.json();
-        setUnreadCount(data.count);
-      }
-    } catch {
-      // Silently fail
-    }
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchUnreadCount() {
+      try {
+        const res = await fetch("/api/notifications/unread-count");
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setUnreadCount(data.count);
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
