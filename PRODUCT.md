@@ -153,11 +153,11 @@ User: "make a pink sakura petal falling and spinning"
 - [x] SEO: sitemap, robots.txt, OG metadata, JSON-LD
 
 ### Phase 4: Growth & Depth (planned)
-- [ ] User accounts (save personal galleries, attribution, preferences)
+- [x] User accounts (save personal galleries, attribution, preferences)
 - [ ] Social features (comments, likes, follows, activity feed)
 - [x] Animation sequences/storyboards (data model, API, /sequence chat commands)
 - [ ] Collaborative editing (real-time multi-user sessions)
-- [ ] Public API with keys (generate animations programmatically)
+- [x] Public API with keys (generate animations programmatically)
 - [x] Server-side animation thumbnails (render actual animation frames for OG cards)
 - [x] Advanced LLM features (/critique, /polish, /style with free-form descriptions)
 - [ ] Plugin system (community-contributed animation effects)

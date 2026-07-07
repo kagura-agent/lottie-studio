@@ -124,7 +124,7 @@ try {
   // Column already exists — ignore
 }
 
-// Likes table for IP-based deduplication
+// Likes table for IP-based deduplication (legacy)
 db.exec(`
   CREATE TABLE IF NOT EXISTS likes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,6 +134,16 @@ db.exec(`
     UNIQUE(animation_id, ip)
   )
 `);
+
+// Migration: add user_id column to likes for authenticated user likes
+try {
+  db.exec(`ALTER TABLE likes ADD COLUMN user_id TEXT`);
+} catch {
+  // Column already exists — ignore
+}
+
+// Migration: unique index on (user_id, animation_id) for user-based likes
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_likes_user_animation ON likes(user_id, animation_id) WHERE user_id IS NOT NULL`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS versions (

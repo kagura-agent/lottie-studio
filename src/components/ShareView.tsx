@@ -10,6 +10,7 @@ import FullscreenPreview from "./FullscreenPreview";
 import { exportDotLottie } from "@/lib/dotlottieExporter";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { LoopConfig } from "@/types/loopConfig";
 
 const BASE_URL = "https://lottie.kagura-agent.com";
@@ -266,6 +267,7 @@ export default function ShareView({ id, name, description, animationData, messag
   const searchParams = useSearchParams();
   const t = useTranslations();
   const { toast } = useToast();
+  const { user } = useAuth();
   const isEmbed = searchParams.get("embed") === "true";
   const prefersReducedMotion = useReducedMotion();
   const [isPlaying, setIsPlaying] = useState(true);
@@ -279,14 +281,9 @@ export default function ShareView({ id, name, description, animationData, messag
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
-  const [liked, setLiked] = useState(() => {
-    if (typeof window !== "undefined") {
-      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
-      return likedIds.includes(id);
-    }
-    return false;
-  });
+  const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeAnimating, setLikeAnimating] = useState(false);
   const supportsNativeShare = useSyncExternalStore(
     () => () => {},
     () => typeof navigator !== "undefined" && typeof navigator.share === "function",
@@ -334,7 +331,7 @@ export default function ShareView({ id, name, description, animationData, messag
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data) {
-          setLikeCount(data.like_count);
+          setLikeCount(data.likeCount);
           if (data.liked) setLiked(true);
         }
       })
@@ -342,24 +339,32 @@ export default function ShareView({ id, name, description, animationData, messag
   }, [id]);
 
   const handleLike = useCallback(async () => {
-    if (liked) return;
-    setLiked(true);
-    setLikeCount((c) => c + 1);
-    const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
-    if (!likedIds.includes(id)) {
-      likedIds.push(id);
-      localStorage.setItem("likedAnimations", JSON.stringify(likedIds));
+    if (!user) {
+      router.push("/login");
+      return;
     }
+
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
+    setLikeAnimating(true);
+    setTimeout(() => setLikeAnimating(false), 300);
+
     try {
       const res = await fetch(`/api/animations/${id}/like`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        setLikeCount(data.like_count);
+        setLiked(data.liked);
+        setLikeCount(data.likeCount);
+      } else {
+        setLiked(wasLiked);
+        setLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
       }
     } catch {
-      // Keep optimistic UI state
+      setLiked(wasLiked);
+      setLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
     }
-  }, [id, liked]);
+  }, [id, liked, user, router]);
 
   // Close download dropdown on outside click
   useEffect(() => {
@@ -468,7 +473,7 @@ export default function ShareView({ id, name, description, animationData, messag
         </span>
         <button
           onClick={handleLike}
-          className={`flex items-center gap-1 text-sm shrink-0 transition-colors ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"}`}
+          className={`flex items-center gap-1 text-sm shrink-0 transition-all duration-200 ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"} ${likeAnimating ? "scale-125" : "scale-100"}`}
           aria-label={liked ? t('explore.liked') : t('explore.like')}
           title={liked ? t('explore.liked') : t('explore.like')}
         >

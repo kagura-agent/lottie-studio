@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 function truncatePrompt(text: string, maxLen: number = 80): string {
   if (text.length <= maxLen) return text;
@@ -46,22 +47,30 @@ function formatViewCount(count: number): string {
 
 export default function ExploreCard({ animation, isFavorite, onToggleFavorite, isOwnAnimation }: ExploreCardProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const lottieContainerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
   const [hovering, setHovering] = useState(false);
   const [animLoaded, setAnimLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [remixing, setRemixing] = useState(false);
-  const [liked, setLiked] = useState(() => {
-    if (typeof window !== "undefined") {
-      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
-      return likedIds.includes(animation.id);
-    }
-    return false;
-  });
+  const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(animation.like_count ?? 0);
+  const [likeAnimating, setLikeAnimating] = useState(false);
   const t = useTranslations();
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetch(`/api/animations/${animation.id}/like`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) {
+          setLiked(data.liked);
+          setLikeCount(data.likeCount);
+        }
+      })
+      .catch(() => {});
+  }, [animation.id]);
 
   useEffect(() => {
     if (!hovering || !lottieContainerRef.current) return;
@@ -161,25 +170,34 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (liked) return;
-      setLiked(true);
-      setLikeCount((c) => c + 1);
-      const likedIds = JSON.parse(localStorage.getItem("likedAnimations") || "[]");
-      if (!likedIds.includes(animation.id)) {
-        likedIds.push(animation.id);
-        localStorage.setItem("likedAnimations", JSON.stringify(likedIds));
+
+      if (!user) {
+        router.push("/login");
+        return;
       }
+
+      const wasLiked = liked;
+      setLiked(!wasLiked);
+      setLikeCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
+      setLikeAnimating(true);
+      setTimeout(() => setLikeAnimating(false), 300);
+
       try {
         const res = await fetch(`/api/animations/${animation.id}/like`, { method: "POST" });
         if (res.ok) {
           const data = await res.json();
-          setLikeCount(data.like_count);
+          setLiked(data.liked);
+          setLikeCount(data.likeCount);
+        } else {
+          setLiked(wasLiked);
+          setLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
         }
       } catch {
-        // Keep optimistic UI state
+        setLiked(wasLiked);
+        setLikeCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
       }
     },
-    [animation.id, liked]
+    [animation.id, liked, user, router]
   );
 
   const frames =
@@ -335,7 +353,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
           <button
             onClick={handleLike}
             aria-label={liked ? t('explore.liked') : t('explore.like')}
-            className={`ml-auto flex items-center gap-1 transition-colors ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"}`}
+            className={`ml-auto flex items-center gap-1 transition-all duration-200 ${liked ? "text-red-500" : "text-zinc-500 hover:text-red-400"} ${likeAnimating ? "scale-125" : "scale-100"}`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -343,7 +361,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
               fill={liked ? "currentColor" : "none"}
               stroke="currentColor"
               strokeWidth={2}
-              className="w-3.5 h-3.5"
+              className="w-3.5 h-3.5 transition-all duration-200"
             >
               <path
                 strokeLinecap="round"
