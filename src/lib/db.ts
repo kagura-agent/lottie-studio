@@ -541,6 +541,25 @@ try {
   // Column already exists — ignore
 }
 
+// --- Notifications ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('follow', 'comment', 'like')),
+    actor_id TEXT NOT NULL,
+    animation_id TEXT,
+    comment_id TEXT,
+    read INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (actor_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at DESC)`);
+
 // Populate FTS index on startup if empty but animations exist
 const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM animations_fts').get() as { count: number }).count;
 const animCount = (db.prepare('SELECT COUNT(*) as count FROM animations').get() as { count: number }).count;
