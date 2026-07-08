@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/contexts/ToastContext";
 import { convertLottieToCss, buildCssPreviewSrcdoc, type CssExportResult } from "@/lib/lottie-to-css";
-import lottie from "lottie-web";
 
 interface CodeSnippetsProps {
   animationId: string;
@@ -268,16 +267,21 @@ function CssTabContent({
   useEffect(() => {
     if (!showPreview || !animationData || !lottieContainerRef.current) return;
 
-    const anim = lottie.loadAnimation({
-      container: lottieContainerRef.current,
-      renderer: "svg",
-      loop: true,
-      autoplay: true,
-      animationData: animationData,
+    let anim: import("lottie-web").AnimationItem | null = null;
+    const container = lottieContainerRef.current;
+    import("lottie-web").then(({ default: lottie }) => {
+      if (!container) return;
+      anim = lottie.loadAnimation({
+        container,
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        animationData: animationData,
+      });
     });
 
     return () => {
-      anim.destroy();
+      anim?.destroy();
     };
   }, [showPreview, animationData]);
 

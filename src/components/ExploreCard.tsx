@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
@@ -78,24 +78,38 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
 
     let cancelled = false;
 
-    fetch(`/api/animations/${animation.id}`)
-      .then((res) => res.json())
-      .then((json) => {
+    const init = async () => {
+      try {
+        const res = await fetch(`/api/animations/${animation.id}`);
+        const json = await res.json();
+
         if (cancelled || !lottieContainerRef.current || !json.data) return;
+
         try {
-          animRef.current = lottie.loadAnimation({
+          animRef.current = await loadAnimation({
             container: lottieContainerRef.current,
             renderer: "svg",
             loop: true,
             autoplay: true,
             animationData: json.data,
           });
+
+          if (cancelled) {
+            animRef.current.destroy();
+            animRef.current = null;
+            return;
+          }
+
           setAnimLoaded(true);
         } catch {
           // Lottie load failed — keep showing thumbnail
         }
-      })
-      .catch(() => {});
+      } catch {
+        // fetch failed — keep showing thumbnail
+      }
+    };
+
+    init();
 
     return () => {
       cancelled = true;

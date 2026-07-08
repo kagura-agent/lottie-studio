@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 
 export type EmbedMode = "scroll" | "hover" | "click" | "cursor";
 
@@ -29,24 +29,38 @@ export default function EmbedPlayer({
 
   useEffect(() => {
     if (!containerRef.current) return;
+    let cancelled = false;
 
-    const anim = lottie.loadAnimation({
-      container: containerRef.current,
-      renderer: "svg",
-      loop,
-      autoplay,
-      animationData,
-    });
+    async function init() {
+      if (!containerRef.current) return;
+      const anim = await loadAnimation({
+        container: containerRef.current,
+        renderer: "svg",
+        loop,
+        autoplay,
+        animationData,
+      });
 
-    animRef.current = anim;
+      if (cancelled) {
+        anim.destroy();
+        return;
+      }
 
-    anim.addEventListener("complete", () => {
-      if (!loop) setIsPlaying(false);
-    });
+      animRef.current = anim;
+
+      anim.addEventListener("complete", () => {
+        if (!loop) setIsPlaying(false);
+      });
+    }
+
+    init();
 
     return () => {
-      anim.destroy();
-      animRef.current = null;
+      cancelled = true;
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
     };
   }, [animationData, loop, autoplay]);
 

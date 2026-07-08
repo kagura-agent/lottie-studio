@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import type { CanvasBackground } from "./BackgroundPicker";
 import type { LoopConfig } from "@/types/loopConfig";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -284,52 +284,66 @@ export default function LottiePreview({
     directionRef.current = 1;
     loopCountRef.current = 0;
 
+    let cancelled = false;
+
     const needsLoop = loopConfig.mode === "loop" || loopConfig.mode === "bounce";
 
-    try {
-      const anim = lottie.loadAnimation({
-        container: containerRef.current,
-        renderer: "svg",
-        loop: needsLoop,
-        autoplay: isPlaying && !prefersReducedMotion,
-        animationData,
-      });
+    const init = async () => {
+      try {
+        const anim = await loadAnimation({
+          container: containerRef.current!,
+          renderer: "svg",
+          loop: needsLoop,
+          autoplay: isPlaying && !prefersReducedMotion,
+          animationData,
+        });
 
-      anim.setSpeed(speed);
-      anim.setDirection(1);
-
-      anim.addEventListener("enterFrame", () => {
-        frameCallbackRef.current?.(
-          Math.floor(anim.currentFrame),
-          Math.floor(anim.totalFrames)
-        );
-      });
-
-      anim.addEventListener("loopComplete", () => {
-        const cfg = loopConfigRef.current;
-        if (cfg.mode === "bounce") {
-          directionRef.current = directionRef.current === 1 ? -1 : 1;
-          anim.setDirection(directionRef.current);
+        if (cancelled) {
+          anim.destroy();
+          return;
         }
-      });
 
-      anim.addEventListener("complete", () => {
-        const cfg = loopConfigRef.current;
-        if (cfg.mode === "count") {
-          loopCountRef.current++;
-          const target = cfg.count ?? 3;
-          if (loopCountRef.current < target) {
-            anim.goToAndPlay(0, true);
+        anim.setSpeed(speed);
+        anim.setDirection(1);
+
+        anim.addEventListener("enterFrame", () => {
+          frameCallbackRef.current?.(
+            Math.floor(anim.currentFrame),
+            Math.floor(anim.totalFrames)
+          );
+        });
+
+        anim.addEventListener("loopComplete", () => {
+          const cfg = loopConfigRef.current;
+          if (cfg.mode === "bounce") {
+            directionRef.current = directionRef.current === 1 ? -1 : 1;
+            anim.setDirection(directionRef.current);
           }
-        }
-      });
+        });
 
-      animRef.current = anim;
-    } catch {
-      // invalid animation data
-    }
+        anim.addEventListener("complete", () => {
+          const cfg = loopConfigRef.current;
+          if (cfg.mode === "count") {
+            loopCountRef.current++;
+            const target = cfg.count ?? 3;
+            if (loopCountRef.current < target) {
+              anim.goToAndPlay(0, true);
+            }
+          }
+        });
 
-    return destroyAnim;
+        animRef.current = anim;
+      } catch {
+        // invalid animation data
+      }
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+      destroyAnim();
+    };
     // Re-create animation when data changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animationData]);

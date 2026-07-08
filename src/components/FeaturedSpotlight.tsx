@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -46,15 +46,24 @@ export default function FeaturedSpotlight() {
 
     fetch(`/api/animations/${featured.id}`)
       .then((res) => res.json())
-      .then((json) => {
+      .then(async (json) => {
         if (cancelled || !containerRef.current || !json.data) return;
-        animRef.current = lottie.loadAnimation({
-          container: containerRef.current,
-          renderer: "canvas",
-          loop: true,
-          autoplay: true,
-          animationData: json.data,
-        });
+        try {
+          const anim = await loadAnimation({
+            container: containerRef.current,
+            renderer: "canvas",
+            loop: true,
+            autoplay: true,
+            animationData: json.data,
+          });
+          if (cancelled) {
+            anim.destroy();
+          } else {
+            animRef.current = anim;
+          }
+        } catch {
+          // ignore
+        }
       })
       .catch(() => {});
 
