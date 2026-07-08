@@ -6,8 +6,9 @@ import type { LoopConfig } from "@/types/loopConfig";
 import type { Command } from "@/lib/commands";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import LottiePreview from "./LottiePreview";
-import JsonEditor from "./JsonEditor";
+const JsonEditor = dynamic(() => import("./JsonEditor"), { ssr: false });
 import ChatPanel from "./ChatPanel";
 import LayerPanel from "./LayerPanel";
 import Controls from "./Controls";
@@ -22,7 +23,6 @@ import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./auth/UserMenu";
-import { captureAndUploadThumbnail } from "@/lib/captureThumbnail";
 import ErrorBoundary from "./ErrorBoundary";
 import VersionHistory from "./VersionHistory";
 import ShortcutsHelp from "./ShortcutsHelp";
@@ -270,8 +270,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
   // Capture and upload a thumbnail after animation is created or updated via chat
   const handleAnimationUpdated = useCallback((animId: string, data: object) => {
-    // Fire-and-forget: non-blocking, failures are silent
-    captureAndUploadThumbnail(animId, data);
+    import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
+      captureAndUploadThumbnail(animId, data);
+    });
   }, []);
 
   const applyHistoryState = useCallback((data: object) => {

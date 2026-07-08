@@ -3,11 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import lottie, { AnimationItem } from "lottie-web";
+import type { AnimationItem } from "lottie-web";
 import { apiFetch } from "@/lib/apiFetch";
-import { exportToGif } from "@/lib/gifExporter";
-import { exportToVideo, getVideoExtension } from "@/lib/videoExporter";
-import { exportToMp4, isMP4ExportSupported, formatFileSize } from "@/lib/mp4Exporter";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import VariationGrid, { type Variation } from "@/components/VariationGrid";
 
@@ -57,18 +54,23 @@ export default function QuickGenerate() {
       animRef.current.destroy();
       animRef.current = null;
     }
-    try {
-      animRef.current = lottie.loadAnimation({
-        container: containerRef.current,
-        renderer: "svg",
-        loop: !reducedMotion,
-        autoplay: !reducedMotion,
-        animationData,
-      });
-    } catch {
-      // invalid data
-    }
+    let cancelled = false;
+    import("lottie-web").then(({ default: lottie }) => {
+      if (cancelled || !containerRef.current) return;
+      try {
+        animRef.current = lottie.loadAnimation({
+          container: containerRef.current,
+          renderer: "svg",
+          loop: !reducedMotion,
+          autoplay: !reducedMotion,
+          animationData,
+        });
+      } catch {
+        // invalid data
+      }
+    });
     return () => {
+      cancelled = true;
       if (animRef.current) {
         animRef.current.destroy();
         animRef.current = null;
@@ -298,6 +300,7 @@ export default function QuickGenerate() {
     if (!animationData || gifProgress !== null) return;
     setGifProgress(0);
     try {
+      const { exportToGif } = await import("@/lib/gifExporter");
       const blob = await exportToGif({
         animationData,
         onProgress: (p) => setGifProgress(Math.round(p * 100)),
@@ -314,6 +317,7 @@ export default function QuickGenerate() {
     if (!animationData || webmProgress !== null) return;
     setWebmProgress(0);
     try {
+      const { exportToVideo, getVideoExtension } = await import("@/lib/videoExporter");
       const blob = await exportToVideo({
         animationData,
         onProgress: (p) => setWebmProgress(Math.round(p * 100)),
@@ -328,6 +332,7 @@ export default function QuickGenerate() {
 
   const handleExportMp4 = useCallback(async () => {
     if (!animationData || mp4Progress !== null) return;
+    const { exportToMp4, isMP4ExportSupported, formatFileSize } = await import("@/lib/mp4Exporter");
     if (!isMP4ExportSupported()) {
       showToast("MP4 export requires Chrome 94+ or Edge 94+");
       return;

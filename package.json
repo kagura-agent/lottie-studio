@@ -2,6 +2,7 @@
   "name": "lottie-studio",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": false,
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "next build && esbuild server.ts --bundle --platform=node --format=cjs --outfile=dist/server.js --external:next --external:better-sqlite3",
@@ -43,6 +44,7 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.10",
     "@tailwindcss/postcss": "^4",
     "@types/archiver": "^8.0.0",
     "@types/bcryptjs": "^2.4.6",
