@@ -402,7 +402,7 @@ export default function LottiePreview({
       ref={areaRef}
       role="img"
       aria-label={ariaLabel}
-      className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden ${bgProps.className} ${cursorStyle}`}
+      className={`preview-area relative flex items-center justify-center flex-1 rounded-lg overflow-hidden touch-manipulation ${bgProps.className} ${cursorStyle}`}
       style={bgProps.style}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

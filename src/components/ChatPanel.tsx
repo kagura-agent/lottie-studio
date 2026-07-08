@@ -1798,13 +1798,13 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
               </div>
             )}
             {msg.id === lastSuggestionMsgId && !isThinking && !isStreaming && msg.suggestions && (
-              <div className="flex justify-start mt-2 animate-[fadeIn_0.3s_ease-in]">
-                <div className="flex flex-wrap gap-2">
+              <div className="flex justify-start mt-2 animate-[fadeIn_0.3s_ease-in] -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="flex gap-2 overflow-x-auto md:flex-wrap scrollbar-hide pb-1">
                   {msg.suggestions.map((chip) => (
                     <button
                       key={chip}
                       onClick={() => handleSend(chip)}
-                      className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800/60 border border-zinc-600 border-l-indigo-500 border-l-2 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-full text-xs text-zinc-300 bg-zinc-800/60 border border-zinc-600 border-l-indigo-500 border-l-2 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white active:bg-indigo-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     >
                       <span className="mr-1 opacity-60">{"\u2192"}</span>
                       {chip}
@@ -1854,7 +1854,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       )}
 
       {/* Input area */}
-      <div ref={inputAreaRef} className={`shrink-0 border-t p-3 bg-zinc-900 relative transition-colors ${isDragOver ? 'border-indigo-500 bg-indigo-500/5' : 'border-zinc-800'}`} onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
+      <div ref={inputAreaRef} className={`shrink-0 border-t p-3 bg-zinc-900 relative transition-colors ${isDragOver ? 'border-indigo-500 bg-indigo-500/5' : 'border-zinc-800'}`} style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }} onPaste={handlePaste} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
         {/* Drag-over overlay */}
         {isDragOver && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-indigo-500/10 border-2 border-dashed border-indigo-500 rounded-lg pointer-events-none">
