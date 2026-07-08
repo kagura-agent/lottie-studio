@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import Link from "next/link";
 import { useTranslations } from 'next-intl';
 
@@ -25,29 +25,39 @@ function RelatedCard({ animation }: { animation: RelatedAnimation }) {
 
     let cancelled = false;
 
-    fetch(`/api/animations/${animation.id}/json`)
-      .then((res) => {
+    const init = async () => {
+      try {
+        const res = await fetch(`/api/animations/${animation.id}/json`);
         if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((json) => {
+        const json = await res.json();
+
         if (cancelled || !containerRef.current) return;
+
         try {
-          animRef.current = lottie.loadAnimation({
+          animRef.current = await loadAnimation({
             container: containerRef.current,
             renderer: "svg",
             loop: true,
             autoplay: true,
             animationData: json,
           });
+
+          if (cancelled) {
+            animRef.current.destroy();
+            animRef.current = null;
+            return;
+          }
+
           setLoaded(true);
         } catch {
           setError(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setError(true);
-      });
+      }
+    };
+
+    init();
 
     return () => {
       cancelled = true;

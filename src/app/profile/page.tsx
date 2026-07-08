@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import UserMenu from "@/components/auth/UserMenu";
@@ -90,12 +90,13 @@ function ProfileAnimationCard({
     if (!containerRef.current) return;
     let cancelled = false;
 
-    fetch(`/api/animations/${id}`)
-      .then((res) => res.json())
-      .then((json) => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/animations/${id}`);
+        const json = await res.json();
         if (cancelled || !containerRef.current || !json.data) return;
         try {
-          animRef.current = lottie.loadAnimation({
+          animRef.current = await loadAnimation({
             container: containerRef.current,
             renderer: "svg",
             loop: true,
@@ -106,10 +107,10 @@ function ProfileAnimationCard({
         } catch {
           setError(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setError(true);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;

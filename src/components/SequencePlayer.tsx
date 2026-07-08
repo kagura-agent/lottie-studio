@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 
 interface SequenceItem {
   animation_id: string;
@@ -107,7 +107,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
     }
   }, []);
 
-  const loadScene = useCallback((sceneIndex: number, slot: "A" | "B") => {
+  const loadScene = useCallback(async (sceneIndex: number, slot: "A" | "B"): Promise<AnimationItem | null> => {
     if (!sequenceData) return null;
     const item = sequenceData.items[sceneIndex];
     if (!item) return null;
@@ -122,7 +122,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
 
     const ref = slot === "A" ? animARef : animBRef;
     try {
-      ref.current = lottie.loadAnimation({
+      ref.current = await loadAnimation({
         container,
         renderer: "svg",
         loop: false,
@@ -207,7 +207,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
         // Loop back to start
         setTransitioning(true);
         const nextSlot = activeSlot.current === "A" ? "B" : "A";
-        const anim = loadScene(0, nextSlot);
+        const anim = await loadScene(0, nextSlot);
 
         const item = sequenceData.items[0];
         await applyTransition(
@@ -230,7 +230,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
 
     setTransitioning(true);
     const nextSlot = activeSlot.current === "A" ? "B" : "A";
-    const anim = loadScene(nextIndex, nextSlot);
+    const anim = await loadScene(nextIndex, nextSlot);
 
     const nextItem = sequenceData.items[nextIndex];
     await applyTransition(
@@ -260,7 +260,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
   }, [currentScene, isPlaying, advanceScene]);
 
   // Start playback: load first scene
-  const handlePlay = useCallback(() => {
+  const handlePlay = useCallback(async () => {
     if (!sequenceData || sequenceData.items.length === 0) return;
 
     const currentAnim = activeSlot.current === "A" ? animARef.current : animBRef.current;
@@ -271,7 +271,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
     }
 
     // Load first scene
-    const anim = loadScene(currentScene, activeSlot.current);
+    const anim = await loadScene(currentScene, activeSlot.current);
     const container = activeSlot.current === "A" ? containerARef.current : containerBRef.current;
     if (container) {
       container.style.opacity = "1";
@@ -289,7 +289,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
     setIsPlaying(false);
   }, []);
 
-  const handleRestart = useCallback(() => {
+  const handleRestart = useCallback(async () => {
     destroyAnim("A");
     destroyAnim("B");
     activeSlot.current = "A";
@@ -308,7 +308,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
 
     // Auto-play from start
     if (sequenceData && sequenceData.items.length > 0) {
-      const anim = loadScene(0, "A");
+      const anim = await loadScene(0, "A");
       if (anim) {
         anim.play();
         setIsPlaying(true);
@@ -323,13 +323,13 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
     }
   }, [sequenceData, advanceScene]);
 
-  const handlePrevScene = useCallback(() => {
+  const handlePrevScene = useCallback(async () => {
     if (!sequenceData || currentScene <= 0) return;
 
     const prevIndex = currentScene - 1;
     destroyAnim(activeSlot.current);
 
-    const anim = loadScene(prevIndex, activeSlot.current);
+    const anim = await loadScene(prevIndex, activeSlot.current);
     const container = activeSlot.current === "A" ? containerARef.current : containerBRef.current;
     if (container) {
       container.style.opacity = "1";
@@ -339,12 +339,12 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
     if (anim && isPlaying) anim.play();
   }, [sequenceData, currentScene, isPlaying, loadScene, destroyAnim]);
 
-  const goToScene = useCallback((index: number) => {
+  const goToScene = useCallback(async (index: number) => {
     if (!sequenceData || index < 0 || index >= sequenceData.items.length) return;
     if (index === currentScene) return;
 
     destroyAnim(activeSlot.current);
-    const anim = loadScene(index, activeSlot.current);
+    const anim = await loadScene(index, activeSlot.current);
     const container = activeSlot.current === "A" ? containerARef.current : containerBRef.current;
     if (container) {
       container.style.opacity = "1";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
 import { useTranslations } from 'next-intl';
@@ -38,22 +38,27 @@ export default function TemplateCard({
 
     fetch(`/templates/${file}`)
       .then((res) => res.json())
-      .then((json) => {
+      .then(async (json) => {
         if (cancelled || !containerRef.current) return;
 
         animDataRef.current = json;
 
         try {
-          animRef.current = lottie.loadAnimation({
+          const anim = await loadAnimation({
             container: containerRef.current,
             renderer: "svg",
             loop: true,
             autoplay: true,
             animationData: json,
           });
-          setLoaded(true);
+          if (cancelled) {
+            anim.destroy();
+          } else {
+            animRef.current = anim;
+            setLoaded(true);
+          }
         } catch {
-          setError(true);
+          if (!cancelled) setError(true);
         }
       })
       .catch(() => {

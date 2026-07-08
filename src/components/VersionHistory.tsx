@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { useTranslations } from 'next-intl';
 
 interface Version {
@@ -96,19 +96,19 @@ function VersionPreview({
       }
     }
 
-    function mountAnimation(animationData: object) {
+    async function mountAnimation(animationData: object) {
       if (!containerRef.current || cancelled) return;
       try {
-        animInstanceRef.current = lottie.loadAnimation({
+        animInstanceRef.current = await loadAnimation({
           container: containerRef.current,
           renderer: "svg",
           loop: true,
           autoplay: true,
           animationData,
         });
-        setStatus("loaded");
+        if (!cancelled) setStatus("loaded");
       } catch {
-        setStatus("error");
+        if (!cancelled) setStatus("error");
       }
     }
 

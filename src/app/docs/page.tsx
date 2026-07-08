@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTranslations } from 'next-intl';
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 // --- Types ---
@@ -157,7 +157,7 @@ function TryItPanel() {
 
       if (data.success && data.animation && previewRef.current) {
         previewRef.current.innerHTML = "";
-        animRef.current = lottie.loadAnimation({
+        animRef.current = await loadAnimation({
           container: previewRef.current,
           animationData: data.animation,
           renderer: "svg",

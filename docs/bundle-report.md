@@ -14,7 +14,7 @@
 | Client JS chunks | 38 |
 
 Top 5 chunks (baseline):
-- 732K — lottie-web + codemirror bundle (statically imported by editor)
+- 732K — lottie-web + codemirror bundle (statically imported by editor and all preview components)
 - 300K — shared framework/page chunk
 - 228K — shared framework/page chunk
 - 176K — component chunk
@@ -33,30 +33,53 @@ Top 5 chunks (baseline):
 - **QuickGenerate lottie-web**: Converted from static `import lottie from "lottie-web"` to dynamic `import("lottie-web")` inside the render effect.
 - **CodeSnippets lottie-web**: Converted from static import to dynamic `import("lottie-web")` inside the CSS preview effect.
 
-### 3. Server-Only Packages
+### 3. Dynamic lottie-web Across All Components
+Created a shared dynamic loader (`src/lib/lottie.ts`) that caches the lottie-web module after first import. Converted all 14 remaining components from static `import lottie from "lottie-web"` to async `loadAnimation()` calls:
+
+- **LottiePreview** — main editor preview canvas
+- **AnimationCard** — gallery animation cards
+- **ExploreCard** — explore page cards
+- **InlineLottiePreview** — chat inline previews
+- **RelatedAnimations** — related animations sidebar
+- **VersionHistory** — version preview thumbnails
+- **TemplateGallery** — template preview cards
+- **FeaturedSpotlight** — featured animation spotlight
+- **VariationGrid** — style variation previews
+- **TemplateCard** — template starter cards
+- **SequencePlayer** — animation sequence player
+- **DocsPage** — API docs "Try it" panel
+- **ProfilePage** — profile animation cards
+- **EmbedPlayer** — embeddable animation player
+
+All components preserve their cancellation/cleanup patterns with `cancelled` flags.
+
+### 4. Server-Only Packages
 Added `serverExternalPackages` to `next.config.ts` for packages that should never appear in client bundles:
 - `puppeteer-core` — used only in `thumbnail-renderer.ts` (server API route)
 - `canvas` — used only in `thumbnail/route.ts` (server API route)
 - `archiver` — used in collection export API routes
 - `better-sqlite3` — database driver (server-only)
 
-### 4. Tree-Shaking
+### 5. Tree-Shaking & Dependency Cleanup
 - Added `"sideEffects": false` to `package.json` to enable aggressive tree-shaking.
-- Verified lodash is already using specific imports (`lodash/has`, `lodash/set`) in a server-only API route — no client bundle impact.
+- Verified lodash uses specific imports (`lodash/has`, `lodash/set`) in a server-only API route — no client bundle impact.
+- Removed unused `codemirror` base package — `JsonEditor` imports from specific `@codemirror/*` sub-packages directly.
+- Moved `@types/lodash` from `dependencies` to `devDependencies`.
 
 ## After Optimization
 
 | Metric | Value |
 |---|---|
 | `.next/` directory | 109 MB |
-| Total client JS | 2,430 KB |
+| Total client JS (incl. lazy) | 2,434 KB |
 | Largest chunk | 384 KB |
 | Client JS chunks | 40 |
+| lottie-web chunk (lazy) | 300 KB |
 
 Top 5 chunks (after):
-- 384K — split from the former 732K monolith
-- 352K — lottie-web (now a separate lazy chunk)
-- 300K — shared framework/page chunk (unchanged)
+- 384K — editor/page components (codemirror removed, lottie-web extracted)
+- 352K — lazy-loaded module chunk
+- 300K — lottie-web (lazy, loads on demand when animation renders)
 - 228K — shared framework/page chunk (unchanged)
 - 176K — component chunk (unchanged)
 
@@ -65,20 +88,10 @@ Top 5 chunks (after):
 | Metric | Before | After | Change |
 |---|---|---|---|
 | `.next/` size | 111 MB | 109 MB | -2 MB (-1.8%) |
-| Total client JS | 2,560 KB | 2,430 KB | -130 KB (-5.1%) |
+| Total client JS | 2,560 KB | 2,434 KB | -126 KB (-4.9%) |
 | Largest chunk | 732 KB | 384 KB | -348 KB (-47.5%) |
-| Initial page load JS | ~732KB+ | ~384KB | Significantly reduced |
+| Initial page load JS | ~1,260 KB | ~912 KB | ~-348 KB (-27.6%) |
 
-The most important win: the **initial page load** no longer includes CodeMirror or lottie-web for pages that don't immediately need them. The 732KB monolith chunk was split into lazy-loaded pieces, cutting the largest chunk nearly in half.
+The critical win: **initial page load no longer includes lottie-web (300KB) or CodeMirror**. The 732KB monolith chunk was split into lazy-loaded pieces, cutting the largest chunk nearly in half and reducing initial page load by ~28%.
 
-## Recommendations for Future Work
-
-1. **Lazy-load lottie-web in remaining components**: `LottiePreview`, `AnimationCard`, `ExploreCard`, `TemplateCard`, etc. still import lottie-web statically. These are used on the gallery/explore pages and could benefit from dynamic imports, though they render above the fold.
-
-2. **Consider lottie-light**: The full `lottie-web` renderer is ~300KB. If only SVG rendering is needed, `lottie-web/build/player/lottie_light` is significantly smaller (~150KB) and excludes expression support.
-
-3. **Code-split the gallery page**: `GalleryPage` statically imports `QuickGenerate` which now lazy-loads its heavy deps, but the component itself could be dynamically imported since it's below the fold.
-
-4. **Move `@types/lodash` to devDependencies**: Currently in `dependencies` but only needed at build time.
-
-5. **Evaluate `codemirror` base package**: The `codemirror` package (line 29 in package.json) re-exports all codemirror sub-packages. Since `JsonEditor` already imports from specific `@codemirror/*` packages, the base `codemirror` package may be removable.
+lottie-web is now a single 300KB lazy chunk that loads on demand when a component first renders an animation. Pages like the landing page, explore page (before hover), and docs page load without any lottie-web JS.

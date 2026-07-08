@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { useRouter } from "next/navigation";
 import { useTranslations } from 'next-intl';
 import AddToCollectionMenu from "@/components/AddToCollectionMenu";
@@ -39,27 +39,38 @@ export default function AnimationCard({
 
     let cancelled = false;
 
-    fetch(`/api/animations/${id}`)
-      .then((res) => res.json())
-      .then((json) => {
+    const init = async () => {
+      try {
+        const res = await fetch(`/api/animations/${id}`);
+        const json = await res.json();
+
         if (cancelled || !containerRef.current || !json.data) return;
 
         try {
-          animRef.current = lottie.loadAnimation({
+          animRef.current = await loadAnimation({
             container: containerRef.current,
             renderer: "svg",
             loop: true,
             autoplay: true,
             animationData: json.data,
           });
+
+          if (cancelled) {
+            animRef.current.destroy();
+            animRef.current = null;
+            return;
+          }
+
           setLoaded(true);
         } catch {
           setError(true);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setError(true);
-      });
+      }
+    };
+
+    init();
 
     return () => {
       cancelled = true;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
 
@@ -48,19 +48,29 @@ function TemplatePreviewCard({ template }: { template: TemplateItem }) {
   useEffect(() => {
     if (!containerRef.current || !lottieData) return;
 
-    try {
-      animRef.current = lottie.loadAnimation({
-        container: containerRef.current,
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        animationData: lottieData,
-      });
-    } catch {
-      queueMicrotask(() => setError(true));
-    }
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const anim = await loadAnimation({
+          container: containerRef.current!,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          animationData: lottieData,
+        });
+        if (cancelled) {
+          anim.destroy();
+        } else {
+          animRef.current = anim;
+        }
+      } catch {
+        if (!cancelled) queueMicrotask(() => setError(true));
+      }
+    })();
 
     return () => {
+      cancelled = true;
       if (animRef.current) {
         animRef.current.destroy();
         animRef.current = null;

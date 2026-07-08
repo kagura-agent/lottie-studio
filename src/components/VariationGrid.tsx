@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import lottie, { type AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 
 export interface Variation {
   style: string;
@@ -30,15 +30,29 @@ function VariationCard({ variation, onSelect }: { variation: Variation; onSelect
   useEffect(() => {
     if (!containerRef.current || !variation.animation) return;
 
-    animRef.current = lottie.loadAnimation({
-      container: containerRef.current,
-      renderer: "svg",
-      loop: true,
-      autoplay: true,
-      animationData: variation.animation,
-    });
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const anim = await loadAnimation({
+          container: containerRef.current!,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          animationData: variation.animation,
+        });
+        if (cancelled) {
+          anim.destroy();
+        } else {
+          animRef.current = anim;
+        }
+      } catch {
+        // ignore
+      }
+    })();
 
     return () => {
+      cancelled = true;
       animRef.current?.destroy();
       animRef.current = null;
     };

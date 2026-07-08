@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import lottie, { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 
 interface InlineLottiePreviewProps {
   lottieJson: object;
@@ -26,11 +26,11 @@ export default function InlineLottiePreview({ lottieJson, previousLottieJson }: 
     }
   }, []);
 
-  const createAnim = useCallback(() => {
+  const createAnim = useCallback(async () => {
     if (!containerRef.current) return;
     destroyAnim();
     try {
-      animRef.current = lottie.loadAnimation({
+      animRef.current = await loadAnimation({
         container: containerRef.current,
         renderer: "svg",
         loop: true,
