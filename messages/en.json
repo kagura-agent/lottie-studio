@@ -547,6 +547,55 @@
     "continueWithGoogle": "Continue with Google",
     "or": "or"
   },
+  "quickStart": {
+    "title": "What do you want to animate?",
+    "subtitle": "Pick a category to get started, or describe your own idea below",
+    "skip": "Skip",
+    "dontShowAgain": "Don't show this again",
+    "go": "Go",
+    "customPlaceholder": "Describe your animation idea...",
+    "categories": {
+      "ui": {
+        "name": "UI Elements",
+        "description": "Buttons, toggles, loaders, notifications",
+        "prompt": "I'd like to create a UI element animation. Some ideas: loading spinner, toggle switch, notification bell, success checkmark, or a button press effect. What would you like to make?"
+      },
+      "motion": {
+        "name": "Motion & Physics",
+        "description": "Bouncing, floating, spinning, particles",
+        "prompt": "I'd like to create a motion or physics-based animation. Some ideas: bouncing ball with squash and stretch, floating particles, spinning gears, pendulum swing, or a gravity drop. What would you like to make?"
+      },
+      "text": {
+        "name": "Text & Typography",
+        "description": "Typewriter, slide-in, reveal, kinetic text",
+        "prompt": "I'd like to create a text or typography animation. Some ideas: typewriter effect, letter-by-letter reveal, sliding text, kinetic typography, or a handwriting animation. What would you like to make?"
+      },
+      "nature": {
+        "name": "Nature & Scenes",
+        "description": "Sunrise, leaves, weather, landscapes",
+        "prompt": "I'd like to create a nature or scene animation. Some ideas: sunrise over mountains, falling leaves, rain and lightning, ocean waves, or a starry night sky. What would you like to make?"
+      },
+      "abstract": {
+        "name": "Abstract & Decorative",
+        "description": "Geometric morphs, waves, patterns",
+        "prompt": "I'd like to create an abstract or decorative animation. Some ideas: morphing geometric shapes, flowing waves, kaleidoscope pattern, pulsing circles, or a gradient mesh. What would you like to make?"
+      },
+      "social": {
+        "name": "Social Media",
+        "description": "Stories, posts, reactions, stickers",
+        "prompt": "I'd like to create a social media animation. Some ideas: animated story frame, like/heart reaction, emoji sticker, swipe indicator, or a notification badge. What would you like to make?"
+      },
+      "branding": {
+        "name": "Branding & Logo",
+        "description": "Logo reveals, intros, outros",
+        "prompt": "I'd like to create a branding or logo animation. Some ideas: logo reveal with particles, elegant intro sequence, text logo assembly, spinning emblem, or a signature animation. What would you like to make?"
+      },
+      "custom": {
+        "name": "Custom",
+        "description": "Describe anything you imagine"
+      }
+    }
+  },
   "profile": {
     "title": "Profile",
     "settings": "Settings",
