@@ -164,6 +164,18 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Analytics dashboard (views, popular animations, usage patterns)
 - [x] Monetization foundation (premium templates, API tiers)
 
+### Phase 5: Production & Reach (planned)
+- [ ] Mobile-responsive editor (touch-friendly canvas + stacked chat layout)
+- [ ] Animation quick-start wizard (category picker → pre-seeded chat context)
+- [ ] Offline/PWA support (view & edit saved animations without connection)
+- [ ] Performance audit & bundle optimization (code-split, lazy load heavy deps)
+- [ ] Accessibility deep pass (keyboard nav, screen reader, WCAG 2.1 AA)
+- [ ] Advanced export presets (platform-specific: Instagram Story, TikTok, Slack emoji)
+- [ ] Template marketplace (community-submitted templates with review flow)
+- [ ] Multi-language prompt support (LLM accepts prompts in any language)
+- [ ] Animation versioning UI (visual diff between versions, restore points)
+- [ ] Webhook integrations (Slack/Discord notifications on animation events)
+
 ## LLM Integration Design
 
 ### Backend Route: `/api/chat`
