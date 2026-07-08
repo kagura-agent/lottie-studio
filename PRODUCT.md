@@ -172,7 +172,7 @@ User: "make a pink sakura petal falling and spinning"
 - [ ] Accessibility deep pass (keyboard nav, screen reader, WCAG 2.1 AA)
 - [ ] Advanced export presets (platform-specific: Instagram Story, TikTok, Slack emoji)
 - [ ] Template marketplace (community-submitted templates with review flow)
-- [ ] Multi-language prompt support (LLM accepts prompts in any language)
+- [x] Multi-language prompt support (LLM accepts prompts in any language)
 - [ ] Animation versioning UI (visual diff between versions, restore points)
 - [ ] Webhook integrations (Slack/Discord notifications on animation events)
 

@@ -1995,7 +1995,7 @@ export function analyzeIntent(message: string, currentAnimation: object | null):
   return sections;
 }
 
-export function buildSystemPrompt(currentAnimation: object | null, userMessage?: string): string {
+export function buildSystemPrompt(currentAnimation: object | null, userMessage?: string, locale?: string): string {
   const examples = userMessage
     ? selectExamples(userMessage)
     : EXAMPLE_REGISTRY.slice(0, 5);
@@ -2114,6 +2114,19 @@ Examples:
 - "go fullscreen" → COMMAND: {"type": "fullscreen"}\n⛶ Toggling fullscreen.
 
 IMPORTANT: Only use COMMAND when the intent is clearly a UI/playback action. Requests to modify the animation content (e.g., "make the ball bigger", "add a shadow", "change the color to red") are Lottie JSON modifications — respond with JSON as usual. "Make it faster" means speed command; "make the animation shorter" means reduce frames (JSON modification).`;
+
+  prompt += `
+
+## Multilingual Support
+
+- Detect the language of the user's message and respond in that same language.
+- Your explanatory text and the SUGGESTIONS array values must be in the user's language.
+- Animation layer names ("nm" fields) should remain in English for Lottie spec compatibility.
+- Technical terms (Lottie, JSON, keyframe, easing, opacity) can stay in English regardless of language.`;
+
+  if (locale) {
+    prompt += `\n- The user's UI is set to ${locale}. Use this as additional context for the expected language, but always prioritize the language of the user's actual message.`;
+  }
 
   return prompt;
 }
