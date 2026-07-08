@@ -354,6 +354,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       a.download = `${sanitized}.gif`;
       a.click();
       URL.revokeObjectURL(url);
+      toast({ message: "GIF exported successfully!", type: "success" });
     } catch (err) {
       console.error("GIF export failed:", err);
       toast({ message: "GIF export failed. Please try again.", type: "error" });
@@ -409,6 +410,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       a.download = `${sanitized}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+      toast({ message: "Video exported successfully!", type: "success" });
     } catch (err) {
       console.error("Video export failed:", err);
       toast({ message: "Video export failed. Please try again.", type: "error" });
@@ -550,6 +552,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       const newId = result.id;
       if (newId) {
         router.push(`/editor/${newId}`);
+        toast({ message: "Animation duplicated!", type: "success" });
       }
     } catch (err) {
       console.error("Duplicate failed:", err);

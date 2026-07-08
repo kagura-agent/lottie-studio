@@ -112,6 +112,7 @@ export function useCollaboration({
     if (!isCollaborating || !userId) return;
     const me = members.find((m) => m.userId === userId);
     if (me) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPermission(me.permission);
     }
   }, [members, userId, isCollaborating]);

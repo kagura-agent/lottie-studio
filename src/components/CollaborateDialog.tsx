@@ -37,6 +37,7 @@ export default function CollaborateDialog({ animationId, open, onClose }: Collab
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchCollaborations();
     }
   }, [open, fetchCollaborations]);
