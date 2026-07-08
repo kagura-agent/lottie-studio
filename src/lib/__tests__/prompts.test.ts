@@ -76,4 +76,42 @@ describe("buildSystemPrompt", () => {
     const result = buildSystemPrompt(null);
     expect(result).toContain("easing");
   });
+
+  it("includes multilingual support section", () => {
+    const result = buildSystemPrompt(null);
+    expect(result).toContain("Multilingual Support");
+    expect(result).toContain("Detect the language");
+    expect(result).toContain("SUGGESTIONS array values must be in the user's language");
+  });
+
+  it("includes layer name English rule in multilingual section", () => {
+    const result = buildSystemPrompt(null);
+    expect(result).toContain("layer names");
+    expect(result).toContain("English");
+    expect(result).toContain("Lottie spec compatibility");
+  });
+
+  it("does not include locale hint when locale is undefined", () => {
+    const result = buildSystemPrompt(null, undefined, undefined);
+    expect(result).not.toContain("user's UI is set to");
+  });
+
+  it("includes locale hint when locale is provided", () => {
+    const result = buildSystemPrompt(null, undefined, "zh-CN");
+    expect(result).toContain("user's UI is set to zh-CN");
+  });
+
+  it("includes locale hint with Accept-Language style locale", () => {
+    const result = buildSystemPrompt(null, "create a ball", "ja");
+    expect(result).toContain("user's UI is set to ja");
+  });
+
+  it("still includes all standard sections when locale is provided", () => {
+    const result = buildSystemPrompt(null, "make a circle", "fr");
+    expect(result).toContain("Lottie animation expert");
+    expect(result).toContain("```json");
+    expect(result).toContain("Response Format");
+    expect(result).toContain("Multilingual Support");
+    expect(result).toContain("user's UI is set to fr");
+  });
 });

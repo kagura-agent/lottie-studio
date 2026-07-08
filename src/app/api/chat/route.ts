@@ -18,6 +18,22 @@ import path from "node:path";
 
 export const dynamic = "force-dynamic";
 
+function extractLocale(request: Request): string | undefined {
+  const cookie = request.headers.get("cookie");
+  if (cookie) {
+    const match = cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+    if (match) return match[1];
+  }
+
+  const acceptLang = request.headers.get("accept-language");
+  if (acceptLang) {
+    const primary = acceptLang.split(",")[0].trim().split(";")[0].trim();
+    if (primary) return primary;
+  }
+
+  return undefined;
+}
+
 interface ChatRequest {
   animationId?: string;
   message: string;
@@ -1172,7 +1188,9 @@ IMPORTANT:
   type ContentPart = { type: "text" | "image_url"; text?: string; image_url?: { url: string } };
   type LLMMessage = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
 
-  let systemPrompt = buildSystemPrompt(currentAnimation, message);
+  const locale = extractLocale(request);
+
+  let systemPrompt = buildSystemPrompt(currentAnimation, message, locale);
   if (templateSource) {
     systemPrompt += `\n\nThe user is working with a remix of the "${templateSource}" template.`;
   }
