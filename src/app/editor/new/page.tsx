@@ -1,31 +1,32 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState, useCallback, useEffect } from "react";
+import { Suspense, useState, useCallback } from "react";
 import EditorLayout from "@/components/EditorLayout";
 import QuickStartWizard from "@/components/QuickStartWizard";
 
 const STORAGE_KEY = "lottie-wizard-skip";
+
+function shouldSkipWizard(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 function NewEditorInner() {
   const searchParams = useSearchParams();
   const promptParam = searchParams.get("prompt") ?? undefined;
   const skipParam = searchParams.get("skip") === "true";
 
-  const [showWizard, setShowWizard] = useState(false);
+  const [showWizard, setShowWizard] = useState(
+    () => !promptParam && !skipParam && !shouldSkipWizard()
+  );
   const [initialPrompt, setInitialPrompt] = useState(promptParam);
-  const [ready, setReady] = useState(!!promptParam || skipParam);
-
-  useEffect(() => {
-    if (promptParam || skipParam) return;
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "true") {
-        setReady(true);
-        return;
-      }
-    } catch {}
-    setShowWizard(true);
-  }, [promptParam, skipParam]);
+  const [ready, setReady] = useState(
+    () => !!promptParam || skipParam || shouldSkipWizard()
+  );
 
   const handleSelect = useCallback((prompt: string) => {
     setInitialPrompt(prompt);
