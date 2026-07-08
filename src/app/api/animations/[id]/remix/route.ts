@@ -1,4 +1,5 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth-middleware";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +16,26 @@ export async function POST(
     .get(id) as Record<string, unknown> | undefined;
   if (!row) {
     return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (row.template_tier === "premium") {
+    const user = getAuthUser(_request);
+    if (!user) {
+      return Response.json(
+        { error: "Authentication required to remix premium templates" },
+        { status: 401 }
+      );
+    }
+    const tierRow = db
+      .prepare("SELECT api_tier FROM users WHERE id = ?")
+      .get(user.id) as { api_tier: string } | undefined;
+    const userTier = tierRow?.api_tier ?? "free";
+    if (userTier === "free") {
+      return Response.json(
+        { error: "Premium template — upgrade to Pro or Team to remix", upgradeUrl: "/pricing" },
+        { status: 403 }
+      );
+    }
   }
 
   const filePath = path.join(ANIMATIONS_DIR, `${id}.json`);

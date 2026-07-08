@@ -26,6 +26,7 @@ export default function PluginManager() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchInstalled();
   }, [fetchInstalled]);
 

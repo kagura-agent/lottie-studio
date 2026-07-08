@@ -266,9 +266,9 @@ function ChatHistory({ messages }: { messages: { role: string; content: string; 
 
 export default function ShareView({ id, name, description, animationData, messages, viewCount: initialViewCount, creatorName, creatorId }: ShareViewProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const t = useTranslations();
-  const { toast } = useToast();
   const { user } = useAuth();
   const isEmbed = searchParams.get("embed") === "true";
   const prefersReducedMotion = useReducedMotion();
