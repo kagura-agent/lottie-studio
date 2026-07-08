@@ -34,6 +34,9 @@ import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import ThemePanel, { ThemeIndicator } from "./ThemePanel";
 import OnboardingTour from "./OnboardingTour";
+import MobileTabBar, { type MobileTab } from "./MobileTabBar";
+import BottomSheet from "./BottomSheet";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import { optimizeLottie } from "@/lib/optimizer";
 import { rescaleDuration } from "@/lib/rescaleDuration";
 import { rescaleForExport } from "@/lib/rescaleForExport";
@@ -135,7 +138,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [presetProgress, setPresetProgress] = useState(0);
   const [presetExportingId, setPresetExportingId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<"canvas" | "chat" | "layers">("chat");
+  const [mobileView, setMobileView] = useState<MobileTab>("chat");
+  const [jsonSheetOpen, setJsonSheetOpen] = useState(false);
+  const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
@@ -1085,48 +1091,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <UserMenu />
       </header>
 
-      {/* Mobile view toggle */}
-      <div className="flex md:hidden border-b border-zinc-800 bg-zinc-900 shrink-0">
-        <button
-          onClick={() => setMobileView("canvas")}
-          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-            mobileView === "canvas"
-              ? "text-zinc-100 border-b-2 border-zinc-100"
-              : "text-zinc-400"
-          }`}
-        >
-          {t('editor.canvas')}
-        </button>
-        <button
-          onClick={() => { setMobileView("chat"); setRightPanel("chat"); }}
-          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-            mobileView === "chat"
-              ? "text-zinc-100 border-b-2 border-zinc-100"
-              : "text-zinc-400"
-          }`}
-        >
-          {t('editor.chat')}
-        </button>
-        <button
-          onClick={() => { setMobileView("layers"); setRightPanel("layers"); }}
-          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-            mobileView === "layers"
-              ? "text-zinc-100 border-b-2 border-zinc-100"
-              : "text-zinc-400"
-          }`}
-        >
-          {t('editor.layers')}
-        </button>
-      </div>
-
       {/* Main content */}
       <ErrorBoundary fallbackMessage={t('common.error')}>
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* Preview panel - hidden on mobile when chat is active */}
-        <div className={`flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
-          mobileView === "canvas" ? "flex flex-1" : "hidden md:flex"
+        {/* Preview panel - stacked on mobile (40vh top), side-by-side on desktop */}
+        <div className={`flex flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
+          isMobile ? "h-[40vh] shrink-0" : ""
         }`}>
-          <div className="flex-1 p-4 min-h-0" data-tour="canvas">
+          <div className="flex-1 p-2 md:p-4 min-h-0" data-tour="canvas">
             <ErrorBoundary
               key={currentId ?? "new"}
               fallbackMessage={t('common.error')}
@@ -1174,13 +1146,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               onSeek={handleSeek}
               frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
             />
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <ArtboardPicker width={currentWidth} height={currentHeight} onChange={handleArtboardChange} />
             </div>
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
             </div>
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <ColorPalette
                 animationData={animationData}
                 onChange={(updated) => {
@@ -1190,7 +1162,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 }}
               />
             </div>
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <TimingEditor
                 animationData={animationData}
                 onChange={(updated) => {
@@ -1200,7 +1172,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 }}
               />
             </div>
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <EasingEditor
                 animationData={animationData}
                 onChange={(updated) => {
@@ -1210,7 +1182,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 }}
               />
             </div>
-            <div className="px-2 py-2 bg-zinc-900">
+            <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <button
                 onClick={() => setFullscreenOpen(true)}
                 disabled={!animationData}
@@ -1227,7 +1199,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               </button>
             </div>
           </div>
-          <div className="flex justify-center gap-2 px-4 pb-3">
+          <div className="hidden md:flex justify-center gap-2 px-4 pb-3">
             <button
               onClick={handleUndo}
               disabled={!canUndo}
@@ -1253,11 +1225,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           </div>
         </div>
 
-        {/* Editor panel - hidden on mobile when canvas is active */}
-        <div className={`flex-col flex-1 md:min-h-0 ${
-          mobileView === "canvas" ? "hidden md:flex" : "flex"
-        }`}>
-          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
+        {/* Editor panel - below canvas on mobile, side-by-side on desktop */}
+        <div
+          id="panel-chat"
+          className="flex flex-col flex-1 md:min-h-0 min-h-0"
+        >
+          {/* Desktop-only right panel tabs */}
+          <div className="hidden md:flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
             <button
               onClick={() => setRightPanel("chat")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
@@ -1319,26 +1293,133 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             </button>
           </div>
           <div className="flex-1 min-h-0" data-tour="chat-input">
-            {rightPanel === "chat" ? (
-              <ErrorBoundary fallbackMessage={t('common.error')}>
-                <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
-              </ErrorBoundary>
-            ) : rightPanel === "layers" ? (
-              <LayerPanel
-                animationData={animationData}
-                onSelectLayer={handleSelectLayer}
-                onToggleVisibility={handleToggleVisibility}
-                onChangeOpacity={handleChangeOpacity}
-                onPreviewOpacity={handlePreviewOpacity}
-                onReorderLayers={handleReorderLayers}
-              />
+            {/* On mobile: show chat or layers based on mobileView. On desktop: use rightPanel */}
+            {isMobile ? (
+              mobileView === "chat" ? (
+                <ErrorBoundary fallbackMessage={t('common.error')}>
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
+                </ErrorBoundary>
+              ) : mobileView === "layers" ? (
+                <LayerPanel
+                  animationData={animationData}
+                  onSelectLayer={handleSelectLayer}
+                  onToggleVisibility={handleToggleVisibility}
+                  onChangeOpacity={handleChangeOpacity}
+                  onPreviewOpacity={handlePreviewOpacity}
+                  onReorderLayers={handleReorderLayers}
+                />
+              ) : null
             ) : (
-              <JsonEditor value={jsonText} onChange={handleJsonChange} />
+              rightPanel === "chat" ? (
+                <ErrorBoundary fallbackMessage={t('common.error')}>
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
+                </ErrorBoundary>
+              ) : rightPanel === "layers" ? (
+                <LayerPanel
+                  animationData={animationData}
+                  onSelectLayer={handleSelectLayer}
+                  onToggleVisibility={handleToggleVisibility}
+                  onChangeOpacity={handleChangeOpacity}
+                  onPreviewOpacity={handlePreviewOpacity}
+                  onReorderLayers={handleReorderLayers}
+                />
+              ) : (
+                <JsonEditor value={jsonText} onChange={handleJsonChange} />
+              )
             )}
           </div>
         </div>
       </div>
       </ErrorBoundary>
+
+      {/* Mobile bottom tab bar */}
+      <MobileTabBar
+        activeTab={mobileView}
+        onTabChange={(tab) => {
+          if (tab === "settings") {
+            setSettingsSheetOpen(true);
+            return;
+          }
+          setMobileView(tab);
+          if (tab === "chat") setRightPanel("chat");
+          else if (tab === "layers") setRightPanel("layers");
+        }}
+      />
+
+      {/* Mobile bottom sheet for JSON editor */}
+      <BottomSheet
+        open={jsonSheetOpen}
+        onClose={() => setJsonSheetOpen(false)}
+        title="JSON Editor"
+      >
+        <div className="h-[60dvh]">
+          <JsonEditor value={jsonText} onChange={handleJsonChange} />
+        </div>
+      </BottomSheet>
+
+      {/* Mobile bottom sheet for settings */}
+      <BottomSheet
+        open={settingsSheetOpen}
+        onClose={() => setSettingsSheetOpen(false)}
+        title="Settings"
+      >
+        <div className="px-4 py-3 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Canvas</h3>
+            <div className="flex items-center gap-3">
+              <ArtboardPicker width={currentWidth} height={currentHeight} onChange={handleArtboardChange} />
+              <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tools</h3>
+            <div className="flex items-center gap-3">
+              <ColorPalette
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+              <TimingEditor
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+              <EasingEditor
+                animationData={animationData}
+                onChange={(updated) => {
+                  setAnimationData(updated as object);
+                  setJsonText(JSON.stringify(updated, null, 2));
+                  pushState(updated as object);
+                }}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">View</h3>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setJsonSheetOpen(true); setSettingsSheetOpen(false); }}
+                className="px-3 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors"
+              >
+                JSON Editor
+              </button>
+              <button
+                onClick={() => { setVersionPanelOpen(true); setSettingsSheetOpen(false); }}
+                disabled={isNewMode}
+                className="px-3 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors disabled:opacity-50"
+              >
+                Version History
+              </button>
+            </div>
+          </div>
+        </div>
+      </BottomSheet>
       {currentId && (
         <VersionHistory
           animationId={currentId}
