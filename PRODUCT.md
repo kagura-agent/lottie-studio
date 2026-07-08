@@ -152,7 +152,7 @@ User: "make a pink sakura petal falling and spinning"
 - [x] PWA with service worker
 - [x] SEO: sitemap, robots.txt, OG metadata, JSON-LD
 
-### Phase 4: Growth & Depth (planned)
+### Phase 4: Growth & Depth ✅
 - [x] User accounts (save personal galleries, attribution, preferences)
 - [x] Social features (comments, likes, follows, activity feed)
 - [x] Animation sequences/storyboards (data model, API, /sequence chat commands)
@@ -162,7 +162,7 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Advanced LLM features (/critique, /polish, /style with free-form descriptions)
 - [x] Plugin system (community-contributed animation effects)
 - [x] Analytics dashboard (views, popular animations, usage patterns)
-- [ ] Monetization foundation (premium templates, API tiers)
+- [x] Monetization foundation (premium templates, API tiers)
 
 ## LLM Integration Design
 
