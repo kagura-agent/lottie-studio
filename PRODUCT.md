@@ -165,7 +165,7 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Monetization foundation (premium templates, API tiers)
 
 ### Phase 5: Production & Reach (planned)
-- [ ] Mobile-responsive editor (touch-friendly canvas + stacked chat layout)
+- [x] Mobile-responsive editor (touch-friendly canvas + stacked chat layout)
 - [ ] Animation quick-start wizard (category picker → pre-seeded chat context)
 - [ ] Offline/PWA support (view & edit saved animations without connection)
 - [ ] Performance audit & bundle optimization (code-split, lazy load heavy deps)
