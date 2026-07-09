@@ -1664,7 +1664,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       )}
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+      <div role="log" aria-live="polite" aria-label="Chat messages" className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <PromptSuggestions
@@ -1841,7 +1841,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
       {/* Error banner */}
       {error && (
-        <div className="shrink-0 mx-3 mb-2 px-3 py-2 rounded-lg bg-red-900/60 border border-red-700 text-red-200 text-sm flex items-start gap-2">
+        <div role="alert" className="shrink-0 mx-3 mb-2 px-3 py-2 rounded-lg bg-red-900/60 border border-red-700 text-red-200 text-sm flex items-start gap-2">
           <span className="flex-1">{error}</span>
           <button
             onClick={dismissError}
@@ -1947,6 +1947,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             <button
               onClick={() => handleSend()}
               disabled={!input.trim()}
+              aria-label="Send message"
               className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('send')}
