@@ -50,3 +50,60 @@ body {
   0%, 100% { opacity: 0.4; transform: translateY(4px); }
   50% { opacity: 1; transform: translateY(-4px); }
 }
+
+/* ── Accessibility: Focus indicators ────────────────────── */
+*:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring when not using keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Accessibility: Reduced motion ──────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Accessibility: Skip link ───────────────────────────── */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.skip-to-content:focus {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* ── Accessibility: Contrast fixes ──────────────────────── */
+/* Boost muted text from zinc-500 (#71717a) to zinc-400 (#a1a1aa) for 4.5:1 ratio on dark bg */
+.a11y-muted {
+  color: #a1a1aa;
+}
