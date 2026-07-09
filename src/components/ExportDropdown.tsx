@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslations } from 'next-intl';
 import CodeSnippets from "./CodeSnippets";
-import { SOCIAL_PRESETS, WEB_PRESETS, ExportPreset } from "@/lib/exportPresets";
+import { SOCIAL_PRESETS, WEB_PRESETS, MESSAGING_PRESETS, ExportPreset } from "@/lib/exportPresets";
 
 interface ExportDropdownProps {
   animationData: object | null;
@@ -27,6 +27,7 @@ interface ExportDropdownProps {
   onExportVideo: (e: React.MouseEvent) => void;
   onExportMp4: (e: React.MouseEvent) => void;
   onExportPreset: (preset: ExportPreset) => void;
+  onOpenPresetDialog: () => void;
   onDuplicate: () => void;
   isDuplicating: boolean;
 }
@@ -53,6 +54,7 @@ export default function ExportDropdown({
   onExportVideo,
   onExportMp4,
   onExportPreset,
+  onOpenPresetDialog,
   onDuplicate,
   isDuplicating,
 }: ExportDropdownProps) {
@@ -61,6 +63,7 @@ export default function ExportDropdown({
   const [copiedItem, setCopiedItem] = useState<"share" | "embed" | null>(null);
   const [codeSnippetsOpen, setCodeSnippetsOpen] = useState(false);
   const [socialExpanded, setSocialExpanded] = useState(false);
+  const [messagingExpanded, setMessagingExpanded] = useState(false);
   const [webExpanded, setWebExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -246,6 +249,34 @@ export default function ExportDropdown({
             </div>
           )}
 
+          {/* Messaging Presets Section */}
+          <button
+            onClick={() => setMessagingExpanded((v) => !v)}
+            aria-expanded={messagingExpanded}
+            className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 flex items-center gap-2 font-medium"
+          >
+            <span aria-hidden="true">💬</span>
+            {t('exportPresets.messagingPresets')}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`ml-auto transition-transform ${messagingExpanded ? "rotate-180" : ""}`}
+            >
+              <path d="M3 5l3 3 3-3" />
+            </svg>
+          </button>
+          {messagingExpanded && (
+            <div>
+              {MESSAGING_PRESETS.map(renderPresetButton)}
+            </div>
+          )}
+
           {/* Web Presets Section */}
           <button
             onClick={() => setWebExpanded((v) => !v)}
@@ -273,6 +304,18 @@ export default function ExportDropdown({
               {WEB_PRESETS.map(renderPresetButton)}
             </div>
           )}
+
+          {/* Open full preset dialog */}
+          <button
+            onClick={() => { onOpenPresetDialog(); setOpen(false); }}
+            disabled={noData}
+            className="w-full px-4 py-2.5 text-left text-sm text-indigo-400 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+            </svg>
+            {t('exportPresets.dialogTitle')}
+          </button>
 
           {/* Separator */}
           <div className="border-t border-zinc-700 my-1" />
