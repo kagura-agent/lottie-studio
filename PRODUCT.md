@@ -167,7 +167,7 @@ User: "make a pink sakura petal falling and spinning"
 ### Phase 5: Production & Reach (planned)
 - [x] Mobile-responsive editor (touch-friendly canvas + stacked chat layout)
 - [x] Animation quick-start wizard (category picker → pre-seeded chat context)
-- [ ] Offline/PWA support (view & edit saved animations without connection)
+- [x] Offline/PWA support (view & edit saved animations without connection)
 - [x] Performance audit & bundle optimization (code-split, lazy load heavy deps)
 - [x] Accessibility deep pass (keyboard nav, screen reader, WCAG 2.1 AA)
 - [x] Advanced export presets (platform-specific: Instagram Story, TikTok, Slack emoji)
