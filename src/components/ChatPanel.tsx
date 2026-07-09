@@ -10,6 +10,8 @@ import { parseCommand, type Command, type StyleName, type AnimationPreset, VALID
 import { getRandomPrompt } from "@/data/randomPrompts";
 import { parseLottieFile } from "@/lib/importLottie";
 import { apiFetch } from "@/lib/apiFetch";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { enqueueMessage, getPendingMessages, flushMessages } from "@/lib/messageQueue";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import PromptSuggestions from "./PromptSuggestions";
 import VariationGrid, { type Variation } from "./VariationGrid";
@@ -76,7 +78,9 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const t = useTranslations('chat');
   const tSeq = useTranslations('sequencePlayer');
   const { tokens: designTokens, setToken: setDesignToken, clearTokens: clearDesignTokens, hasTokens: hasDesignTokens } = useDesignTokens();
+  const { isOnline } = useOnlineStatus();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [input, setInput] = useState(initialPrompt ?? "");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -188,6 +192,26 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     if (!insertText) return;
     inputRef.current?.focus();
   }, [insertText]);
+
+  // Check pending offline messages count
+  useEffect(() => {
+    getPendingMessages().then((msgs) => setPendingCount(msgs.length)).catch(() => {});
+  }, []);
+
+  // Flush queued messages when coming back online
+  useEffect(() => {
+    if (!isOnline) return;
+    flushMessages(async (msg) => {
+      try {
+        await handleSendRef.current?.(msg.content);
+        return true;
+      } catch {
+        return false;
+      }
+    }).then(({ sent }) => {
+      if (sent > 0) setPendingCount(0);
+    }).catch(() => {});
+  }, [isOnline]);
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
@@ -1185,6 +1209,29 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
     const imageDataUrl = pendingImage;
 
+    // Queue message when offline instead of sending
+    if (!isOnline) {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: text,
+        imageUrl: imageDataUrl || undefined,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      setPendingImage(null);
+      enqueueMessage(currentAnimationId || '', text, imageDataUrl || undefined)
+        .then(() => setPendingCount((c) => c + 1))
+        .catch(() => {});
+      const queuedMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "Message queued — will be sent when you're back online.",
+      };
+      setMessages((prev) => [...prev, queuedMsg]);
+      return;
+    }
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -1838,6 +1885,17 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Pending offline messages indicator */}
+      {pendingCount > 0 && (
+        <div className="shrink-0 mx-3 mb-2 px-3 py-1.5 rounded-lg bg-amber-900/40 border border-amber-700/40 text-amber-200 text-xs flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>{pendingCount} message{pendingCount > 1 ? 's' : ''} queued — will send when online</span>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (

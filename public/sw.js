@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'lottie-studio-v1';
+const CACHE_VERSION = 'lottie-studio-v2';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 
@@ -29,6 +29,34 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Message handler for client communication
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'GET_OFFLINE_STATUS') {
+    event.ports[0].postMessage({ isOffline: !navigator.onLine });
+  }
+
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Background sync for queued messages
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-chat-messages') {
+    event.waitUntil(notifyClientsToSync());
+  }
+  if (event.tag === 'sync-animations') {
+    event.waitUntil(notifyClientsToSync());
+  }
+});
+
+async function notifyClientsToSync() {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_REQUESTED' });
+  }
+}
+
 // Fetch: apply caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -55,9 +83,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache animation metadata for offline gallery
+  if (url.pathname.match(/^\/api\/animations\/[^/]+$/) && !url.pathname.includes('/api/animations/explore')) {
+    event.respondWith(networkFirst(request, DYNAMIC_CACHE));
+    return;
+  }
+
   // Cache thumbnails for offline gallery
   if (url.pathname.match(/^\/api\/animations\/[^/]+\/thumbnail/)) {
     event.respondWith(cacheFirst(request, DYNAMIC_CACHE));
+    return;
+  }
+
+  // Cache animation list for offline gallery
+  if (url.pathname === '/api/animations' && url.searchParams.has('mine')) {
+    event.respondWith(networkFirst(request, DYNAMIC_CACHE));
     return;
   }
 
@@ -105,7 +145,10 @@ async function networkFirst(request, cacheName = DYNAMIC_CACHE) {
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || new Response('Offline', { status: 503 });
+    return cached || new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 

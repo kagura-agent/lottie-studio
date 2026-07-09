@@ -35,6 +35,7 @@ import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
 import ThemePanel, { ThemeIndicator } from "./ThemePanel";
 import OnboardingTour from "./OnboardingTour";
+import OfflineIndicator from "./OfflineIndicator";
 import MobileTabBar, { type MobileTab } from "./MobileTabBar";
 import BottomSheet from "./BottomSheet";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -43,6 +44,7 @@ import { rescaleDuration } from "@/lib/rescaleDuration";
 import { rescaleForExport } from "@/lib/rescaleForExport";
 import { ExportPreset, getPresetFilename } from "@/lib/exportPresets";
 import { useToast } from "@/contexts/ToastContext";
+import { saveAnimation } from "@/lib/offlineStorage";
 
 interface EditorPageProps {
   id: string | null;
@@ -262,6 +264,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       setJsonText(text);
       setAnimationData(newData);
       pushState(newData);
+      saveAnimation(newId, name, newData, { synced: true }).catch(() => {});
     } else {
       // Fetch animation data if not provided inline
       try {
@@ -272,6 +275,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             setJsonText(JSON.stringify(result.data, null, 2));
             setAnimationData(result.data);
             pushState(result.data);
+            saveAnimation(newId, result.name || name, result.data, { synced: true }).catch(() => {});
           }
           if (result.name) setName(result.name);
         }
@@ -280,14 +284,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       }
     }
     window.history.replaceState(null, '', `/editor/${newId}`);
-  }, [pushState]);
+  }, [pushState, name]);
 
   // Capture and upload a thumbnail after animation is created or updated via chat
   const handleAnimationUpdated = useCallback((animId: string, data: object) => {
     import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
       captureAndUploadThumbnail(animId, data);
     });
-  }, []);
+    saveAnimation(animId, name, data, { synced: true }).catch(() => {});
+  }, [name]);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -1128,6 +1133,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <LanguageSwitcher />
         <UserMenu />
       </header>
+
+      {/* Offline indicator */}
+      <OfflineIndicator />
 
       {/* Main content */}
       <ErrorBoundary fallbackMessage={t('common.error')}>
