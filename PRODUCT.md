@@ -166,14 +166,14 @@ User: "make a pink sakura petal falling and spinning"
 
 ### Phase 5: Production & Reach (planned)
 - [x] Mobile-responsive editor (touch-friendly canvas + stacked chat layout)
-- [ ] Animation quick-start wizard (category picker → pre-seeded chat context)
+- [x] Animation quick-start wizard (category picker → pre-seeded chat context)
 - [ ] Offline/PWA support (view & edit saved animations without connection)
-- [ ] Performance audit & bundle optimization (code-split, lazy load heavy deps)
+- [x] Performance audit & bundle optimization (code-split, lazy load heavy deps)
 - [ ] Accessibility deep pass (keyboard nav, screen reader, WCAG 2.1 AA)
 - [ ] Advanced export presets (platform-specific: Instagram Story, TikTok, Slack emoji)
 - [ ] Template marketplace (community-submitted templates with review flow)
 - [x] Multi-language prompt support (LLM accepts prompts in any language)
-- [ ] Animation versioning UI (visual diff between versions, restore points)
+- [x] Animation versioning UI (visual diff between versions, restore points)
 - [ ] Webhook integrations (Slack/Discord notifications on animation events)
 
 ## LLM Integration Design
