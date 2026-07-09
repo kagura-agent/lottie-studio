@@ -318,7 +318,16 @@
     "restore": "恢复",
     "restoring": "恢复中...",
     "noVersions": "还没有版本",
-    "triggerLabel": "通过聊天"
+    "triggerLabel": "通过聊天",
+    "preview": "预览",
+    "previewingVersion": "正在预览 v{version}",
+    "exitPreview": "退出预览",
+    "compare": "比较",
+    "compareTitle": "版本比较",
+    "selectTwo": "选择两个版本进行比较",
+    "exitCompare": "退出比较",
+    "selected": "已选",
+    "toggleVersionHistory": "切换版本历史"
   },
   "relatedAnimations": {
     "title": "相关动画",
@@ -342,7 +351,8 @@
     "toggleLayers": "切换图层",
     "toggleFullscreen": "切换全屏",
     "showShortcuts": "显示快捷键",
-    "commandPalette": "命令面板"
+    "commandPalette": "命令面板",
+    "versionHistory": "版本历史"
   },
   "qualityPanel": {
     "title": "质量",
@@ -400,6 +410,8 @@
     "toggleLayersDesc": "显示或隐藏图层面板",
     "showShortcuts": "键盘快捷键",
     "showShortcutsDesc": "显示键盘快捷键参考",
+    "toggleVersionHistory": "版本历史",
+    "toggleVersionHistoryDesc": "切换版本历史面板",
     "exportJson": "导出 JSON",
     "exportJsonDesc": "下载 Lottie JSON 文件",
     "exportGif": "导出 GIF",

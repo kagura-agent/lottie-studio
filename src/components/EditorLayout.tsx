@@ -144,6 +144,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const isMobile = useIsMobile();
   const [insertText, setInsertText] = useState("");
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
+  const [versionPreviewData, setVersionPreviewData] = useState<object | null>(null);
+  const [previewingVersion, setPreviewingVersion] = useState<number | null>(null);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -219,6 +221,16 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   }, [currentId, pushState]);
 
   useAnimationSocket(currentId, handleExternalUpdate);
+
+  const handleVersionPreview = useCallback((lottieJson: object, versionNum: number) => {
+    setVersionPreviewData(lottieJson);
+    setPreviewingVersion(versionNum);
+  }, []);
+
+  const handleExitVersionPreview = useCallback(() => {
+    setVersionPreviewData(null);
+    setPreviewingVersion(null);
+  }, []);
 
   // Load share_chat setting from API on mount
   useEffect(() => {
@@ -622,6 +634,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     },
     onShowHelp: () => setShortcutsHelpOpen((v) => !v),
     onToggleFullscreen: () => setFullscreenOpen((v) => !v),
+    onToggleVersionHistory: () => {
+      if (!isNewMode) {
+        setVersionPanelOpen((v) => {
+          if (v) handleExitVersionPreview();
+          return !v;
+        });
+      }
+    },
   });
 
   // Global Ctrl+K / Cmd+K for command palette
@@ -1099,14 +1119,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <div className={`flex flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
           isMobile ? "h-[40vh] shrink-0" : ""
         }`}>
-          <div className="flex-1 p-2 md:p-4 min-h-0" data-tour="canvas">
+          <div className="flex-1 p-2 md:p-4 min-h-0 relative" data-tour="canvas">
             <ErrorBoundary
               key={currentId ?? "new"}
               fallbackMessage={t('common.error')}
               onReset={() => setAnimationData(animationData)}
             >
               <LottiePreview
-                animationData={animationData}
+                animationData={versionPreviewData ?? animationData}
                 isPlaying={isPlaying}
                 speed={speed}
                 loopConfig={loopConfig}
@@ -1117,6 +1137,17 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 ariaLabel={name || "Animation preview"}
               />
             </ErrorBoundary>
+            {previewingVersion !== null && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm">
+                <span>{t('versionHistory.previewingVersion', { version: previewingVersion })}</span>
+                <button
+                  onClick={handleExitVersionPreview}
+                  className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-xs transition-colors"
+                >
+                  {t('versionHistory.exitPreview')}
+                </button>
+              </div>
+            )}
             {isNewMode && animationData === null && (
               <div className="mt-4">
                 <ImportLottie onImported={handleAnimationCreated} />
@@ -1425,7 +1456,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <VersionHistory
           animationId={currentId}
           open={versionPanelOpen}
-          onClose={() => setVersionPanelOpen(false)}
+          onClose={() => {
+            setVersionPanelOpen(false);
+            handleExitVersionPreview();
+          }}
+          onPreview={handleVersionPreview}
+          onExitPreview={handleExitVersionPreview}
+          previewingVersion={previewingVersion}
         />
       )}
       <ShortcutsHelp
@@ -1448,6 +1485,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         onToggleJson={() => setRightPanel("json")}
         onToggleLayers={() => setRightPanel("layers")}
         onShowShortcuts={() => setShortcutsHelpOpen(true)}
+        onToggleVersionHistory={() => {
+          if (!isNewMode) setVersionPanelOpen((v) => !v);
+        }}
         onExportJson={handleExport}
         onExportGif={() => handleExportGif({ preventDefault: () => {} } as MouseEvent)}
         onExportApng={() => handleExportApng({ preventDefault: () => {} } as MouseEvent)}

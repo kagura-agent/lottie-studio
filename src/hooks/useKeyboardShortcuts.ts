@@ -13,6 +13,7 @@ interface KeyboardShortcutHandlers {
   onSpeedUp?: () => void;
   onShowHelp?: () => void;
   onToggleFullscreen?: () => void;
+  onToggleVersionHistory?: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
@@ -45,6 +46,13 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
       if (mod && e.key === "/" && handlers.onShowHelp) {
         e.preventDefault();
         handlers.onShowHelp();
+        return;
+      }
+
+      // Ctrl/Cmd + H → Toggle version history
+      if (mod && (e.key === "h" || e.key === "H") && handlers.onToggleVersionHistory) {
+        e.preventDefault();
+        handlers.onToggleVersionHistory();
         return;
       }
 
