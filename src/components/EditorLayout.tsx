@@ -29,6 +29,7 @@ import ShortcutsHelp from "./ShortcutsHelp";
 import CommandPalette from "./CommandPalette";
 import FullscreenPreview from "./FullscreenPreview";
 import EmbedDialog from "./EmbedDialog";
+import ExportPresetDialog from "./ExportPresetDialog";
 import KeyframeTimeline from "./KeyframeTimeline";
 import QualityPanel from "./QualityPanel";
 import ImportLottie from "./ImportLottie";
@@ -150,6 +151,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [shareChat, setShareChat] = useState(false);
   const [shareChatSaving, setShareChatSaving] = useState(false);
@@ -488,11 +490,16 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       let blob: Blob;
       const onProgress = (p: number) => setPresetProgress(p);
 
-      if (preset.format === "gif") {
+      if (preset.format === "json") {
+        const json = JSON.stringify(rescaledData, null, 2);
+        blob = new Blob([json], { type: "application/json" });
+      } else if (preset.format === "dotlottie") {
+        const { exportDotLottie } = await import("@/lib/dotlottieExporter");
+        blob = await exportDotLottie(rescaledData, name || "animation");
+      } else if (preset.format === "gif") {
         const { exportToGif } = await import("@/lib/gifExporter");
 
         if (preset.maxFileSize) {
-          // Iterative export with quality/framerate reduction for size-limited presets
           blob = await exportWithSizeLimit(rescaledData, preset.maxFileSize, onProgress);
         } else {
           blob = await exportToGif({ animationData: rescaledData, onProgress });
@@ -967,6 +974,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           onExportVideo={handleExportVideo}
           onExportMp4={handleExportMp4}
           onExportPreset={handleExportPreset}
+          onOpenPresetDialog={() => setPresetDialogOpen(true)}
           onDuplicate={handleDuplicate}
           isDuplicating={duplicating}
         />
@@ -1515,6 +1523,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         />
       )}
       <ThemePanel open={themePanelOpen} onClose={() => setThemePanelOpen(false)} />
+      <ExportPresetDialog
+        open={presetDialogOpen}
+        onClose={() => setPresetDialogOpen(false)}
+        onExport={(preset) => { setPresetDialogOpen(false); handleExportPreset(preset); }}
+        animationData={animationData}
+        exporting={presetExporting}
+        exportProgress={presetProgress}
+      />
       <OnboardingTour />
     </div>
   );

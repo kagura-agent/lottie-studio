@@ -341,6 +341,7 @@ export default function VersionHistory({
   const [compareMode, setCompareMode] = useState(false);
   const [compareSelection, setCompareSelection] = useState<number[]>([]);
   const [showDiff, setShowDiff] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
 
   const fetchVersions = useCallback(async () => {
     setLoading(true);
@@ -362,12 +363,18 @@ export default function VersionHistory({
     if (open) fetchVersions();
   }, [open, fetchVersions]);
 
+  // Reset compare state when dialog closes (render-phase transition check)
+  if (prevOpen && !open) {
+    setCompareMode(false);
+    setCompareSelection([]);
+    setShowDiff(false);
+  }
+  if (open !== prevOpen) setPrevOpen(open);
+
+  // Clear lottie cache in effect (refs cannot be accessed during render)
   useEffect(() => {
     if (!open) {
       lottieCache.current.clear();
-      setCompareMode(false);
-      setCompareSelection([]);
-      setShowDiff(false);
     }
   }, [open]);
 
