@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from 'next-intl';
 import LottiePreview from "./LottiePreview";
 import type { LoopConfig } from "@/types/loopConfig";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface FullscreenPreviewProps {
   animationData: object | null;
@@ -33,6 +34,7 @@ export default function FullscreenPreview({
 }: FullscreenPreviewProps) {
   const t = useTranslations('controls');
   const containerRef = useRef<HTMLDivElement>(null);
+  const focusTrapRef = useFocusTrap(true);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [loopConfig] = useState<LoopConfig>({ mode: "loop" });
@@ -103,7 +105,10 @@ export default function FullscreenPreview({
 
   return (
     <div
-      ref={containerRef}
+      ref={(el) => {
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        (focusTrapRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Fullscreen animation preview"

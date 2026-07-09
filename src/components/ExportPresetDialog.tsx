@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import {
   SOCIAL_PRESETS,
   MESSAGING_PRESETS,
@@ -48,6 +49,7 @@ export default function ExportPresetDialog({
   exportProgress,
 }: ExportPresetDialogProps) {
   const t = useTranslations();
+  const focusTrapRef = useFocusTrap(open);
   const [selected, setSelected] = useState<ExportPreset | null>(null);
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -145,6 +147,7 @@ export default function ExportPresetDialog({
       onClick={onClose}
     >
       <div
+        ref={focusTrapRef}
         className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"

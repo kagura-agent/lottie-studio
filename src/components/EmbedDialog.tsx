@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from 'next-intl';
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface EmbedDialogProps {
   animationId: string;
@@ -22,6 +23,7 @@ export default function EmbedDialog({
   onClose,
 }: EmbedDialogProps) {
   const t = useTranslations();
+  const focusTrapRef = useFocusTrap(open);
   const [activeTab, setActiveTab] = useState<Tab>("player");
   const [copied, setCopied] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
@@ -73,6 +75,7 @@ export default function EmbedDialog({
       onClick={onClose}
     >
       <div
+        ref={focusTrapRef}
         className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-[90vw] max-w-lg mx-4"
         role="dialog"
         aria-modal="true"

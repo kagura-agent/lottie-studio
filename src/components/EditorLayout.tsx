@@ -923,6 +923,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
   return (
     <div className="flex flex-col h-[100dvh]">
+      <h1 className="sr-only">Lottie Studio Editor</h1>
+
+      {/* Accessibility: save status announcer */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {saveStatus === "saved" && "Animation saved"}
+        {saveStatus === "error" && "Save failed"}
+        {saving && "Saving animation..."}
+      </div>
+
       {/* Header */}
       <header className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 border-b border-zinc-800 bg-zinc-900 shrink-0">
         <Link
@@ -1122,9 +1131,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
       {/* Main content */}
       <ErrorBoundary fallbackMessage={t('common.error')}>
-      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+      <div id="main-content" className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Preview panel - stacked on mobile (40vh top), side-by-side on desktop */}
-        <div className={`flex flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
+        <div role="region" aria-label="Animation preview" className={`flex flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
           isMobile ? "h-[40vh] shrink-0" : ""
         }`}>
           <div className="flex-1 p-2 md:p-4 min-h-0 relative" data-tour="canvas">
@@ -1266,13 +1275,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         </div>
 
         {/* Editor panel - below canvas on mobile, side-by-side on desktop */}
-        <div
+        <main
           id="panel-chat"
           className="flex flex-col flex-1 md:min-h-0 min-h-0"
         >
           {/* Desktop-only right panel tabs */}
-          <div className="hidden md:flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
+          <div role="tablist" aria-label="Editor panels" className="hidden md:flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
             <button
+              role="tab"
+              aria-selected={rightPanel === "chat"}
               onClick={() => setRightPanel("chat")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 rightPanel === "chat"
@@ -1283,6 +1294,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               {t('editor.chat')}
             </button>
             <button
+              role="tab"
+              aria-selected={rightPanel === "json"}
               onClick={() => setRightPanel("json")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 rightPanel === "json"
@@ -1293,6 +1306,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               {t('editor.json')}
             </button>
             <button
+              role="tab"
+              aria-selected={rightPanel === "layers"}
               onClick={() => setRightPanel("layers")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 rightPanel === "layers"
@@ -1368,7 +1383,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               )
             )}
           </div>
-        </div>
+        </main>
       </div>
       </ErrorBoundary>
 

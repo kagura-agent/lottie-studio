@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/apiFetch";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface Collaboration {
   id: string;
@@ -18,6 +19,7 @@ interface CollaborateDialogProps {
 }
 
 export default function CollaborateDialog({ animationId, open, onClose }: CollaborateDialogProps) {
+  const focusTrapRef = useFocusTrap(open);
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [permission, setPermission] = useState<"edit" | "view">("edit");
   const [loading, setLoading] = useState(false);
@@ -83,12 +85,16 @@ export default function CollaborateDialog({ animationId, open, onClose }: Collab
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
+        ref={focusTrapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Collaborate"
         className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-white">Collaborate</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-xl leading-none" aria-label="Close">&times;</button>
         </div>
 
         <div className="flex gap-2 mb-4">
@@ -136,6 +142,7 @@ export default function CollaborateDialog({ animationId, open, onClose }: Collab
                     onClick={() => copyLink(collab.token)}
                     className="text-zinc-400 hover:text-white p-1 rounded text-xs"
                     title="Copy link"
+                    aria-label="Copy collaboration link"
                   >
                     {copiedToken === collab.token ? "Copied!" : "Copy"}
                   </button>
@@ -143,6 +150,7 @@ export default function CollaborateDialog({ animationId, open, onClose }: Collab
                     onClick={() => revokeLink(collab.token)}
                     className="text-zinc-500 hover:text-red-400 p-1 rounded text-xs"
                     title="Revoke"
+                    aria-label="Revoke collaboration link"
                   >
                     &times;
                   </button>
