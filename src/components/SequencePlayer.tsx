@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { loadAnimation, type AnimationItem } from "@/lib/lottie";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface SequenceItem {
   animation_id: string;
@@ -24,6 +25,7 @@ interface SequencePlayerProps {
 
 export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
   const t = useTranslations("sequencePlayer");
+  const prefersReducedMotion = useReducedMotion();
   const [sequenceData, setSequenceData] = useState<SequenceData | null>(null);
   const [animationDataMap, setAnimationDataMap] = useState<Record<string, object>>({});
   const [loading, setLoading] = useState(true);
@@ -263,6 +265,22 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
   const handlePlay = useCallback(async () => {
     if (!sequenceData || sequenceData.items.length === 0) return;
 
+    if (prefersReducedMotion) {
+      const currentAnim = activeSlot.current === "A" ? animARef.current : animBRef.current;
+      if (currentAnim) {
+        currentAnim.goToAndStop(0, true);
+      } else {
+        const anim = await loadScene(currentScene, activeSlot.current);
+        const container = activeSlot.current === "A" ? containerARef.current : containerBRef.current;
+        if (container) {
+          container.style.opacity = "1";
+          container.style.transform = "";
+        }
+        if (anim) anim.goToAndStop(0, true);
+      }
+      return;
+    }
+
     const currentAnim = activeSlot.current === "A" ? animARef.current : animBRef.current;
     if (currentAnim) {
       currentAnim.play();
@@ -281,7 +299,7 @@ export default function SequencePlayer({ sequenceId }: SequencePlayerProps) {
       anim.play();
       setIsPlaying(true);
     }
-  }, [sequenceData, currentScene, loadScene]);
+  }, [sequenceData, currentScene, loadScene, prefersReducedMotion]);
 
   const handlePause = useCallback(() => {
     const currentAnim = activeSlot.current === "A" ? animARef.current : animBRef.current;
