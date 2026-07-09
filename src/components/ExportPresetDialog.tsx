@@ -58,13 +58,9 @@ export default function ExportPresetDialog({
     setSelected(null);
     setShowSaveForm(false);
     setCustomName("");
+    setCustomPresets(loadCustomPresets());
   }
   if (open !== prevOpen) setPrevOpen(open);
-
-  useEffect(() => {
-    if (!open) return;
-    setCustomPresets(loadCustomPresets());
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
