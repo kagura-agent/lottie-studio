@@ -71,6 +71,9 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-white">
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
           <DesignTokensProvider>
