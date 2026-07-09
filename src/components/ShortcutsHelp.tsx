@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useTranslations } from 'next-intl';
 import { resetOnboarding } from "./OnboardingTour";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface ShortcutsHelpProps {
   open: boolean;
@@ -36,6 +37,7 @@ function Kbd({ children }: { children: string }) {
 
 export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const focusTrapRef = useFocusTrap(open);
   const isMac = useIsMac();
   const mod = isMac ? "⌘" : "Ctrl";
   const t = useTranslations();
@@ -89,7 +91,7 @@ export default function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md mx-4">
+      <div ref={focusTrapRef} role="dialog" aria-modal="true" aria-label={t('shortcutsHelp.title')} className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="text-zinc-100 text-base font-semibold">{t('shortcutsHelp.title')}</h2>
