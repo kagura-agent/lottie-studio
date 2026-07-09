@@ -457,6 +457,12 @@ export default function LottiePreview({
         </div>
       )}
 
+      {animationData && prefersReducedMotion && (
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-zinc-800/80 backdrop-blur-sm px-2 py-1 shadow border border-zinc-700/50">
+          <span className="text-zinc-400 text-xs">Motion paused</span>
+        </div>
+      )}
+
       {/* Floating zoom controls */}
       {animationData && (
         <div
@@ -467,6 +473,7 @@ export default function LottiePreview({
           <button
             type="button"
             title="Zoom out (−)"
+            aria-label="Zoom out"
             className="flex items-center justify-center w-6 h-6 rounded text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
             disabled={scale <= MIN_ZOOM}
             onClick={() => zoomTo(scale - BUTTON_ZOOM_STEP)}
@@ -482,6 +489,7 @@ export default function LottiePreview({
           <button
             type="button"
             title="Zoom in (+)"
+            aria-label="Zoom in"
             className="flex items-center justify-center w-6 h-6 rounded text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
             disabled={scale >= MAX_ZOOM}
             onClick={() => zoomTo(scale + BUTTON_ZOOM_STEP)}
@@ -492,6 +500,7 @@ export default function LottiePreview({
           <button
             type="button"
             title="Fit to view (0)"
+            aria-label="Reset zoom to fit view"
             className="flex items-center justify-center h-6 px-1.5 rounded text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors text-[10px] font-medium uppercase tracking-wide"
             onClick={resetView}
           >
