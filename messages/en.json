@@ -318,7 +318,16 @@
     "restore": "Restore",
     "restoring": "Restoring...",
     "noVersions": "No versions yet",
-    "triggerLabel": "via chat"
+    "triggerLabel": "via chat",
+    "preview": "Preview",
+    "previewingVersion": "Previewing v{version}",
+    "exitPreview": "Exit preview",
+    "compare": "Compare",
+    "compareTitle": "Compare Versions",
+    "selectTwo": "Select two versions to compare",
+    "exitCompare": "Exit compare",
+    "selected": "Selected",
+    "toggleVersionHistory": "Toggle version history"
   },
   "relatedAnimations": {
     "title": "Related Animations",
@@ -342,7 +351,8 @@
     "toggleLayers": "Toggle layers",
     "toggleFullscreen": "Toggle fullscreen",
     "showShortcuts": "Show shortcuts",
-    "commandPalette": "Command palette"
+    "commandPalette": "Command palette",
+    "versionHistory": "Version history"
   },
   "qualityPanel": {
     "title": "Quality",
@@ -400,6 +410,8 @@
     "toggleLayersDesc": "Show or hide the layers panel",
     "showShortcuts": "Keyboard Shortcuts",
     "showShortcutsDesc": "Show keyboard shortcuts reference",
+    "toggleVersionHistory": "Version History",
+    "toggleVersionHistoryDesc": "Toggle version history panel",
     "exportJson": "Export JSON",
     "exportJsonDesc": "Download the Lottie JSON file",
     "exportGif": "Export GIF",

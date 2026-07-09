@@ -43,6 +43,7 @@ interface CommandPaletteProps {
   onToggleJson: () => void;
   onToggleLayers: () => void;
   onShowShortcuts: () => void;
+  onToggleVersionHistory: () => void;
   onExportJson: () => void;
   onExportGif: () => void;
   onExportApng: () => void;
@@ -89,6 +90,7 @@ export default function CommandPalette({
   onToggleJson,
   onToggleLayers,
   onShowShortcuts,
+  onToggleVersionHistory,
   onExportJson,
   onExportGif,
   onExportApng,
@@ -136,6 +138,7 @@ export default function CommandPalette({
       { id: "action-toggle-json", kind: "action", label: t("commandPalette.toggleJson"), description: t("commandPalette.toggleJsonDesc") },
       { id: "action-toggle-layers", kind: "action", label: t("commandPalette.toggleLayers"), description: t("commandPalette.toggleLayersDesc") },
       { id: "action-shortcuts", kind: "action", label: t("commandPalette.showShortcuts"), description: t("commandPalette.showShortcutsDesc"), shortcut: [mod, "/"] },
+      { id: "action-version-history", kind: "action", label: t("commandPalette.toggleVersionHistory"), description: t("commandPalette.toggleVersionHistoryDesc"), shortcut: [mod, "H"] },
     );
 
     // 4. Export formats
@@ -262,6 +265,9 @@ export default function CommandPalette({
             case "action-shortcuts":
               onShowShortcuts();
               break;
+            case "action-version-history":
+              onToggleVersionHistory();
+              break;
           }
           break;
         }
@@ -307,6 +313,7 @@ export default function CommandPalette({
       onToggleJson,
       onToggleLayers,
       onShowShortcuts,
+      onToggleVersionHistory,
       onExportJson,
       onExportGif,
       onExportApng,
