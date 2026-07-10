@@ -43,6 +43,43 @@ const TAG_ORDER = [
   "celebration", "notification",
 ];
 
+function CommunityTemplates() {
+  const [templates, setTemplates] = useState<Array<{ id: string; title: string; description: string | null; category: string | null; tags: string | null; animation_name: string; anim_id: string }>>([]);
+
+  useEffect(() => {
+    fetch("/api/templates/community")
+      .then((r) => r.ok ? r.json() : [])
+      .then(setTemplates)
+      .catch(() => {});
+  }, []);
+
+  if (templates.length === 0) return null;
+
+  return (
+    <div className="mt-12 pt-8 border-t border-zinc-800">
+      <h2 className="text-xl font-bold text-zinc-100 mb-4">Community Templates</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {templates.map((t) => (
+          <Link
+            key={t.id}
+            href={`/editor/${t.anim_id}`}
+            className="block bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-600 transition-colors"
+          >
+            <h3 className="text-zinc-100 font-medium">{t.title}</h3>
+            {t.description && <p className="text-zinc-400 text-sm mt-1 line-clamp-2">{t.description}</p>}
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {t.category && <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-xs text-zinc-400">{t.category}</span>}
+              {t.tags && t.tags.split(",").map((tag) => (
+                <span key={tag} className="px-2 py-0.5 rounded-full bg-zinc-800 text-xs text-zinc-500">{tag.trim()}</span>
+              ))}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ExplorePage() {
   const t = useTranslations();
   const [animations, setAnimations] = useState<ExploreAnimation[]>([]);
@@ -586,6 +623,9 @@ export default function ExplorePage() {
           </>
         )}
       </div>
+
+      {/* Community Templates Section */}
+      <CommunityTemplates />
     </div>
   );
 }

@@ -162,13 +162,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_versions_animation ON versions(animation_id, version_num)
 `);
 
-// Startup cleanup: remove orphaned animation rows (no frames AND no messages)
-// These are stale entries from failed LLM generations
-db.exec(`
-  DELETE FROM animations
-  WHERE frame_count IS NULL
-    AND id NOT IN (SELECT DISTINCT animation_id FROM messages)
-`);
+// Startup cleanup: moved below after template_submissions table creation
 
 // --- FTS5 Full-Text Search ---
 
@@ -976,5 +970,33 @@ db.exec(`
 `);
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id)`);
+
+// --- Template Marketplace: Community Submissions ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS template_submissions (
+    id TEXT PRIMARY KEY,
+    animation_id TEXT NOT NULL REFERENCES animations(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    tags TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    reviewer_notes TEXT,
+    submitted_at TEXT NOT NULL DEFAULT (datetime('now')),
+    reviewed_at TEXT
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_template_submissions_status ON template_submissions(status)`);
+
+// Startup cleanup: remove orphaned animation rows (no frames AND no messages)
+// These are stale entries from failed LLM generations
+db.exec(`
+  DELETE FROM animations
+  WHERE frame_count IS NULL
+    AND id NOT IN (SELECT DISTINCT animation_id FROM messages)
+    AND id NOT IN (SELECT DISTINCT animation_id FROM template_submissions)
+`);
 
 export { db, ANIMATIONS_DIR };

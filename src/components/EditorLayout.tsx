@@ -36,6 +36,7 @@ import ImportLottie from "./ImportLottie";
 import ThemePanel, { ThemeIndicator } from "./ThemePanel";
 import OnboardingTour from "./OnboardingTour";
 import OfflineIndicator from "./OfflineIndicator";
+import SubmitTemplateModal from "./SubmitTemplateModal";
 import MobileTabBar, { type MobileTab } from "./MobileTabBar";
 import BottomSheet from "./BottomSheet";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -153,6 +154,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [submitTemplateOpen, setSubmitTemplateOpen] = useState(false);
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const [shareChat, setShareChat] = useState(false);
@@ -1006,6 +1008,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         )}
         <ThemeIndicator onClick={() => setThemePanelOpen((v) => !v)} />
         <button
+          onClick={() => setSubmitTemplateOpen(true)}
+          disabled={isNewMode}
+          aria-label="Submit as template"
+          className="hidden md:inline-flex px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Submit as Template
+        </button>
+        <button
           onClick={() => setEmbedOpen(true)}
           disabled={isNewMode}
           aria-label="Open embed dialog"
@@ -1546,6 +1556,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         />
       )}
       <ThemePanel open={themePanelOpen} onClose={() => setThemePanelOpen(false)} />
+      {currentId && (
+        <SubmitTemplateModal
+          open={submitTemplateOpen}
+          onClose={() => setSubmitTemplateOpen(false)}
+          animationId={currentId}
+        />
+      )}
       <ExportPresetDialog
         open={presetDialogOpen}
         onClose={() => setPresetDialogOpen(false)}
