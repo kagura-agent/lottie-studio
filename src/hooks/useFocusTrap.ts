@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -11,8 +11,9 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-export function useFocusTrap(active: boolean) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function useFocusTrap(active: boolean, externalRef?: React.RefObject<HTMLDivElement | null>) {
+  const internalRef = useRef<HTMLDivElement>(null);
+  const containerRef = externalRef ?? internalRef;
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {

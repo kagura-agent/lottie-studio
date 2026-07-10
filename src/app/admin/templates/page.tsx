@@ -42,7 +42,9 @@ export default function AdminTemplatesPage() {
   }
 
   useEffect(() => {
-    if (token) fetchSubmissions();
+    if (token) {
+      void (async () => { await fetchSubmissions(); })();
+    }
   }, [filter]);
 
   async function handleReview(id: string, status: "approved" | "rejected") {

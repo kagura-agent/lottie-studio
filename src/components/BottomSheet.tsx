@@ -20,7 +20,7 @@ export default function BottomSheet({
   height = "60vh",
 }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const focusTrapRef = useFocusTrap(open);
+  useFocusTrap(open, sheetRef);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startYRef = useRef(0);
@@ -84,10 +84,7 @@ export default function BottomSheet({
 
       {/* Sheet */}
       <div
-        ref={(el) => {
-          (sheetRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-          (focusTrapRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-        }}
+        ref={sheetRef}
         className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 rounded-t-2xl shadow-2xl md:hidden"
         style={{
           maxHeight: height,
