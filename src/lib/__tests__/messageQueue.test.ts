@@ -37,8 +37,8 @@ beforeEach(() => {
     },
     index: () => ({
       getAll: () => {
-        const sorted = [...queueStore.values()].sort(
-          (a: { timestamp: number }, b: { timestamp: number }) => a.timestamp - b.timestamp
+        const sorted = ([...queueStore.values()] as Array<{ timestamp: number }>).sort(
+          (a, b) => a.timestamp - b.timestamp
         );
         const req = { result: sorted, onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
         queueMicrotask(() => req.onsuccess?.());
