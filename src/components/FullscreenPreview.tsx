@@ -33,7 +33,6 @@ export default function FullscreenPreview({
   onClose,
 }: FullscreenPreviewProps) {
   const t = useTranslations('controls');
-  const containerRef = useRef<HTMLDivElement>(null);
   const focusTrapRef = useFocusTrap(true);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -41,7 +40,7 @@ export default function FullscreenPreview({
 
   // Request fullscreen on mount
   useEffect(() => {
-    const el = containerRef.current;
+    const el = focusTrapRef.current;
     if (!el) return;
 
     el.requestFullscreen?.().catch(() => {
@@ -105,10 +104,7 @@ export default function FullscreenPreview({
 
   return (
     <div
-      ref={(el) => {
-        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-        (focusTrapRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-      }}
+      ref={focusTrapRef}
       role="dialog"
       aria-modal="true"
       aria-label="Fullscreen animation preview"
