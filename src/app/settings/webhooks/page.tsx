@@ -59,8 +59,20 @@ export default function WebhooksSettingsPage() {
 
   useEffect(() => {
     if (!loading && !user) router.push("/");
-    if (user) fetchWebhooks();
-  }, [user, loading, router, fetchWebhooks]);
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/webhooks");
+      if (res.ok && !cancelled) {
+        const data = await res.json();
+        setWebhooks(data.webhooks);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -169,7 +181,7 @@ export default function WebhooksSettingsPage() {
 
       {newSecret && (
         <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-          <p className="font-medium text-green-800 dark:text-green-200 mb-1">Webhook created! Save your secret — it won't be shown again:</p>
+          <p className="font-medium text-green-800 dark:text-green-200 mb-1">Webhook created! Save your secret — it won&apos;t be shown again:</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 px-3 py-1 bg-white dark:bg-gray-800 rounded border text-sm font-mono">{newSecret}</code>
             <button
