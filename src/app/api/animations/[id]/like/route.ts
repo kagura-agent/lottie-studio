@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-middleware";
 import { extractIp } from "@/lib/rateLimit";
 import { createNotification } from "@/lib/notifications";
+import { emitWebhook } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export async function POST(
     // Like — insert and increment count
     db.prepare("INSERT INTO likes (animation_id, user_id, ip) VALUES (?, ?, '')").run(id, user.id);
     db.prepare("UPDATE animations SET like_count = COALESCE(like_count, 0) + 1 WHERE id = ?").run(id);
+    emitWebhook("animation.liked", { animationId: id, userId: user.id }, user.id);
 
     const owner = db
       .prepare("SELECT creator_id, user_id FROM animations WHERE id = ?")

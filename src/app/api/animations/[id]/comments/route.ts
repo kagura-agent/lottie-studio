@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth-middleware";
+import { emitWebhook } from "@/lib/events";
 import crypto from "node:crypto";
 import { createNotification } from "@/lib/notifications";
 
@@ -128,6 +129,8 @@ export async function POST(
   db.prepare(
     "UPDATE animations SET comment_count = COALESCE(comment_count, 0) + 1 WHERE id = ?"
   ).run(id);
+
+  emitWebhook("animation.commented", { animationId: id, commentId, userId: user.id }, user.id);
 
   const owner = db
     .prepare("SELECT creator_id, user_id FROM animations WHERE id = ?")

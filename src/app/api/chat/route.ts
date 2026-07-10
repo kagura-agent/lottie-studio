@@ -3,7 +3,7 @@ import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from 
 import { buildSystemPrompt, buildDesignTokensPrompt, buildPresetPrompt } from "@/lib/prompts";
 import { compactHistory, isUndoIntent } from "@/lib/chat-utils";
 import type { MessageRow } from "@/lib/chat-utils";
-import { animationEvents } from "@/lib/events";
+import { animationEvents, emitWebhook } from "@/lib/events";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
@@ -1144,6 +1144,7 @@ IMPORTANT:
       "INSERT INTO animations (id, name, creator_id, creator_name) VALUES (?, ?, ?, ?)"
     ).run(animationId, name, creatorId, creatorName);
     isNewAnimation = true;
+    emitWebhook("animation.created", { animationId, name }, creatorId || undefined);
   }
 
   // When regenerating, delete the previous user + assistant messages for this turn

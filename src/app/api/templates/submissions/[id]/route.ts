@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { emitWebhook } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (status === "approved") {
     db.prepare("UPDATE animations SET share_chat = 1 WHERE id = ?").run(submission.animation_id);
+    emitWebhook("template.approved", { submissionId: id, animationId: submission.animation_id });
   }
 
   const updated = db.prepare("SELECT * FROM template_submissions WHERE id = ?").get(id);

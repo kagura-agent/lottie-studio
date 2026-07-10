@@ -171,10 +171,10 @@ User: "make a pink sakura petal falling and spinning"
 - [x] Performance audit & bundle optimization (code-split, lazy load heavy deps)
 - [x] Accessibility deep pass (keyboard nav, screen reader, WCAG 2.1 AA)
 - [x] Advanced export presets (platform-specific: Instagram Story, TikTok, Slack emoji)
-- [ ] Template marketplace (community-submitted templates with review flow)
+- [x] Template marketplace (community-submitted templates with review flow)
 - [x] Multi-language prompt support (LLM accepts prompts in any language)
 - [x] Animation versioning UI (visual diff between versions, restore points)
-- [ ] Webhook integrations (Slack/Discord notifications on animation events)
+- [x] Webhook integrations (Slack/Discord notifications on animation events)
 
 ## LLM Integration Design
 

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { emitWebhook } from "@/lib/events";
 import crypto from "node:crypto";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function POST(request: Request) {
   db.prepare(
     "INSERT INTO template_submissions (id, animation_id, title, description, category, tags) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(id, animationId, title, description || null, category || null, tagsStr);
+
+  emitWebhook("template.submitted", { submissionId: id, animationId, title });
 
   const submission = db.prepare("SELECT * FROM template_submissions WHERE id = ?").get(id);
   return Response.json(submission, { status: 201 });
