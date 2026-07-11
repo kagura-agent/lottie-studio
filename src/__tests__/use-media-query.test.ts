@@ -129,8 +129,6 @@ describe("useMediaQuery store logic", () => {
 
 describe("useIsMobile breakpoint", () => {
   it("uses max-width: 767px (below Tailwind md)", () => {
-    // useIsMobile calls useMediaQuery("(max-width: 767px)")
-    // This means mobile is true when viewport < 768px
     const query = "(max-width: 767px)";
     expect(query).toBe("(max-width: 767px)");
   });
@@ -146,5 +144,15 @@ describe("useMediaQuery exports", () => {
     expect(typeof mod.useMediaQuery).toBe("function");
     expect(typeof mod.useIsMobile).toBe("function");
     expect(typeof mod.useIsTablet).toBe("function");
+  });
+});
+
+describe("useMediaQuery hook implementation", () => {
+  it("uses useState + useEffect pattern (no useSyncExternalStore)", async () => {
+    const source = await import("@/hooks/useMediaQuery?raw");
+    const code = typeof source === "string" ? source : (source as { default: string }).default;
+    expect(code).not.toContain("useSyncExternalStore");
+    expect(code).toContain("useState");
+    expect(code).toContain("useEffect");
   });
 });
