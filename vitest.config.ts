@@ -8,6 +8,6 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ["node_modules", ".next", "dist"],
+    exclude: ["node_modules", ".next", "dist", "e2e"],
   },
 });
