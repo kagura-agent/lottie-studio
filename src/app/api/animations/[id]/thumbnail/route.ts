@@ -1,6 +1,6 @@
 import { db, ANIMATIONS_DIR } from "@/lib/db";
 import { renderLottieThumbnail } from "@/lib/thumbnail-renderer";
-import { createCanvas } from "canvas";
+import sharp from "sharp";
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -11,49 +11,29 @@ fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
 const FALLBACK_WIDTH = 1200;
 const FALLBACK_HEIGHT = 630;
 
-function generateFallbackThumbnail(name: string): Buffer {
-  const canvas = createCanvas(FALLBACK_WIDTH, FALLBACK_HEIGHT);
-  const ctx = canvas.getContext("2d");
+function escapeXml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
-  const gradient = ctx.createLinearGradient(0, 0, FALLBACK_WIDTH, FALLBACK_HEIGHT);
-  gradient.addColorStop(0, "#1a1a2e");
-  gradient.addColorStop(0.5, "#16213e");
-  gradient.addColorStop(1, "#0f3460");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, FALLBACK_WIDTH, FALLBACK_HEIGHT);
+async function generateFallbackThumbnail(name: string): Promise<Buffer> {
+  const escapedName = escapeXml(name);
+  const svg = `<svg width="${FALLBACK_WIDTH}" height="${FALLBACK_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="50%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#0f3460"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <circle cx="900" cy="150" r="200" fill="#e94560" opacity="0.1"/>
+  <circle cx="200" cy="500" r="150" fill="#533483" opacity="0.1"/>
+  <text x="${FALLBACK_WIDTH / 2}" y="${FALLBACK_HEIGHT / 2 - 20}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-weight="bold" font-size="48" fill="#ffffff">${escapedName}</text>
+  <text x="${FALLBACK_WIDTH / 2}" y="${FALLBACK_HEIGHT / 2 + 50}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="24" fill="#e94560">Lottie Studio</text>
+  <rect x="20" y="20" width="${FALLBACK_WIDTH - 40}" height="${FALLBACK_HEIGHT - 40}" fill="none" stroke="rgba(233,69,96,0.3)" stroke-width="4"/>
+</svg>`;
 
-  ctx.globalAlpha = 0.1;
-  ctx.fillStyle = "#e94560";
-  ctx.beginPath();
-  ctx.arc(900, 150, 200, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#533483";
-  ctx.beginPath();
-  ctx.arc(200, 500, 150, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  const maxWidth = FALLBACK_WIDTH - 160;
-  let fontSize = 56;
-  ctx.font = `bold ${fontSize}px sans-serif`;
-  while (ctx.measureText(name).width > maxWidth && fontSize > 28) {
-    fontSize -= 2;
-    ctx.font = `bold ${fontSize}px sans-serif`;
-  }
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(name, FALLBACK_WIDTH / 2, FALLBACK_HEIGHT / 2 - 20, maxWidth);
-
-  ctx.font = "24px sans-serif";
-  ctx.fillStyle = "#e94560";
-  ctx.fillText("🎬 Lottie Studio", FALLBACK_WIDTH / 2, FALLBACK_HEIGHT / 2 + 50);
-
-  ctx.strokeStyle = "rgba(233, 69, 96, 0.3)";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(20, 20, FALLBACK_WIDTH - 40, FALLBACK_HEIGHT - 40);
-
-  return canvas.toBuffer("image/png");
+  return await sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 export async function GET(
@@ -131,7 +111,7 @@ export async function GET(
   }
 
   const name = row.name || "Untitled";
-  const buffer = generateFallbackThumbnail(name);
+  const buffer = await generateFallbackThumbnail(name);
   fs.writeFileSync(fallbackPath, buffer);
 
   return new NextResponse(new Uint8Array(buffer), {
