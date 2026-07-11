@@ -1,31 +1,15 @@
 import { getBrowser } from "./thumbnail-renderer";
 import fs from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 
 const GIF_SIZE = 480;
 const FRAME_COUNT = 20;
-
-let GifEncoder: typeof import("gifencoder") | null = null;
-let createCanvas: typeof import("canvas").createCanvas | null = null;
-
-async function loadDeps(): Promise<boolean> {
-  if (GifEncoder && createCanvas) return true;
-  try {
-    GifEncoder = (await import("gifencoder")).default ?? (await import("gifencoder"));
-    createCanvas = (await import("canvas")).createCanvas;
-    return true;
-  } catch (err) {
-    console.error("[gif-renderer] Failed to load gifencoder/canvas:", err);
-    return false;
-  }
-}
 
 export async function renderAnimatedPreview(
   animationJson: unknown,
   outputPath: string
 ): Promise<boolean> {
-  if (!await loadDeps()) return false;
-
   let page = null;
   try {
     const jsonStr = JSON.stringify(animationJson);
@@ -73,24 +57,12 @@ export async function renderAnimatedPreview(
 
     if (!totalFrames || totalFrames <= 0) return false;
 
-    const encoder = new GifEncoder!(GIF_SIZE, GIF_SIZE);
-    const dir = path.dirname(outputPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    const stream = fs.createWriteStream(outputPath);
-    encoder.createReadStream().pipe(stream);
-
     const frameRate = (animationJson as { fr?: number }).fr || 30;
     const duration = totalFrames / frameRate;
-    const delay = Math.round((duration * 1000) / FRAME_COUNT);
+    const delayMs = Math.round((duration * 1000) / FRAME_COUNT);
 
-    encoder.start();
-    encoder.setRepeat(0);
-    encoder.setDelay(delay);
-    encoder.setQuality(10);
-
-    const canvas = createCanvas!(GIF_SIZE, GIF_SIZE);
-    const ctx = canvas.getContext("2d");
+    // Capture frames as raw RGBA buffers via sharp
+    const rawFrames: Buffer[] = [];
 
     for (let i = 0; i < FRAME_COUNT; i++) {
       const frame = Math.floor((i / FRAME_COUNT) * totalFrames);
@@ -105,17 +77,38 @@ export async function renderAnimatedPreview(
       await new Promise((r) => setTimeout(r, 100));
 
       const screenshot = await page.screenshot({ type: "png", omitBackground: false });
-      const img = await (await import("canvas")).loadImage(Buffer.from(screenshot));
-      ctx.drawImage(img, 0, 0, GIF_SIZE, GIF_SIZE);
-      encoder.addFrame(ctx as unknown as CanvasRenderingContext2D);
+
+      // Convert PNG screenshot to raw RGBA buffer at target size
+      const rawBuf = await sharp(Buffer.from(screenshot))
+        .resize(GIF_SIZE, GIF_SIZE)
+        .ensureAlpha()
+        .raw()
+        .toBuffer();
+
+      rawFrames.push(rawBuf);
     }
 
-    encoder.finish();
+    // Stack all frames vertically into one tall raw buffer
+    const stacked = Buffer.concat(rawFrames);
 
-    await new Promise<void>((resolve, reject) => {
-      stream.on("finish", resolve);
-      stream.on("error", reject);
-    });
+    // Ensure output directory exists
+    const dir = path.dirname(outputPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    // Create animated GIF using sharp
+    // sharp interprets the tall image as multi-page when delay array is provided
+    await sharp(stacked, {
+      raw: {
+        width: GIF_SIZE,
+        height: GIF_SIZE * FRAME_COUNT,
+        channels: 4,
+      },
+    })
+      .gif({
+        delay: Array(FRAME_COUNT).fill(delayMs),
+        loop: 0,
+      })
+      .toFile(outputPath);
 
     return true;
   } catch (err) {
