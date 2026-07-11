@@ -51,43 +51,31 @@ export const MOCK_LOTTIE_JSON = {
   ],
 };
 
-const MOCK_CHAT_RESPONSE = JSON.stringify({
-  text: "Here's a bouncing circle animation for you!",
-  lottie: MOCK_LOTTIE_JSON,
-});
-
 /**
- * Intercepts the /api/chat endpoint and returns a canned response
- * that includes Lottie JSON, simulating the LLM agent.
+ * Mock the /api/chat endpoint to return a non-streaming JSON response
+ * that the ChatPanel can handle via the fallback (non-SSE) path.
  */
 export async function mockLLMRoute(page: Page) {
   await page.route("**/api/chat", async (route: Route) => {
+    const method = route.request().method();
+    if (method !== "POST") {
+      await route.fallback();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: MOCK_CHAT_RESPONSE,
+      body: JSON.stringify({
+        reply: "Here's a bouncing circle animation for you!",
+        animationId: "test-animation-id",
+        lottieJson: MOCK_LOTTIE_JSON,
+      }),
     });
   });
-}
 
-/**
- * Intercepts WebSocket connections and provides mock streaming responses.
- * Use when testing the real-time preview flow.
- */
-export async function mockWebSocket(page: Page) {
-  // Intercept fetch-based streaming (SSE/chunked) used by the chat route
-  await page.route("**/api/chat", async (route: Route) => {
-    const chunks = [
-      JSON.stringify({ type: "text", content: "Here's a bouncing circle!" }),
-      JSON.stringify({ type: "lottie", content: MOCK_LOTTIE_JSON }),
-      JSON.stringify({ type: "done" }),
-    ];
-
-    await route.fulfill({
-      status: 200,
-      contentType: "text/event-stream",
-      body: chunks.map((c) => `data: ${c}\n\n`).join(""),
-    });
+  // Dismiss onboarding tour to prevent it from blocking interactions
+  await page.addInitScript(() => {
+    localStorage.setItem("lottie-studio-onboarding-done", "true");
   });
 }
 
@@ -95,29 +83,56 @@ export async function mockWebSocket(page: Page) {
  * Mock the animations API to return sample gallery data.
  */
 export async function mockGalleryAPI(page: Page) {
-  await page.route("**/api/animations?*", async (route: Route) => {
+  const animations = [
+    {
+      id: "test-1",
+      name: "Bouncing Ball",
+      frame_count: 60,
+      duration_seconds: 2,
+      created_at: "2026-01-01T00:00:00Z",
+    },
+    {
+      id: "test-2",
+      name: "Spinning Star",
+      frame_count: 60,
+      duration_seconds: 2,
+      created_at: "2026-01-02T00:00:00Z",
+    },
+  ];
+
+  await page.route("**/api/animations", async (route: Route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        animations: [
-          {
-            id: "test-1",
-            name: "Bouncing Ball",
-            thumbnail: null,
-            createdAt: "2026-01-01T00:00:00Z",
-            updatedAt: "2026-01-01T00:00:00Z",
-          },
-          {
-            id: "test-2",
-            name: "Spinning Star",
-            thumbnail: null,
-            createdAt: "2026-01-02T00:00:00Z",
-            updatedAt: "2026-01-02T00:00:00Z",
-          },
-        ],
-        total: 2,
-      }),
+      body: JSON.stringify(animations),
+    });
+  });
+
+  await page.route("**/templates/index.json", async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+
+  await page.route("**/api/auth/me", async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: null }),
+    });
+  });
+
+  await page.route("**/api/collections**", async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
     });
   });
 }

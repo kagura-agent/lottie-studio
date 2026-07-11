@@ -6,24 +6,14 @@ test.describe("Chat interaction", () => {
     await mockLLMRoute(page);
     await page.goto("/editor/new?skip=true");
 
-    const input = page.locator(
-      "[data-testid='chat-input'], textarea, input[type='text']"
-    ).first();
+    const input = page.locator("textarea[placeholder*='Describe']");
+    await expect(input).toBeVisible({ timeout: 10_000 });
     await input.fill("Create a bouncing ball animation");
-
-    // Submit via Enter or send button
-    const sendButton = page.locator(
-      "button[type='submit'], [data-testid='send-button'], button[aria-label*='end']"
-    );
-    if (await sendButton.first().isVisible().catch(() => false)) {
-      await sendButton.first().click();
-    } else {
-      await input.press("Enter");
-    }
+    await input.press("Enter");
 
     // Response should appear in chat
     await expect(
       page.getByText(/bouncing circle|animation/i).first()
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

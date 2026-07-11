@@ -9,25 +9,23 @@ test.describe("Editor — new animation", () => {
   test("renders canvas and chat panel", async ({ page }) => {
     await page.goto("/editor/new?skip=true");
 
-    // Canvas area should be present
-    const canvas = page.locator("canvas, [data-testid='canvas'], [data-testid='lottie-canvas']");
-    await expect(canvas.first()).toBeVisible();
+    // Wait for full hydration via chat input
+    const input = page.locator("textarea[placeholder*='Describe']");
+    await expect(input).toBeVisible({ timeout: 15_000 });
 
-    // Chat panel should be present
-    const chatPanel = page.locator(
-      "[data-testid='chat-panel'], [role='complementary'], [class*='chat']"
-    );
-    await expect(chatPanel.first()).toBeVisible();
+    const canvas = page.getByRole("region", { name: /animation preview/i });
+    await expect(canvas).toBeVisible();
+
+    const chatPanel = page.getByRole("log", { name: /chat messages/i });
+    await expect(chatPanel).toBeVisible();
   });
 
   test("chat input is visible and focusable", async ({ page }) => {
     await page.goto("/editor/new?skip=true");
 
-    const input = page.locator(
-      "[data-testid='chat-input'], textarea[placeholder*='escri'], textarea[placeholder*='hat'], input[placeholder*='escri']"
-    );
-    await expect(input.first()).toBeVisible();
-    await input.first().focus();
-    await expect(input.first()).toBeFocused();
+    const input = page.locator("textarea[placeholder*='Describe']");
+    await expect(input).toBeVisible({ timeout: 15_000 });
+    await input.focus();
+    await expect(input).toBeFocused();
   });
 });

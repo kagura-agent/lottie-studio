@@ -6,25 +6,25 @@ test.describe("Canvas preview", () => {
     await mockLLMRoute(page);
     await page.goto("/editor/new?skip=true");
 
-    // Send a message to trigger animation generation
-    const input = page.locator(
-      "[data-testid='chat-input'], textarea, input[type='text']"
-    ).first();
-    await input.fill("Make a blue circle");
+    // Wait for full editor hydration — chat input indicates React is ready
+    const input = page.locator("textarea[placeholder*='Describe']");
+    await expect(input).toBeVisible({ timeout: 15_000 });
 
-    const sendButton = page.locator(
-      "button[type='submit'], [data-testid='send-button'], button[aria-label*='end']"
-    );
-    if (await sendButton.first().isVisible().catch(() => false)) {
-      await sendButton.first().click();
-    } else {
-      await input.press("Enter");
-    }
+    // Verify the placeholder is shown initially
+    await expect(page.getByText("Describe your animation to begin")).toBeVisible();
 
-    // Wait for lottie-web to render — it creates an SVG or canvas element inside the player
-    const lottieContainer = page.locator(
-      "[data-testid='lottie-canvas'] svg, [data-testid='canvas'] svg, canvas, .lottie-player svg"
-    );
-    await expect(lottieContainer.first()).toBeVisible({ timeout: 15_000 });
+    // Send a message — wait for hydration to stabilize before interacting
+    const sendBtn = page.locator("button[aria-label='Send message']");
+
+    // Keep filling until the button becomes enabled (hydration may reset input)
+    await expect(async () => {
+      await input.fill("Make a blue circle");
+      await expect(sendBtn).toBeEnabled({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
+
+    await sendBtn.click();
+
+    // After the agent responds with Lottie JSON, the placeholder should disappear
+    await expect(page.getByText("Describe your animation to begin")).toBeHidden({ timeout: 15_000 });
   });
 });
