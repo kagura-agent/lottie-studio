@@ -9,7 +9,8 @@
     "start": "tsx server.ts",
     "lint": "eslint",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.10",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/archiver": "^8.0.0",
     "@types/bcryptjs": "^2.4.6",
