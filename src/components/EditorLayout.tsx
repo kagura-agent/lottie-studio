@@ -1151,9 +1151,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       <ErrorBoundary fallbackMessage={t('common.error')}>
       <div id="main-content" className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Preview panel - stacked on mobile (40vh top), side-by-side on desktop */}
-        <div role="region" aria-label="Animation preview" className={`flex flex-col md:w-1/2 md:min-h-0 md:border-r border-zinc-800 ${
-          isMobile ? "h-[40vh] shrink-0" : ""
-        }`}>
+        <div role="region" aria-label="Animation preview" className="flex flex-col h-[40vh] shrink-0 md:h-auto md:shrink md:w-1/2 md:min-h-0 md:border-r border-zinc-800">
           <div className="flex-1 p-2 md:p-4 min-h-0 relative" data-tour="canvas">
             <ErrorBoundary
               key={currentId ?? "new"}

@@ -3,6 +3,11 @@ import { useSyncExternalStore } from "react";
 /**
  * Custom hook that tracks a CSS media query match state.
  * Uses useSyncExternalStore for safe, tear-free reads.
+ *
+ * Note: The server snapshot returns false. This means conditional rendering
+ * based on this hook may produce a brief flash on mobile after hydration.
+ * For layout-critical classes, prefer pure CSS/Tailwind responsive utilities
+ * (e.g. `md:flex-row`) over JS-based checks.
  */
 export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -16,7 +21,7 @@ export function useMediaQuery(query: string): boolean {
       if (typeof window === "undefined") return false;
       return window.matchMedia(query).matches;
     },
-    () => false // SSR snapshot
+    () => false // SSR snapshot — matches server render
   );
 }
 
