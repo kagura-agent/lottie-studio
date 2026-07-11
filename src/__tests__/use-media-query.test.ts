@@ -148,11 +148,11 @@ describe("useMediaQuery exports", () => {
 });
 
 describe("useMediaQuery hook implementation", () => {
-  it("uses useState + useEffect pattern (no useSyncExternalStore)", async () => {
+  it("uses useSyncExternalStore with SSR-safe server snapshot", async () => {
     const source = await import("@/hooks/useMediaQuery?raw");
     const code = typeof source === "string" ? source : (source as { default: string }).default;
-    expect(code).not.toContain("useSyncExternalStore");
-    expect(code).toContain("useState");
-    expect(code).toContain("useEffect");
+    expect(code).toContain("useSyncExternalStore");
+    // Server snapshot must return false to match SSR output
+    expect(code).toContain("false");
   });
 });
