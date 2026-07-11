@@ -5,17 +5,17 @@ import path from "node:path";
 const GIF_SIZE = 480;
 const FRAME_COUNT = 20;
 
-let GifEncoder: typeof import("gifencoder") | null = null;
+let GifEncoder: typeof import("gif-encoder-2").default | null = null;
 let createCanvas: typeof import("canvas").createCanvas | null = null;
 
 async function loadDeps(): Promise<boolean> {
   if (GifEncoder && createCanvas) return true;
   try {
-    GifEncoder = (await import("gifencoder")).default ?? (await import("gifencoder"));
+    GifEncoder = (await import("gif-encoder-2")).default ?? (await import("gif-encoder-2"));
     createCanvas = (await import("canvas")).createCanvas;
     return true;
   } catch (err) {
-    console.error("[gif-renderer] Failed to load gifencoder/canvas:", err);
+    console.error("[gif-renderer] Failed to load gif-encoder-2/canvas:", err);
     return false;
   }
 }
