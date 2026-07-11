@@ -8,7 +8,7 @@ const THUMBNAIL_SIZE = 600;
 let browserInstance: Browser | null = null;
 let browserLaunchPromise: Promise<Browser> | null = null;
 
-async function getBrowser(): Promise<Browser> {
+export async function getBrowser(): Promise<Browser> {
   if (browserInstance?.connected) return browserInstance;
 
   if (browserLaunchPromise) return browserLaunchPromise;

@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: "summary_large_image",
       title: name,
       description,
-      images: [thumbnailUrl],
+      images: [`${BASE_URL}/api/animations/${id}/preview`],
     },
   };
 }
