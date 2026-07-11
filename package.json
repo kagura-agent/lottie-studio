@@ -40,7 +40,8 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "upng-js": "^2.1.0",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "gifencoder": "^2.0.1"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.10",
