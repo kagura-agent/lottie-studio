@@ -25,7 +25,9 @@ describe("usage tracking", () => {
 
     function checkTierLimitPure(
       usage: { apiCalls: number },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       _tier: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       _endpoint: string
     ): RateLimitResult {
       if (usage.apiCalls >= 100) {

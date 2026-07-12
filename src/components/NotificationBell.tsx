@@ -204,6 +204,7 @@ export default function NotificationBell() {
                   }`}
                 >
                   {n.actor.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element -- external avatar URL with unknown dimensions */
                     <img
                       src={n.actor.avatarUrl}
                       alt=""

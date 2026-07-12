@@ -157,15 +157,14 @@ function DiffPlayer({
   versionNum: number;
   triggerMessage: string | null;
 }) {
-  const t = useTranslations();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _t = useTranslations();
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<AnimationItem | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
-    let cancelled = false;
 
     (async () => {
       try {
@@ -182,7 +181,6 @@ function DiffPlayer({
     })();
 
     return () => {
-      cancelled = true;
       if (animRef.current) {
         animRef.current.destroy();
         animRef.current = null;

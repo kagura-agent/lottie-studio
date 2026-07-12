@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -14,7 +14,8 @@ vi.mock("@/lib/thumbnail-renderer", () => ({
 vi.mock("@/lib/db", () => ({
   db: {
     prepare: () => ({
-      get: (...args: unknown[]) => mockDbGetReturn,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      get: (..._args: unknown[]) => mockDbGetReturn,
     }),
   },
   ANIMATIONS_DIR: path.join(process.cwd(), "data", "animations"),

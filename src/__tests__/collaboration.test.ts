@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import crypto from "node:crypto";
 import path from "node:path";
 
 let mockDbData: {
@@ -70,6 +69,7 @@ function createMockPrepare() {
       }
       return [];
     },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     run: (..._args: unknown[]) => ({ changes: 1 }),
   });
 }
