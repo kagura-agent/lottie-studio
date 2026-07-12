@@ -1,15 +1,38 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import crypto from "node:crypto";
+import { verifySignature } from "@/lib/webhooks";
 
-describe("webhooks", () => {
-  let verifySignature: typeof import("@/lib/webhooks").verifySignature;
+describe("verifySignature", () => {
+  it("returns true for valid signature", () => {
+    const secret = "whsec_testSecretValue123";
+    const payload = JSON.stringify({ event: "animation.created", data: {} });
+    const sig = `sha256=${crypto.createHmac("sha256", secret).update(payload).digest("hex")}`;
+    expect(verifySignature(payload, sig, secret)).toBe(true);
+  });
+
+  it("returns false for invalid signature", () => {
+    const secret = "whsec_testSecretValue123";
+    const payload = JSON.stringify({ event: "animation.created", data: {} });
+    const badSig = `sha256=${"a".repeat(64)}`;
+    expect(verifySignature(payload, badSig, secret)).toBe(false);
+  });
+
+  it("returns false for tampered payload", () => {
+    const secret = "whsec_testSecretValue123";
+    const original = JSON.stringify({ event: "animation.created" });
+    const sig = `sha256=${crypto.createHmac("sha256", secret).update(original).digest("hex")}`;
+    const tampered = JSON.stringify({ event: "animation.deleted" });
+    expect(verifySignature(tampered, sig, secret)).toBe(false);
+  });
+});
+
+describe("webhooks (database)", () => {
   let dispatchWebhookEvent: typeof import("@/lib/webhooks").dispatchWebhookEvent;
   let db: typeof import("@/lib/db").db;
 
   beforeEach(async () => {
     vi.resetModules();
     const webhookMod = await import("@/lib/webhooks");
-    verifySignature = webhookMod.verifySignature;
     dispatchWebhookEvent = webhookMod.dispatchWebhookEvent;
     const dbMod = await import("@/lib/db");
     db = dbMod.db;
@@ -19,39 +42,13 @@ describe("webhooks", () => {
     vi.restoreAllMocks();
   });
 
-  describe("verifySignature", () => {
-    it("returns true for valid signature", () => {
-      const secret = "whsec_testSecretValue123";
-      const payload = JSON.stringify({ event: "animation.created", data: {} });
-      const sig = `sha256=${crypto.createHmac("sha256", secret).update(payload).digest("hex")}`;
-      expect(verifySignature(payload, sig, secret)).toBe(true);
-    });
-
-    it("returns false for invalid signature", () => {
-      const secret = "whsec_testSecretValue123";
-      const payload = JSON.stringify({ event: "animation.created", data: {} });
-      const badSig = `sha256=${"a".repeat(64)}`;
-      expect(verifySignature(payload, badSig, secret)).toBe(false);
-    });
-
-    it("returns false for tampered payload", () => {
-      const secret = "whsec_testSecretValue123";
-      const original = JSON.stringify({ event: "animation.created" });
-      const sig = `sha256=${crypto.createHmac("sha256", secret).update(original).digest("hex")}`;
-      const tampered = JSON.stringify({ event: "animation.deleted" });
-      expect(verifySignature(tampered, sig, secret)).toBe(false);
-    });
-  });
-
   describe("webhook CRUD (database)", () => {
     const userId = "test-user-webhook";
 
     beforeEach(() => {
-      // Ensure test user exists
       db.prepare(
         "INSERT OR IGNORE INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)"
       ).run(userId, "webhook@test.local", "hash", "Webhook Tester");
-      // Clean up any test webhooks
       db.prepare("DELETE FROM webhooks WHERE user_id = ?").run(userId);
     });
 
