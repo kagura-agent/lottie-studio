@@ -208,6 +208,12 @@ function handleCollabDisconnect(ws: WebSocket, animationId: string) {
 
 app.prepare().then(() => {
   const server = createServer((req, res) => {
+    const origWriteHead = res.writeHead;
+    res.writeHead = function (this: typeof res, ...args: Parameters<typeof origWriteHead>) {
+      this.removeHeader('X-Powered-By');
+      return origWriteHead.apply(this, args);
+    } as typeof origWriteHead;
+
     const parsedUrl = parse(req.url!, true);
     handle(req, res, parsedUrl);
   });
