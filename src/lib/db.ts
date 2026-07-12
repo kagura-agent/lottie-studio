@@ -1023,6 +1023,24 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id, created_at DESC)`);
 
+// --- Feedback (thumbs up/down on AI responses) ---
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS feedback (
+    id TEXT PRIMARY KEY,
+    animation_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    user_id TEXT,
+    rating INTEGER NOT NULL,
+    comment TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (animation_id) REFERENCES animations(id),
+    FOREIGN KEY (message_id) REFERENCES messages(id)
+  )
+`);
+
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_message ON feedback(message_id)`);
+
 // Startup cleanup: remove orphaned animation rows (no frames AND no messages)
 // These are stale entries from failed LLM generations
 db.exec(`
