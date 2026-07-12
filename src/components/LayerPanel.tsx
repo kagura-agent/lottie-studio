@@ -12,7 +12,7 @@ interface LottieLayer {
 
 interface LayerPanelProps {
   animationData: object | null;
-  onSelectLayer: (layerName: string) => void;
+  onSelectLayer: (layerName: string, layerIndex: number) => void;
   onToggleVisibility: (layerIndex: number, hidden: boolean) => void;
   onChangeOpacity: (layerIndex: number, opacity: number) => void;
   onPreviewOpacity: (layerIndex: number, opacity: number) => void;
@@ -146,7 +146,7 @@ export default function LayerPanel({ animationData, onSelectLayer, onToggleVisib
                   {icon}
                 </span>
               <button
-                onClick={() => onSelectLayer(`[${name}]`)}
+                onClick={() => onSelectLayer(`[${name}]`, originalIndex)}
                 className="flex-1 text-left text-sm text-zinc-200 truncate hover:text-zinc-100 transition-colors"
                 title={name}
               >
