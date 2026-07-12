@@ -39,6 +39,9 @@ interface ChatPanelProps {
   onAnimationUpdated?: (id: string, data: object) => void;
   onCommand?: (command: Command) => void;
   initialPrompt?: string;
+  selectedLayerIndex?: number | null;
+  animationData?: object | null;
+  onLayerContextConsumed?: () => void;
 }
 
 // Image upload constraints (module-level to avoid recreating on each render)
@@ -47,6 +50,31 @@ const MAX_ANIMATION_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const SUPPORTED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const ANIMATION_EXTENSIONS = [".json", ".svg", ".lottie"];
 const LOTTIE_REQUIRED_FIELDS = ["v", "fr", "ip", "op", "w", "h", "layers"] as const;
+
+function extractLayerContext(animationData: object | null | undefined, layerIndex: number | null | undefined): object | null {
+  if (layerIndex == null || !animationData) return null;
+  const layers = (animationData as Record<string, unknown>).layers as Array<Record<string, unknown>> | undefined;
+  if (!layers || !layers[layerIndex]) return null;
+  const layer = layers[layerIndex];
+  const typeNames: Record<number, string> = { 0: "Precomp", 1: "Solid", 2: "Image", 3: "Null", 4: "Shape", 5: "Text" };
+  const ks = layer.ks as Record<string, unknown> | undefined;
+  const pos = ks?.p as { k?: unknown } | undefined;
+  const opacity = ks?.o as { a?: number; k?: unknown } | undefined;
+  const scale = ks?.s as { k?: unknown } | undefined;
+  const rotation = ks?.r as { a?: number; k?: unknown } | undefined;
+
+  return {
+    name: layer.nm || `Layer ${layerIndex}`,
+    type: typeNames[(layer.ty as number)] || "Unknown",
+    index: layerIndex,
+    inPoint: layer.ip,
+    outPoint: layer.op,
+    position: pos?.k,
+    opacity: opacity?.a === 1 ? "animated" : opacity?.k,
+    scale: scale?.k,
+    rotation: rotation?.a === 1 ? "animated" : rotation?.k,
+  };
+}
 
 // Style command descriptions for LLM instructions
 const STYLE_INSTRUCTIONS: Record<StyleName, string> = {
@@ -74,7 +102,7 @@ const ANIMATE_INSTRUCTIONS: Record<AnimationPreset, string> = {
   typewriter: "Apply a typewriter reveal effect. If there are text layers, reveal characters one by one using trim paths or opacity per character. If no text layers, apply a left-to-right reveal using a rectangular mask with animated position.",
 };
 
-export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt }: ChatPanelProps) {
+export default function ChatPanel({ animationId, insertText, onAnimationCreated, onAnimationUpdated, onCommand, initialPrompt, selectedLayerIndex, animationData: animationDataProp, onLayerContextConsumed }: ChatPanelProps) {
   const t = useTranslations('chat');
   const tSeq = useTranslations('sequencePlayer');
   const { tokens: designTokens, setToken: setDesignToken, clearTokens: clearDesignTokens, hasTokens: hasDesignTokens } = useDesignTokens();
@@ -215,7 +243,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
 
   // Shared streaming fetch logic. `existingAssistantMsgId` is set during retry
   // to update an existing message in-place instead of appending a new one.
-  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string, regenerate?: boolean) => {
+  const streamResponse = useCallback(async (text: string, existingAssistantMsgId?: string, signal?: AbortSignal, imageDataUrl?: string, regenerate?: boolean, layerContext?: object | null) => {
     const res = await apiFetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -225,6 +253,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
         ...(imageDataUrl ? { image: imageDataUrl } : {}),
         ...(regenerate ? { regenerate: true } : {}),
         ...(hasDesignTokens ? { designTokens } : {}),
+        ...(layerContext ? { layerContext } : {}),
       }),
       signal,
     });
@@ -1247,8 +1276,11 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    const layerCtx = extractLayerContext(animationDataProp, selectedLayerIndex);
+    if (layerCtx) onLayerContextConsumed?.();
+
     try {
-      await streamResponse(text, undefined, controller.signal, imageDataUrl || undefined);
+      await streamResponse(text, undefined, controller.signal, imageDataUrl || undefined, undefined, layerCtx);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         // User cancelled — not an error
@@ -1926,6 +1958,24 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
           onSelect={handleAutocompleteSelect}
           onDismiss={handleAutocompleteDismiss}
         />
+        {/* Selected layer context chip */}
+        {selectedLayerIndex != null && animationDataProp && (() => {
+          const layers = (animationDataProp as Record<string, unknown>).layers as Array<Record<string, unknown>> | undefined;
+          const layer = layers?.[selectedLayerIndex];
+          const layerName = layer?.nm as string || `Layer ${selectedLayerIndex}`;
+          return (
+            <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600/20 border border-indigo-500/40 text-xs text-indigo-300">
+              <span>Editing: {layerName}</span>
+              <button
+                onClick={() => onLayerContextConsumed?.()}
+                className="text-indigo-400 hover:text-indigo-200 font-bold leading-none"
+                aria-label="Dismiss layer selection"
+              >
+                ×
+              </button>
+            </div>
+          );
+        })()}
         {/* Image preview */}
         {pendingImage && (
           <div className="mb-2 inline-flex relative">

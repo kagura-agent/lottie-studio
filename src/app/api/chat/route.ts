@@ -40,6 +40,7 @@ interface ChatRequest {
   image?: string; // base64 data URL for image attachment
   regenerate?: boolean; // true when regenerating the last assistant response
   designTokens?: { primary?: string; secondary?: string; accent?: string; background?: string; font?: string };
+  layerContext?: { name: string; type: string; index: number; inPoint?: number; outPoint?: number; position?: unknown; opacity?: unknown; scale?: unknown; rotation?: unknown };
 }
 
 /**
@@ -1202,6 +1203,20 @@ IMPORTANT:
     if (tokenPrompt) {
       systemPrompt += `\n\n${tokenPrompt}`;
     }
+  }
+
+  // Inject layer context into system prompt if provided
+  if (body.layerContext) {
+    const lc = body.layerContext;
+    const props = [
+      lc.inPoint != null ? `in-point: ${lc.inPoint}` : null,
+      lc.outPoint != null ? `out-point: ${lc.outPoint}` : null,
+      lc.opacity != null ? `opacity: ${JSON.stringify(lc.opacity)}` : null,
+      lc.position != null ? `position: ${JSON.stringify(lc.position)}` : null,
+      lc.scale != null ? `scale: ${JSON.stringify(lc.scale)}` : null,
+      lc.rotation != null ? `rotation: ${JSON.stringify(lc.rotation)}` : null,
+    ].filter(Boolean).join(', ');
+    systemPrompt += `\n\nThe user has selected layer: "${lc.name}" (type: ${lc.type}, index: ${lc.index}). Properties: ${props}. When they refer to "this", "it", or make unqualified requests, apply changes to this layer.`;
   }
 
   // Style command: add extra instructions to preserve motion/keyframes

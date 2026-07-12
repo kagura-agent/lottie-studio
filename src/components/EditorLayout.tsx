@@ -147,6 +147,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const [insertText, setInsertText] = useState("");
+  const [selectedLayerIndex, setSelectedLayerIndex] = useState<number | null>(null);
   const [versionPanelOpen, setVersionPanelOpen] = useState(false);
   const [versionPreviewData, setVersionPreviewData] = useState<object | null>(null);
   const [previewingVersion, setPreviewingVersion] = useState<number | null>(null);
@@ -687,8 +688,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     setTimeout(() => setSeekFrame(undefined), 50);
   }, []);
 
-  const handleSelectLayer = useCallback((layerName: string) => {
+  const handleSelectLayer = useCallback((layerName: string, layerIndex: number) => {
     setInsertText(layerName);
+    setSelectedLayerIndex(layerIndex);
     setRightPanel("chat");
     setMobileView("chat");
     setTimeout(() => setInsertText(""), 0);
@@ -1368,7 +1370,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             {isMobile ? (
               mobileView === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} />
                 </ErrorBoundary>
               ) : mobileView === "layers" ? (
                 <LayerPanel
@@ -1383,7 +1385,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             ) : (
               rightPanel === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} />
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} />
                 </ErrorBoundary>
               ) : rightPanel === "layers" ? (
                 <LayerPanel
