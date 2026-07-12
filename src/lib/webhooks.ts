@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { db } from "@/lib/db";
+import { sign, verifySignature } from "@/lib/webhook-crypto";
 
 export type WebhookEvent =
   | "animation.created"
@@ -69,10 +70,6 @@ function formatPayload(
   }
 
   return { event, data, timestamp };
-}
-
-function sign(payload: string, secret: string): string {
-  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
 async function deliver(
@@ -159,12 +156,4 @@ export async function dispatchWebhookEvent(
   );
 }
 
-export function verifySignature(
-  payload: string,
-  signature: string,
-  secret: string
-): boolean {
-  const expected = `sha256=${sign(payload, secret)}`;
-  if (signature.length !== expected.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-}
+export { verifySignature } from "@/lib/webhook-crypto";

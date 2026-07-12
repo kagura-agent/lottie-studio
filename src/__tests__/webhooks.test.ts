@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import crypto from "node:crypto";
+import { verifySignature } from "@/lib/webhook-crypto";
 
 describe("webhooks", () => {
-  let verifySignature: typeof import("@/lib/webhooks").verifySignature;
   let dispatchWebhookEvent: typeof import("@/lib/webhooks").dispatchWebhookEvent;
   let db: typeof import("@/lib/db").db;
 
   beforeEach(async () => {
     vi.resetModules();
     const webhookMod = await import("@/lib/webhooks");
-    verifySignature = webhookMod.verifySignature;
     dispatchWebhookEvent = webhookMod.dispatchWebhookEvent;
     const dbMod = await import("@/lib/db");
     db = dbMod.db;
