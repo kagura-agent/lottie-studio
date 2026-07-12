@@ -16,6 +16,7 @@ import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import PromptSuggestions from "./PromptSuggestions";
 import VariationGrid, { type Variation } from "./VariationGrid";
 import SequencePlayer from "./SequencePlayer";
+import FeedbackButtons from "./FeedbackButtons";
 
 interface Message {
   id: string;
@@ -1861,6 +1862,14 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
                 )}
               </div>
             </div>
+            {msg.role === "assistant" && msg.lottieJson && !isThinking && !isStreaming && (
+              <div className="flex justify-start mt-1 ml-0">
+                <FeedbackButtons
+                  messageId={msg.id}
+                  animationId={currentAnimationId || ""}
+                />
+              </div>
+            )}
             {msg.warning && !dismissedWarnings.has(msg.id) && (
               <div className="flex justify-start mt-1">
                 <div className="max-w-[80%] px-3 py-1.5 rounded-md bg-amber-900/30 border border-amber-700/40 text-amber-200/80 text-xs flex items-start gap-1.5">
