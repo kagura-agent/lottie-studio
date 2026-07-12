@@ -134,14 +134,23 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const [prevInsertText, setPrevInsertText] = useState<string | undefined>(insertText);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<PromptSuggestion[] | null>(null);
   const suggestionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [prevSuggestionsKey, setPrevSuggestionsKey] = useState<string | undefined>(undefined);
+
+  // Clear suggestions synchronously during render when animation data is absent (derived state pattern)
+  const suggestionsKey = animationDataProp && messages.length > 0
+    ? `${JSON.stringify(animationDataProp).length}:${selectedLayerIndex}`
+    : undefined;
+  if (suggestionsKey !== prevSuggestionsKey) {
+    setPrevSuggestionsKey(suggestionsKey);
+    if (!suggestionsKey) {
+      setDynamicSuggestions(null);
+    }
+  }
 
   // Fetch dynamic suggestions when animation state changes (debounced)
   useEffect(() => {
+    if (!animationDataProp || messages.length === 0) return;
     if (suggestionsTimerRef.current) clearTimeout(suggestionsTimerRef.current);
-    if (!animationDataProp || messages.length === 0) {
-      setDynamicSuggestions(null);
-      return;
-    }
     suggestionsTimerRef.current = setTimeout(() => {
       const selectedLayer = selectedLayerIndex != null
         ? ((animationDataProp as Record<string, unknown>).layers as Array<Record<string, unknown>> | undefined)?.[selectedLayerIndex] ?? null
@@ -1328,7 +1337,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
       setIsThinking(false);
       setIsStreaming(false);
     }
-  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand, designTokens, setDesignToken, clearDesignTokens, onAnimationCreated, t]);
+  }, [input, isThinking, isStreaming, pendingImage, streamResponse, onCommand, designTokens, setDesignToken, clearDesignTokens, onAnimationCreated, t, animationDataProp, currentAnimationId, isOnline, onLayerContextConsumed, selectedLayerIndex, tSeq]);
 
   // Keep handleSendRef in sync for use in async callbacks (e.g. auto-describe)
   useEffect(() => {
