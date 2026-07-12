@@ -14,6 +14,7 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { enqueueMessage, getPendingMessages, flushMessages } from "@/lib/messageQueue";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import PromptSuggestions from "./PromptSuggestions";
+import type { PromptSuggestion } from "@/data/prompt-suggestions";
 import VariationGrid, { type Variation } from "./VariationGrid";
 import SequencePlayer from "./SequencePlayer";
 import FeedbackButtons from "./FeedbackButtons";
@@ -131,6 +132,38 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
   const abortControllerRef = useRef<AbortController | null>(null);
   const [prevAnimationId, setPrevAnimationId] = useState<string | undefined>(animationId);
   const [prevInsertText, setPrevInsertText] = useState<string | undefined>(insertText);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<PromptSuggestion[] | null>(null);
+  const suggestionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch dynamic suggestions when animation state changes (debounced)
+  useEffect(() => {
+    if (suggestionsTimerRef.current) clearTimeout(suggestionsTimerRef.current);
+    if (!animationDataProp || messages.length === 0) {
+      setDynamicSuggestions(null);
+      return;
+    }
+    suggestionsTimerRef.current = setTimeout(() => {
+      const selectedLayer = selectedLayerIndex != null
+        ? ((animationDataProp as Record<string, unknown>).layers as Array<Record<string, unknown>> | undefined)?.[selectedLayerIndex] ?? null
+        : null;
+      apiFetch("/api/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          animationJson: animationDataProp,
+          selectedLayer,
+          messageCount: messages.length,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data: { suggestions?: PromptSuggestion[] }) => {
+          if (data.suggestions?.length) setDynamicSuggestions(data.suggestions);
+        })
+        .catch(() => {});
+    }, 800);
+    return () => { if (suggestionsTimerRef.current) clearTimeout(suggestionsTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animationDataProp, selectedLayerIndex]);
 
   // Keep currentAnimationId in sync when prop changes (derived state pattern)
   if (animationId !== prevAnimationId) {
@@ -1750,6 +1783,7 @@ export default function ChatPanel({ animationId, insertText, onAnimationCreated,
             <PromptSuggestions
               onSelect={(prompt) => setInput(prompt)}
               hasDesignTokens={hasDesignTokens}
+              dynamicSuggestions={dynamicSuggestions}
             />
           </div>
         )}
