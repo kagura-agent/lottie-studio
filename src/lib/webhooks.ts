@@ -115,11 +115,6 @@ async function deliver(
   return { statusCode: null, responseBody: "Exhausted retries", success: false };
 }
 
-const logDelivery = db.prepare(`
-  INSERT INTO webhook_deliveries (id, webhook_id, event, payload, status_code, response_body, success)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
-`);
-
 export async function dispatchWebhookEvent(
   event: WebhookEvent,
   data: Record<string, unknown>,
@@ -146,7 +141,10 @@ export async function dispatchWebhookEvent(
         formatPayload(event, data, webhook.format)
       );
       const result = await deliver(webhook.url, payload, webhook.secret);
-      logDelivery.run(
+      db.prepare(`
+        INSERT INTO webhook_deliveries (id, webhook_id, event, payload, status_code, response_body, success)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
         crypto.randomUUID(),
         webhook.id,
         event,
