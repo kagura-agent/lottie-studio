@@ -21,7 +21,7 @@ vi.mock("node:fs", () => ({
 describe("chat-handlers/helpers", () => {
   let helpers: typeof import("../helpers");
   let dbMock: { prepare: ReturnType<typeof vi.fn> };
-  let fsMock: typeof import("node:fs");
+  let fsMock: typeof import("node:fs") & { default: typeof import("node:fs") };
 
   beforeEach(async () => {
     vi.resetModules();

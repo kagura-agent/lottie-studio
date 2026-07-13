@@ -36,7 +36,7 @@ vi.mock("node:fs", () => ({
 
 describe("chat-handlers/compose", () => {
   let handleCompose: typeof import("../compose").handleCompose;
-  let fsMock: typeof import("node:fs");
+  let fsMock: typeof import("node:fs") & { default: typeof import("node:fs") };
 
   beforeEach(async () => {
     vi.clearAllMocks();
