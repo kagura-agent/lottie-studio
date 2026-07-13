@@ -220,7 +220,7 @@ Configurable via `LLM_API_URL` and `LLM_API_KEY` environment variables. Currentl
 - **Export**: GIF (gif.js), MP4 (mp4-muxer + WebCodecs), WebM (MediaRecorder), APNG, TGS, dotLottie, CSS
 - **Import**: JSON, SVG→Lottie conversion, dotLottie extraction
 - **i18n**: next-intl (en/zh)
-- **Testing**: Vitest (948 tests, 49 test files)
+- **Testing**: Vitest (1614 tests, 81 test files)
 - **Deploy**: VM1 (lottie.kagura-agent.com), port 3400, Caddy reverse proxy, GitHub Actions CI/CD
 
 ## What This Is NOT
