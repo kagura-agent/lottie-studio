@@ -12,7 +12,21 @@ const DB_PATH = path.join(DATA_DIR, "lottie-studio.db");
 fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
 
 const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 30000");
+
+// journal_mode = WAL needs an exclusive lock; retry if another process
+// is initializing concurrently (common in parallel test workers)
+for (let attempt = 0; attempt < 3; attempt++) {
+  try {
+    db.pragma("journal_mode = WAL");
+    break;
+  } catch (e: unknown) {
+    if (attempt === 2 || !(e instanceof Error) || !e.message.includes("database is locked")) throw e;
+    // Small sleep before retry (sync; acceptable at startup)
+    const start = Date.now();
+    while (Date.now() - start < 500 + attempt * 500) { /* busy wait */ }
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS animations (
