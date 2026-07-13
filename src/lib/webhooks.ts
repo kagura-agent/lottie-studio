@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { db } from "@/lib/db";
-import { sign, verifySignature } from "@/lib/webhook-crypto";
+import { sign } from "@/lib/webhook-crypto";
 
 export type WebhookEvent =
   | "animation.created"

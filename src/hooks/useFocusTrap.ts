@@ -63,7 +63,7 @@ export function useFocusTrap(active: boolean, externalRef?: React.RefObject<HTML
       document.removeEventListener("keydown", handleKeyDown);
       previousFocusRef.current?.focus();
     };
-  }, [active]);
+  }, [active, containerRef]);
 
   return containerRef;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface Submission {
   id: string;
@@ -24,7 +24,7 @@ export default function AdminTemplatesPage() {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  async function fetchSubmissions() {
+  const fetchSubmissions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/templates/submissions?status=${filter}`, {
@@ -39,13 +39,13 @@ export default function AdminTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filter, token]);
 
   useEffect(() => {
     if (token) {
       void (async () => { await fetchSubmissions(); })();
     }
-  }, [filter]);
+  }, [fetchSubmissions, token]);
 
   async function handleReview(id: string, status: "approved" | "rejected") {
     await fetch(`/api/templates/submissions/${id}`, {

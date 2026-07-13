@@ -397,6 +397,7 @@ export default function ProfilePage() {
         {/* Profile header */}
         <div className="flex items-start gap-6 mb-10">
           {profile.user.avatar_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- external avatar URL with unknown dimensions */
             <img
               src={profile.user.avatar_url}
               alt=""

@@ -47,7 +47,7 @@ export default function FullscreenPreview({
       // Fullscreen not supported or denied — close immediately
       onClose();
     });
-  }, [onClose]);
+  }, [onClose, focusTrapRef]);
 
   // Listen for fullscreenchange to detect Escape key exits
   useEffect(() => {

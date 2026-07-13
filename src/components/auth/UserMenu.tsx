@@ -57,6 +57,7 @@ export default function UserMenu() {
         className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-zinc-800 transition-colors"
       >
         {user.avatar_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- external avatar URL with unknown dimensions */
           <img
             src={user.avatar_url}
             alt=""

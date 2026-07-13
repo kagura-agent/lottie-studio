@@ -22,6 +22,7 @@ export default function CollaboratorAvatars({ members, maxVisible = 3 }: Collabo
             title={`${member.displayName} (${member.permission})`}
           >
             {member.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- external avatar URL with unknown dimensions */
               <img
                 src={member.avatarUrl}
                 alt={member.displayName}

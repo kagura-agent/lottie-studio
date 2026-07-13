@@ -244,6 +244,7 @@ export default function ExploreCard({ animation, isFavorite, onToggleFavorite, i
         }}
       >
         {(!hovering || !animLoaded) && (
+          // eslint-disable-next-line @next/next/no-img-element -- dynamic API thumbnail with unknown dimensions
           <img
             src={`/api/animations/${animation.id}/thumbnail`}
             alt={animation.name}
