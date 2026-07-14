@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { parseResponse } from "../llm";
 
 describe("parseResponse", () => {
@@ -204,5 +204,218 @@ Some text`;
     const result = parseResponse(content);
     expect(result.command).toEqual({ type: "export_gif" });
     expect(result.lottieJson).toBeNull();
+  });
+});
+
+describe("chatCompletion", () => {
+  let chatCompletion: typeof import("../llm").chatCompletion;
+
+  beforeEach(async () => {
+    vi.stubEnv("LLM_API_URL", "http://test-llm:8000/v1");
+    vi.stubEnv("LLM_MODEL", "test-model");
+    vi.stubEnv("LLM_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn());
+    // Re-import to pick up env vars
+    vi.resetModules();
+    const mod = await import("../llm");
+    chatCompletion = mod.chatCompletion;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("returns parsed LLMResponse on successful response with valid JSON", async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: `Here's a ball.\n\n\`\`\`json\n{"v":"5.7.1","fr":30,"ip":0,"op":60,"w":512,"h":512,"layers":[{"ty":4}]}\n\`\`\``,
+            },
+          },
+        ],
+      }),
+    };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const result = await chatCompletion([{ role: "user", content: "make a ball" }]);
+    expect(result.lottieJson).not.toBeNull();
+    expect(result.parseError).toBeNull();
+    expect(result.reply).toContain("ball");
+  });
+
+  it("throws with status and body text on HTTP error", async () => {
+    const mockResponse = {
+      ok: false,
+      status: 500,
+      text: async () => "Internal Server Error",
+    };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    await expect(chatCompletion([{ role: "user", content: "hi" }])).rejects.toThrow(
+      "LLM API error 500: Internal Server Error"
+    );
+  });
+
+  it("returns empty content handled by parseResponse when choices array is empty", async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({ choices: [] }),
+    };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const result = await chatCompletion([{ role: "user", content: "hi" }]);
+    expect(result.reply).toBe("");
+    expect(result.lottieJson).toBeNull();
+    expect(result.parseError).toBe("no_json");
+  });
+});
+
+describe("chatCompletionStream", () => {
+  let chatCompletionStream: typeof import("../llm").chatCompletionStream;
+
+  beforeEach(async () => {
+    vi.stubEnv("LLM_API_URL", "http://test-llm:8000/v1");
+    vi.stubEnv("LLM_MODEL", "test-model");
+    vi.stubEnv("LLM_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn());
+    vi.resetModules();
+    const mod = await import("../llm");
+    chatCompletionStream = mod.chatCompletionStream;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("returns the Response object on success", async () => {
+    const mockResponse = { ok: true, body: "stream-body" };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const result = await chatCompletionStream([{ role: "user", content: "hi" }]);
+    expect(result).toBe(mockResponse);
+  });
+
+  it("throws on HTTP error", async () => {
+    const mockResponse = {
+      ok: false,
+      status: 429,
+      text: async () => "Rate limited",
+    };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    await expect(chatCompletionStream([{ role: "user", content: "hi" }])).rejects.toThrow(
+      "LLM API error 429: Rate limited"
+    );
+  });
+
+  it("passes custom temperature option through to fetch body", async () => {
+    const mockResponse = { ok: true };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    await chatCompletionStream([{ role: "user", content: "hi" }], { temperature: 0.2 });
+
+    const callBody = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+    expect(callBody.temperature).toBe(0.2);
+  });
+});
+
+describe("chatCompletionRepairStream", () => {
+  let chatCompletionRepairStream: typeof import("../llm").chatCompletionRepairStream;
+
+  beforeEach(async () => {
+    vi.stubEnv("LLM_API_URL", "http://test-llm:8000/v1");
+    vi.stubEnv("LLM_MODEL", "test-model");
+    vi.stubEnv("LLM_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn());
+    vi.resetModules();
+    const mod = await import("../llm");
+    chatCompletionRepairStream = mod.chatCompletionRepairStream;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("builds correct repair message array and returns Response", async () => {
+    const mockResponse = { ok: true, body: "stream" };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const originalMessages = [{ role: "user" as const, content: "make a ball" }];
+    const result = await chatCompletionRepairStream(originalMessages, "bad response", "invalid_json");
+
+    expect(result).toBe(mockResponse);
+
+    const callBody = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+    expect(callBody.messages).toHaveLength(3);
+    expect(callBody.messages[0]).toEqual({ role: "user", content: "make a ball" });
+    expect(callBody.messages[1]).toEqual({ role: "assistant", content: "bad response" });
+    expect(callBody.messages[2].role).toBe("user");
+    expect(callBody.messages[2].content).toContain("malformed");
+    expect(callBody.temperature).toBe(0.5);
+    expect(callBody.stream).toBe(true);
+  });
+
+  it("throws on HTTP error", async () => {
+    const mockResponse = {
+      ok: false,
+      status: 503,
+      text: async () => "Service Unavailable",
+    };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    await expect(
+      chatCompletionRepairStream([{ role: "user", content: "hi" }], "bad", "no_json")
+    ).rejects.toThrow("LLM API error 503: Service Unavailable");
+  });
+});
+
+describe("Header construction", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("includes Authorization header when LLM_API_KEY is set", async () => {
+    vi.stubEnv("LLM_API_URL", "http://test-llm:8000/v1");
+    vi.stubEnv("LLM_MODEL", "test-model");
+    vi.stubEnv("LLM_API_KEY", "my-secret-key");
+    vi.stubGlobal("fetch", vi.fn());
+    vi.resetModules();
+
+    const mockResponse = { ok: true, json: async () => ({ choices: [] }) };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const { chatCompletion: fn } = await import("../llm");
+    await fn([{ role: "user", content: "hi" }]);
+
+    const headers = vi.mocked(fetch).mock.calls[0][1]!.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("Bearer my-secret-key");
+  });
+
+  it("omits Authorization header when LLM_API_KEY is empty", async () => {
+    vi.stubEnv("LLM_API_URL", "http://test-llm:8000/v1");
+    vi.stubEnv("LLM_MODEL", "test-model");
+    vi.stubEnv("LLM_API_KEY", "");
+    vi.stubGlobal("fetch", vi.fn());
+    vi.resetModules();
+
+    const mockResponse = { ok: true, json: async () => ({ choices: [] }) };
+    vi.mocked(fetch).mockResolvedValue(mockResponse as unknown as Response);
+
+    const { chatCompletion: fn } = await import("../llm");
+    await fn([{ role: "user", content: "hi" }]);
+
+    const headers = vi.mocked(fetch).mock.calls[0][1]!.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBeUndefined();
   });
 });
