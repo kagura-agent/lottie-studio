@@ -9,5 +9,6 @@ export default defineConfig({
   },
   test: {
     exclude: ["node_modules", ".next", "dist", "e2e"],
+    setupFiles: ["./src/__tests__/setup.ts"],
   },
 });
