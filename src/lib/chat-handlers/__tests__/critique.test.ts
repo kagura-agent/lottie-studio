@@ -46,7 +46,7 @@ describe("chat-handlers/critique", () => {
     vi.clearAllMocks();
     const mod = await import("../critique");
     handleCritique = mod.handleCritique;
-    fs = await import("node:fs") as any;
+    fs = await import("node:fs") as typeof fs;
   });
 
   it("returns 'create animation first' when no animationId", async () => {
@@ -113,14 +113,14 @@ describe("chat-handlers/critique", () => {
 
     const tokenEvents = lines
       .map((l: string) => JSON.parse(l.slice(6)))
-      .filter((e: any) => e.type === "token");
+      .filter((e: Record<string, unknown>) => e.type === "token");
     expect(tokenEvents).toHaveLength(2);
     expect(tokenEvents[0].text).toBe("Great ");
     expect(tokenEvents[1].text).toBe("animation!");
 
     const doneEvent = lines
       .map((l: string) => JSON.parse(l.slice(6)))
-      .find((e: any) => e.type === "done");
+      .find((e: Record<string, unknown>) => e.type === "done");
     expect(doneEvent.reply).toBe("Great animation!");
     expect(doneEvent.animationId).toBe("anim1");
 

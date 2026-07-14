@@ -27,10 +27,10 @@ vi.mock("@/lib/llm", () => ({
 }));
 
 vi.mock("@/lib/optimizer", () => ({
-  roundDecimals: vi.fn((json: any) => json),
-  removeEmptyGroups: vi.fn((json: any) => json),
-  removeHiddenLayers: vi.fn((json: any) => json),
-  validateAndFix: vi.fn((json: any) => ({ fixed: json, errors: [] })),
+  roundDecimals: vi.fn((json: unknown) => json),
+  removeEmptyGroups: vi.fn((json: unknown) => json),
+  removeHiddenLayers: vi.fn((json: unknown) => json),
+  validateAndFix: vi.fn((json: unknown) => ({ fixed: json, errors: [] })),
 }));
 
 function mockStreamResponse(chunks: string[]): Response {
@@ -54,7 +54,7 @@ describe("chat-handlers/polish", () => {
     vi.clearAllMocks();
     const mod = await import("../polish");
     handlePolish = mod.handlePolish;
-    fs = await import("node:fs") as any;
+    fs = await import("node:fs") as typeof fs;
   });
 
   it("returns 'create animation first' when no animationId", async () => {
@@ -132,13 +132,13 @@ describe("chat-handlers/polish", () => {
 
     const tokenEvents = lines
       .map((l: string) => JSON.parse(l.slice(6)))
-      .filter((e: any) => e.type === "token");
+      .filter((e: Record<string, unknown>) => e.type === "token");
     expect(tokenEvents).toHaveLength(2);
     expect(tokenEvents[0].text).toBe("Polished ");
 
     const doneEvent = lines
       .map((l: string) => JSON.parse(l.slice(6)))
-      .find((e: any) => e.type === "done");
+      .find((e: Record<string, unknown>) => e.type === "done");
     expect(doneEvent.reply).toBe("Polished it!");
     expect(doneEvent.lottieJson).toEqual(lottieJson);
     expect(doneEvent.animationId).toBe("anim1");
