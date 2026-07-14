@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolveConflicts } from '../syncResolver';
+import { resolveConflicts, resolveConflict } from '../syncResolver';
+import type { ConflictEntry } from '../syncResolver';
 import type { OfflineAnimation } from '../offlineStorage';
 
 // Mock apiFetch
@@ -122,5 +123,55 @@ describe('syncResolver', () => {
     const result = await resolveConflicts([makeLocal()]);
 
     expect(result.errors).toContain('anim-1');
+  });
+});
+
+function makeConflict(overrides: Partial<ConflictEntry> = {}): ConflictEntry {
+  return {
+    id: 'anim-1',
+    localVersion: { name: 'Local Anim', jsonData: { v: '5.7.1', layers: [] }, lastModified: 1000 },
+    serverVersion: { name: 'Server Anim', jsonData: { v: '5.7.1', layers: [{ type: 'shape' }] }, lastModified: 2000 },
+    ...overrides,
+  };
+}
+
+describe('resolveConflict', () => {
+  it('local: PUTs local data to server then marks synced', async () => {
+    mockedFetch.mockResolvedValueOnce({ ok: true });
+    const conflict = makeConflict();
+
+    await resolveConflict(conflict, 'local');
+
+    expect(mockedFetch).toHaveBeenCalledOnce();
+    expect(mockedFetch).toHaveBeenCalledWith('/api/animations/anim-1', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Local Anim', data: { v: '5.7.1', layers: [] } }),
+    });
+    expect(markSynced).toHaveBeenCalledWith('anim-1');
+  });
+
+  it('server: only marks synced without any fetch call', async () => {
+    const conflict = makeConflict();
+
+    await resolveConflict(conflict, 'server');
+
+    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(markSynced).toHaveBeenCalledWith('anim-1');
+  });
+
+  it('both: POSTs a duplicate with suffixed name then marks synced', async () => {
+    mockedFetch.mockResolvedValueOnce({ ok: true });
+    const conflict = makeConflict();
+
+    await resolveConflict(conflict, 'both');
+
+    expect(mockedFetch).toHaveBeenCalledOnce();
+    expect(mockedFetch).toHaveBeenCalledWith('/api/animations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Local Anim (offline edit)', data: { v: '5.7.1', layers: [] } }),
+    });
+    expect(markSynced).toHaveBeenCalledWith('anim-1');
   });
 });
