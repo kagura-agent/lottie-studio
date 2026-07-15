@@ -22,6 +22,7 @@ export interface Message {
   variationsLoading?: boolean;
   sequenceId?: string;
   qualityHints?: QualityHint[];
+  versionNum?: number;
 }
 
 export interface ChatPanelProps {

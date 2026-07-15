@@ -6,6 +6,7 @@ import InlineLottiePreview from "@/components/InlineLottiePreview";
 import VariationGrid from "@/components/VariationGrid";
 import SequencePlayer from "@/components/SequencePlayer";
 import FeedbackButtons from "@/components/FeedbackButtons";
+import VersionBadge from "@/components/chat/VersionBadge";
 import type { Message, Variation, QualityHint } from "@/lib/chat-types";
 
 interface ChatMessageProps {
@@ -29,6 +30,7 @@ interface ChatMessageProps {
   onDismissQualityHints: () => void;
   isLastSuggestion: boolean;
   onSuggestionClick: (chip: string) => void;
+  onVersionRestore?: (versionNum: number) => void;
   t: (key: string, values?: Record<string, string>) => string;
 }
 
@@ -37,7 +39,7 @@ export default function ChatMessage({
   onRetry, isRetrying, isLastAssistant, isThinking, isStreaming,
   onVariationSelect, currentAnimationId, warningDismissed, onDismissWarning,
   qualityHintsDismissed, onDismissQualityHints,
-  isLastSuggestion, onSuggestionClick, t,
+  isLastSuggestion, onSuggestionClick, onVersionRestore, t,
 }: ChatMessageProps) {
   const [hintsExpanded, setHintsExpanded] = useState(false);
   return (
@@ -78,6 +80,13 @@ export default function ChatMessage({
             >
               {msg.role === "assistant" && msg.lottieJson && (
                 <InlineLottiePreview lottieJson={msg.lottieJson} previousLottieJson={msg.previousLottieJson} />
+              )}
+              {msg.role === "assistant" && msg.lottieJson && msg.versionNum && (
+                <VersionBadge
+                  versionNum={msg.versionNum}
+                  animationId={currentAnimationId || ""}
+                  onRestore={onVersionRestore}
+                />
               )}
               {msg.role === "assistant" && (msg.variations?.length || msg.variationsLoading) && (
                 <div className="mt-2">
