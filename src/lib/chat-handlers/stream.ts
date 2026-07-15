@@ -9,6 +9,7 @@ import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
 import { analyzeQuality } from "@/lib/quality";
+import { summarizeChanges } from "@/lib/animation-diff";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -389,6 +390,19 @@ export async function handleMainChat(
                 suggestion: c.suggestion,
               })),
             })));
+          }
+
+          if (currentAnimation) {
+            const diffSummary = summarizeChanges(
+              currentAnimation as Record<string, unknown>,
+              lottieJson as Record<string, unknown>,
+            );
+            if (diffSummary) {
+              controller.enqueue(encodeSSE(JSON.stringify({
+                type: "modification_summary",
+                summary: diffSummary,
+              })));
+            }
           }
         }
       } catch (err) {
