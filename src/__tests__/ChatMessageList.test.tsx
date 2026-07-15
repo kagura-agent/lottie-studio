@@ -37,6 +37,8 @@ function makeProps(overrides = {}) {
     currentAnimationId: undefined,
     dismissedWarnings: new Set<string>(),
     onDismissWarning: vi.fn(),
+    dismissedQualityHints: new Set<string>(),
+    onDismissQualityHints: vi.fn(),
     onSuggestionClick: vi.fn(),
     onPromptSelect: vi.fn(),
     hasDesignTokens: false,
