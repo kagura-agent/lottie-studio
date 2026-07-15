@@ -79,7 +79,7 @@ describe("useChatInput", () => {
     );
 
     act(() => {
-      result.current.handleAutocompleteSelect({ command: "/play", label: "Play", hasParams: false });
+      result.current.handleAutocompleteSelect({ command: "/play", description: "Play", hasParams: false });
     });
 
     expect(setInput).toHaveBeenCalledWith("/play");
@@ -92,7 +92,7 @@ describe("useChatInput", () => {
     );
 
     act(() => {
-      result.current.handleAutocompleteSelect({ command: "/style", label: "Style", hasParams: true });
+      result.current.handleAutocompleteSelect({ command: "/style", description: "Style", hasParams: true });
     });
 
     expect(setInput).toHaveBeenCalledWith("/style ");

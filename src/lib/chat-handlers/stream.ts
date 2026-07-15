@@ -8,6 +8,7 @@ import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
+import { analyzeQuality } from "@/lib/quality";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -370,6 +371,26 @@ export async function handleMainChat(
           ...(lottieJson && currentAnimation ? { previousLottieJson: currentAnimation } : {}),
         });
         controller.enqueue(encodeSSE(doneEvent));
+
+        if (lottieJson) {
+          const jsonStr = JSON.stringify(lottieJson);
+          const quality = analyzeQuality(lottieJson as Record<string, unknown>, jsonStr);
+          const actionableHints = quality.checks.filter(
+            (c) => (c.status === "warn" || c.status === "fail") && c.suggestion
+          );
+          if (actionableHints.length > 0) {
+            controller.enqueue(encodeSSE(JSON.stringify({
+              type: "quality_hints",
+              hints: actionableHints.map((c) => ({
+                id: c.id,
+                label: c.label,
+                status: c.status,
+                detail: c.detail,
+                suggestion: c.suggestion,
+              })),
+            })));
+          }
+        }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : "Stream processing error";
         controller.enqueue(encodeSSE(JSON.stringify({ type: "error", error: errMsg })));

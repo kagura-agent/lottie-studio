@@ -26,6 +26,8 @@ interface ChatMessageListProps {
   currentAnimationId: string | undefined;
   dismissedWarnings: Set<string>;
   onDismissWarning: (msgId: string) => void;
+  dismissedQualityHints: Set<string>;
+  onDismissQualityHints: (msgId: string) => void;
   onSuggestionClick: (chip: string) => void;
   onPromptSelect: (prompt: string) => void;
   hasDesignTokens: boolean;
@@ -39,6 +41,7 @@ export default function ChatMessageList({
   editingMsgId, editText, onEditTextChange, onEditStart, onEditCancel, onEditSave,
   onRetry, lastAssistantMsgId, lastSuggestionMsgId,
   onVariationSelect, currentAnimationId, dismissedWarnings, onDismissWarning,
+  dismissedQualityHints, onDismissQualityHints,
   onSuggestionClick, onPromptSelect, hasDesignTokens, dynamicSuggestions,
   messagesEndRef, t,
 }: ChatMessageListProps) {
@@ -74,6 +77,8 @@ export default function ChatMessageList({
           currentAnimationId={currentAnimationId}
           warningDismissed={dismissedWarnings.has(msg.id)}
           onDismissWarning={() => onDismissWarning(msg.id)}
+          qualityHintsDismissed={dismissedQualityHints.has(msg.id)}
+          onDismissQualityHints={() => onDismissQualityHints(msg.id)}
           isLastSuggestion={msg.id === lastSuggestionMsgId}
           onSuggestionClick={onSuggestionClick}
           t={t}

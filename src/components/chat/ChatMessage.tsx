@@ -1,11 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import InlineLottiePreview from "@/components/InlineLottiePreview";
 import VariationGrid from "@/components/VariationGrid";
 import SequencePlayer from "@/components/SequencePlayer";
 import FeedbackButtons from "@/components/FeedbackButtons";
-import type { Message, Variation } from "@/lib/chat-types";
+import type { Message, Variation, QualityHint } from "@/lib/chat-types";
 
 interface ChatMessageProps {
   msg: Message;
@@ -24,6 +25,8 @@ interface ChatMessageProps {
   currentAnimationId: string | undefined;
   warningDismissed: boolean;
   onDismissWarning: () => void;
+  qualityHintsDismissed: boolean;
+  onDismissQualityHints: () => void;
   isLastSuggestion: boolean;
   onSuggestionClick: (chip: string) => void;
   t: (key: string, values?: Record<string, string>) => string;
@@ -33,8 +36,10 @@ export default function ChatMessage({
   msg, isEditing, editText, onEditTextChange, onEditStart, onEditCancel, onEditSave,
   onRetry, isRetrying, isLastAssistant, isThinking, isStreaming,
   onVariationSelect, currentAnimationId, warningDismissed, onDismissWarning,
+  qualityHintsDismissed, onDismissQualityHints,
   isLastSuggestion, onSuggestionClick, t,
 }: ChatMessageProps) {
+  const [hintsExpanded, setHintsExpanded] = useState(false);
   return (
     <div>
       <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -160,6 +165,52 @@ export default function ChatMessage({
             >
               ×
             </button>
+          </div>
+        </div>
+      )}
+      {msg.qualityHints && msg.qualityHints.length > 0 && !qualityHintsDismissed && (
+        <div className="flex justify-start mt-1.5">
+          <div className="max-w-[80%] rounded-md bg-zinc-800/60 border border-zinc-700/50 text-xs overflow-hidden">
+            <div className="flex items-center justify-between px-2.5 py-1.5">
+              <button
+                onClick={() => setHintsExpanded(!hintsExpanded)}
+                className="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  className={`w-3 h-3 transition-transform ${hintsExpanded ? "rotate-90" : ""}`}
+                >
+                  <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+                <span>Quality Tips</span>
+                <span className="text-zinc-500">({msg.qualityHints.length})</span>
+              </button>
+              <button
+                onClick={onDismissQualityHints}
+                className="text-zinc-500 hover:text-zinc-300 font-bold leading-none px-1"
+                aria-label="Dismiss quality tips"
+              >
+                ×
+              </button>
+            </div>
+            {hintsExpanded && (
+              <div className="px-2.5 pb-2 space-y-1.5">
+                {msg.qualityHints.map((hint) => (
+                  <div key={hint.id} className="flex gap-2 text-zinc-400">
+                    <span className={`shrink-0 ${hint.status === "fail" ? "text-red-400" : "text-amber-400"}`}>
+                      {hint.status === "fail" ? "●" : "○"}
+                    </span>
+                    <div>
+                      <span className="text-zinc-300">{hint.label}:</span>{" "}
+                      <span>{hint.detail}</span>
+                      <p className="text-zinc-500 mt-0.5">{hint.suggestion}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
