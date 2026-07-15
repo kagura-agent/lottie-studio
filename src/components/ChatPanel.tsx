@@ -79,7 +79,7 @@ export default function ChatPanel({
     handleFileInputChange,
     inputRef, inputAreaRef, fileInputRef,
   } = useChatInput({
-    input, setInput, pendingImage, setPendingImage,
+    input, setInput, setPendingImage,
     setError, setMessages, setCurrentAnimationId, onAnimationCreated,
     handleSend, insertText, t,
   });
