@@ -17,6 +17,7 @@ export function useChatMessages(
   const [messages, setMessages] = useState<Message[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
+  const [dismissedQualityHints, setDismissedQualityHints] = useState<Set<string>>(new Set());
   const [dynamicSuggestions, setDynamicSuggestions] = useState<PromptSuggestion[] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const historyLoadedRef = useRef<string | undefined>(undefined);
@@ -126,6 +127,10 @@ export function useChatMessages(
     setDismissedWarnings((prev) => new Set(prev).add(msgId));
   }, []);
 
+  const dismissQualityHints = useCallback((msgId: string) => {
+    setDismissedQualityHints((prev) => new Set(prev).add(msgId));
+  }, []);
+
   const handleClearChat = useCallback(async (currentAnimationId: string | undefined) => {
     if (!currentAnimationId || messages.length === 0) return;
     if (!window.confirm("Clear all chat messages? This cannot be undone.")) return;
@@ -163,6 +168,8 @@ export function useChatMessages(
     setPendingCount,
     dismissedWarnings,
     dismissWarning,
+    dismissedQualityHints,
+    dismissQualityHints,
     dynamicSuggestions,
     messagesEndRef,
     scrollToBottom,

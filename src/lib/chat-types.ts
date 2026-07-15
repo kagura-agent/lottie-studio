@@ -1,5 +1,13 @@
 import type { Variation } from "@/components/VariationGrid";
 
+export interface QualityHint {
+  id: string;
+  label: string;
+  status: "warn" | "fail";
+  detail: string;
+  suggestion: string;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -13,6 +21,7 @@ export interface Message {
   variations?: Variation[];
   variationsLoading?: boolean;
   sequenceId?: string;
+  qualityHints?: QualityHint[];
 }
 
 export interface ChatPanelProps {

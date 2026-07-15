@@ -155,7 +155,7 @@ export function useChatSend(options: UseChatSendOptions) {
         const trimmed = part.trim();
         if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
-        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; previousLottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown };
+        let parsed: { type: string; text?: string; reply?: string; lottieJson?: unknown; previousLottieJson?: unknown; animationId?: string; error?: string; warning?: string; suggestions?: string[]; command?: unknown; hints?: unknown[] };
         try {
           parsed = JSON.parse(trimmed.slice(6));
         } catch {
@@ -276,6 +276,14 @@ export function useChatSend(options: UseChatSendOptions) {
           }
           if (parsed.command && typeof parsed.command === "object" && (parsed.command as Record<string, unknown>).type) {
             onCommand?.(parsed.command as Command);
+          }
+        } else if (parsed.type === "quality_hints") {
+          if (assistantMsgId && Array.isArray(parsed.hints)) {
+            const msgId = assistantMsgId;
+            const hints = parsed.hints as import("@/lib/chat-types").QualityHint[];
+            setMessages((prev) =>
+              prev.map((m) => m.id === msgId ? { ...m, qualityHints: hints } : m)
+            );
           }
         } else if (parsed.type === "error") {
           setError(parsed.error || "An unexpected error occurred");

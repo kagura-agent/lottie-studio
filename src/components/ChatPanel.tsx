@@ -33,7 +33,8 @@ export default function ChatPanel({
 
   const {
     messages, setMessages, pendingCount, setPendingCount,
-    dismissedWarnings, dismissWarning, dynamicSuggestions,
+    dismissedWarnings, dismissWarning, dismissedQualityHints, dismissQualityHints,
+    dynamicSuggestions,
     messagesEndRef, scrollToBottom, handleClearChat,
     lastAssistantMsgId, lastSuggestionMsgId, isOnline,
   } = useChatMessages(animationId, animationDataProp, selectedLayerIndex, handleSendRef);
@@ -140,6 +141,8 @@ export default function ChatPanel({
         currentAnimationId={currentAnimationId}
         dismissedWarnings={dismissedWarnings}
         onDismissWarning={dismissWarning}
+        dismissedQualityHints={dismissedQualityHints}
+        onDismissQualityHints={dismissQualityHints}
         onSuggestionClick={handleSend}
         onPromptSelect={(prompt) => setInput(prompt)}
         hasDesignTokens={hasDesignTokens}
