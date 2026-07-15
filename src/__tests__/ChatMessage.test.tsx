@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
 import ChatMessage from "@/components/chat/ChatMessage";
 import type { Message } from "@/lib/chat-types";
 
@@ -53,6 +52,8 @@ function makeProps(msgOverrides: Partial<Message> = {}, propOverrides = {}) {
     currentAnimationId: "anim-1",
     warningDismissed: false,
     onDismissWarning: vi.fn(),
+    qualityHintsDismissed: false,
+    onDismissQualityHints: vi.fn(),
     isLastSuggestion: false,
     onSuggestionClick: vi.fn(),
     t: (key: string) => key,
