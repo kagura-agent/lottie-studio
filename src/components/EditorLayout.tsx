@@ -20,6 +20,8 @@ import TimingEditor from "./TimingEditor";
 import EasingEditor from "./EasingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
+import { useBeforeAfter } from "@/hooks/useBeforeAfter";
+import BeforeAfterComparison from "./BeforeAfterComparison";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./auth/UserMenu";
@@ -111,6 +113,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
   const [animationData, setAnimationData] = useState<object | null>(initialData);
   const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData ?? {});
+  const beforeAfter = useBeforeAfter();
   const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -263,6 +266,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const handleAnimationCreated = useCallback(async (newId: string, newData?: object) => {
     setCurrentId(newId);
     if (newData) {
+      if (animationData) {
+        beforeAfter.setBeforeState(animationData);
+        beforeAfter.setAfterState(newData);
+      }
       const text = JSON.stringify(newData, null, 2);
       setJsonText(text);
       setAnimationData(newData);
@@ -275,6 +282,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         if (res.ok) {
           const result = await res.json();
           if (result.data) {
+            if (animationData) {
+              beforeAfter.setBeforeState(animationData);
+              beforeAfter.setAfterState(result.data);
+            }
             setJsonText(JSON.stringify(result.data, null, 2));
             setAnimationData(result.data);
             pushState(result.data);
@@ -287,7 +298,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       }
     }
     window.history.replaceState(null, '', `/editor/${newId}`);
-  }, [pushState, name]);
+  }, [pushState, name, animationData, beforeAfter]);
 
   // Capture and upload a thumbnail after animation is created or updated via chat
   const handleAnimationUpdated = useCallback((animId: string, data: object) => {
@@ -1172,6 +1183,41 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 ariaLabel={name || "Animation preview"}
               />
             </ErrorBoundary>
+            {beforeAfter.isComparing && beforeAfter.beforeData && beforeAfter.afterData && (
+              <BeforeAfterComparison
+                beforeData={beforeAfter.beforeData}
+                afterData={beforeAfter.afterData}
+                comparisonMode={beforeAfter.comparisonMode}
+                onModeChange={beforeAfter.setComparisonMode}
+                onAccept={() => beforeAfter.accept()}
+                onRevert={() => {
+                  const data = beforeAfter.revert();
+                  if (data) {
+                    setAnimationData(data);
+                    setJsonText(JSON.stringify(data, null, 2));
+                    pushState(data);
+                  }
+                }}
+                isPlaying={isPlaying}
+                speed={speed}
+                loopConfig={loopConfig}
+                seekToFrame={seekFrame}
+                background={canvasBg}
+              />
+            )}
+            {beforeAfter.beforeData && !beforeAfter.isComparing && (
+              <button
+                onClick={() => beforeAfter.setBeforeState(beforeAfter.beforeData!)}
+                title="Compare before/after"
+                aria-label="Toggle before/after comparison"
+                className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-md bg-zinc-800/80 backdrop-blur-sm border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/80 transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="12" y1="3" x2="12" y2="21" />
+                </svg>
+              </button>
+            )}
             {previewingVersion !== null && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm">
                 <span>{t('versionHistory.previewingVersion', { version: previewingVersion })}</span>
