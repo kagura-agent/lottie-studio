@@ -632,6 +632,15 @@
       }
     }
   },
+  "beforeAfter": {
+    "toggle": "Toggle",
+    "split": "Split",
+    "slider": "Slider",
+    "before": "Before",
+    "after": "After",
+    "close": "Close comparison",
+    "compare": "Compare"
+  },
   "profile": {
     "title": "Profile",
     "settings": "Settings",

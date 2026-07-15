@@ -29,7 +29,7 @@ export interface ChatPanelProps {
   animationId?: string;
   insertText?: string;
   onAnimationCreated?: (id: string, data?: object) => void;
-  onAnimationUpdated?: (id: string, data: object) => void;
+  onAnimationUpdated?: (id: string, data: object, previousData?: object) => void;
   onCommand?: (command: import("@/lib/commands").Command) => void;
   initialPrompt?: string;
   selectedLayerIndex?: number | null;

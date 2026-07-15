@@ -42,7 +42,7 @@ interface UseChatSendOptions {
   currentAnimationId: string | undefined;
   setCurrentAnimationId: React.Dispatch<React.SetStateAction<string | undefined>>;
   onAnimationCreated?: (id: string, data?: object) => void;
-  onAnimationUpdated?: (id: string, data: object) => void;
+  onAnimationUpdated?: (id: string, data: object, previousData?: object) => void;
   onCommand?: (command: Command) => void;
   animationDataProp: object | null | undefined;
   selectedLayerIndex: number | null | undefined;
@@ -259,10 +259,10 @@ export function useChatSend(options: UseChatSendOptions) {
           if (!currentAnimationId && parsed.animationId) {
             setCurrentAnimationId(parsed.animationId);
             onAnimationCreated?.(parsed.animationId, doneLottieJson);
-            if (doneLottieJson) onAnimationUpdated?.(parsed.animationId, doneLottieJson);
+            if (doneLottieJson) onAnimationUpdated?.(parsed.animationId, doneLottieJson, donePreviousLottieJson);
           } else if (doneLottieJson) {
             const captureId = currentAnimationId || parsed.animationId;
-            if (captureId) onAnimationUpdated?.(captureId, doneLottieJson);
+            if (captureId) onAnimationUpdated?.(captureId, doneLottieJson, donePreviousLottieJson);
           }
           if (assistantMsgId && parsed.reply) {
             const msgId = assistantMsgId;

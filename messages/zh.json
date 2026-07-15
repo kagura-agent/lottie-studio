@@ -632,6 +632,15 @@
       }
     }
   },
+  "beforeAfter": {
+    "toggle": "切换",
+    "split": "分屏",
+    "slider": "滑块",
+    "before": "修改前",
+    "after": "修改后",
+    "close": "关闭对比",
+    "compare": "对比"
+  },
   "profile": {
     "title": "个人资料",
     "settings": "设置",

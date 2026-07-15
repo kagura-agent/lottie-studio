@@ -21,6 +21,8 @@ import EasingEditor from "./EasingEditor";
 import { useAnimationSocket } from "@/hooks/useAnimationSocket";
 import { useAnimationHistory } from "@/hooks/useAnimationHistory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useBeforeAfter } from "@/hooks/useBeforeAfter";
+import BeforeAfterToggle from "./BeforeAfterToggle";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./auth/UserMenu";
 import ErrorBoundary from "./ErrorBoundary";
@@ -229,6 +231,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
   useAnimationSocket(currentId, handleExternalUpdate);
 
+  const beforeAfter = useBeforeAfter();
+
   const handleVersionPreview = useCallback((lottieJson: object, versionNum: number) => {
     setVersionPreviewData(lottieJson);
     setPreviewingVersion(versionNum);
@@ -290,12 +294,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   }, [pushState, name]);
 
   // Capture and upload a thumbnail after animation is created or updated via chat
-  const handleAnimationUpdated = useCallback((animId: string, data: object) => {
+  const handleAnimationUpdated = useCallback((animId: string, data: object, previousData?: object) => {
+    if (previousData) {
+      beforeAfter.activate(previousData, data);
+    }
     import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
       captureAndUploadThumbnail(animId, data);
     });
     saveAnimation(animId, name, data, { synced: true }).catch(() => {});
-  }, [name]);
+  }, [name, beforeAfter]);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -1172,6 +1179,20 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 ariaLabel={name || "Animation preview"}
               />
             </ErrorBoundary>
+            {beforeAfter.isActive && beforeAfter.beforeJson && beforeAfter.afterJson && (
+              <BeforeAfterToggle
+                beforeJson={beforeAfter.beforeJson}
+                afterJson={beforeAfter.afterJson}
+                mode={beforeAfter.mode}
+                onModeChange={beforeAfter.setMode}
+                onClose={beforeAfter.deactivate}
+                isPlaying={isPlaying}
+                speed={speed}
+                loopConfig={loopConfig}
+                seekToFrame={seekFrame}
+                background={canvasBg}
+              />
+            )}
             {previewingVersion !== null && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm">
                 <span>{t('versionHistory.previewingVersion', { version: previewingVersion })}</span>
