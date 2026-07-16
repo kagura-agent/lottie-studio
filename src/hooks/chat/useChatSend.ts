@@ -9,6 +9,7 @@ import { getRandomPrompt } from "@/data/randomPrompts";
 import { apiFetch } from "@/lib/apiFetch";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import { enqueueMessage } from "@/lib/messageQueue";
+import { extractPartialLottie } from "@/lib/partial-lottie";
 import type { Variation } from "@/components/VariationGrid";
 
 const STYLE_INSTRUCTIONS: Record<StyleName, string> = {
@@ -48,6 +49,7 @@ interface UseChatSendOptions {
   selectedLayerIndex: number | null | undefined;
   onLayerContextConsumed?: () => void;
   isOnline: boolean;
+  onProgressivePreview?: (data: object | null) => void;
 }
 
 export function useChatSend(options: UseChatSendOptions) {
@@ -56,7 +58,7 @@ export function useChatSend(options: UseChatSendOptions) {
     currentAnimationId, setCurrentAnimationId,
     onAnimationCreated, onAnimationUpdated, onCommand,
     animationDataProp, selectedLayerIndex, onLayerContextConsumed,
-    isOnline,
+    isOnline, onProgressivePreview,
   } = options;
 
   const t = useTranslations("chat");
@@ -128,6 +130,9 @@ export function useChatSend(options: UseChatSendOptions) {
     let visibleContent = "";
     let insideJsonBlock = false;
     let fenceBuffer = "";
+    let jsonBlockContent = "";
+    let jsonBlockCharsSinceLastPreview = 0;
+    let lastPreviewTime = 0;
     let repairVisibleContent = "";
     let repairInsideJsonBlock = false;
     let repairFenceBuffer = "";
@@ -186,17 +191,34 @@ export function useChatSend(options: UseChatSendOptions) {
               if (fenceBuffer.endsWith("```")) {
                 insideJsonBlock = false;
                 fenceBuffer = "";
+                onProgressivePreview?.(null);
               } else if ("```".startsWith(fenceBuffer)) {
-                // hold
+                // hold — but accumulate non-fence chars for preview
+                jsonBlockContent += fenceBuffer.slice(0, -fenceBuffer.length);
               } else {
+                jsonBlockContent += fenceBuffer[0];
+                jsonBlockCharsSinceLastPreview++;
                 fenceBuffer = fenceBuffer.slice(1);
                 while (fenceBuffer.length > 0 && !"```".startsWith(fenceBuffer)) {
+                  jsonBlockContent += fenceBuffer[0];
+                  jsonBlockCharsSinceLastPreview++;
                   fenceBuffer = fenceBuffer.slice(1);
                 }
               }
             }
           }
           visibleContent += visibleChunk;
+
+          // Progressive preview: attempt partial parse periodically
+          if (insideJsonBlock && onProgressivePreview && jsonBlockCharsSinceLastPreview >= 200) {
+            const now = Date.now();
+            if (now - lastPreviewTime >= 500) {
+              lastPreviewTime = now;
+              jsonBlockCharsSinceLastPreview = 0;
+              const partial = extractPartialLottie(jsonBlockContent);
+              if (partial) onProgressivePreview(partial);
+            }
+          }
 
           if (!assistantMsgId) {
             assistantMsgId = crypto.randomUUID();
@@ -290,7 +312,7 @@ export function useChatSend(options: UseChatSendOptions) {
         }
       }
     }
-  }, [currentAnimationId, setCurrentAnimationId, onAnimationCreated, onAnimationUpdated, onCommand, designTokens, hasDesignTokens, setMessages]);
+  }, [currentAnimationId, setCurrentAnimationId, onAnimationCreated, onAnimationUpdated, onCommand, designTokens, hasDesignTokens, setMessages, onProgressivePreview]);
 
   const handleSend = useCallback(async (promptOverride?: string) => {
     const text = (promptOverride ?? input).trim();

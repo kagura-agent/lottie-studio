@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import LottiePreview from "./LottiePreview";
+import { useProgressivePreview } from "@/hooks/chat/useProgressivePreview";
 const JsonEditor = dynamic(() => import("./JsonEditor"), { ssr: false });
 import ChatPanel from "./ChatPanel";
 import LayerPanel from "./LayerPanel";
@@ -112,6 +113,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
   const [duplicating, setDuplicating] = useState(false);
   const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
   const [animationData, setAnimationData] = useState<object | null>(initialData);
+  const { previewData: progressivePreviewData, isPreviewActive, updatePreview: updateProgressivePreview, clearPreview: clearProgressivePreview } = useProgressivePreview();
   const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData ?? {});
   const beforeAfter = useBeforeAfter();
   const [name, setName] = useState(initialName);
@@ -302,11 +304,20 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
   // Capture and upload a thumbnail after animation is created or updated via chat
   const handleAnimationUpdated = useCallback((animId: string, data: object) => {
+    clearProgressivePreview();
     import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
       captureAndUploadThumbnail(animId, data);
     });
     saveAnimation(animId, name, data, { synced: true }).catch(() => {});
-  }, [name]);
+  }, [name, clearProgressivePreview]);
+
+  const handleProgressivePreview = useCallback((data: object | null) => {
+    if (data) {
+      updateProgressivePreview(data as import("@/lib/partial-lottie").PartialLottie);
+    } else {
+      clearProgressivePreview();
+    }
+  }, [updateProgressivePreview, clearProgressivePreview]);
 
   const applyHistoryState = useCallback((data: object) => {
     const text = JSON.stringify(data, null, 2);
@@ -1172,16 +1183,22 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               onReset={() => setAnimationData(animationData)}
             >
               <LottiePreview
-                animationData={versionPreviewData ?? animationData}
+                animationData={versionPreviewData ?? progressivePreviewData ?? animationData}
                 isPlaying={isPlaying}
                 speed={speed}
                 loopConfig={loopConfig}
                 onFrameChange={handleFrameChange}
                 seekToFrame={seekFrame}
                 background={canvasBg}
-                placeholder={isNewMode && animationData === null}
+                placeholder={isNewMode && animationData === null && !progressivePreviewData}
                 ariaLabel={name || "Animation preview"}
               />
+              {isPreviewActive && (
+                <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+                  Generating…
+                </div>
+              )}
             </ErrorBoundary>
             {beforeAfter.isComparing && beforeAfter.beforeData && beforeAfter.afterData && (
               <BeforeAfterComparison
@@ -1416,7 +1433,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             {isMobile ? (
               mobileView === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} />
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} onProgressivePreview={handleProgressivePreview} />
                 </ErrorBoundary>
               ) : mobileView === "layers" ? (
                 <LayerPanel
@@ -1431,7 +1448,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             ) : (
               rightPanel === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} />
+                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} onProgressivePreview={handleProgressivePreview} />
                 </ErrorBoundary>
               ) : rightPanel === "layers" ? (
                 <LayerPanel
