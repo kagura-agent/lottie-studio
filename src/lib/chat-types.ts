@@ -35,6 +35,7 @@ export interface ChatPanelProps {
   selectedLayerIndex?: number | null;
   animationData?: object | null;
   onLayerContextConsumed?: () => void;
+  onProgressivePreview?: (data: object | null) => void;
 }
 
 export const MAX_IMAGE_SIZE = 4 * 1024 * 1024;

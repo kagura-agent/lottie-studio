@@ -20,6 +20,7 @@ export default function ChatPanel({
   selectedLayerIndex,
   animationData: animationDataProp,
   onLayerContextConsumed,
+  onProgressivePreview,
 }: ChatPanelProps) {
   const [currentAnimationId, setCurrentAnimationId] = useState<string | undefined>(animationId);
   const [prevAnimationId, setPrevAnimationId] = useState<string | undefined>(animationId);
@@ -54,7 +55,7 @@ export default function ChatPanel({
     currentAnimationId, setCurrentAnimationId,
     onAnimationCreated, onAnimationUpdated, onCommand,
     animationDataProp, selectedLayerIndex, onLayerContextConsumed,
-    isOnline,
+    isOnline, onProgressivePreview,
   });
 
   useEffect(() => {
