@@ -31,12 +31,22 @@ const securityHeaders = [
   { key: 'Content-Security-Policy', value: cspDirectives },
 ];
 
+// Embed pages need to be iframe-embeddable on other sites,
+// so we omit X-Frame-Options (which would DENY framing).
+const embedSecurityHeaders = securityHeaders.filter(
+  (h) => h.key !== 'X-Frame-Options',
+);
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   serverExternalPackages: ["puppeteer-core", "canvas", "archiver", "better-sqlite3"],
   async headers() {
     return [
+      {
+        source: '/embed/:path*',
+        headers: embedSecurityHeaders,
+      },
       {
         source: '/:path*',
         headers: securityHeaders,
