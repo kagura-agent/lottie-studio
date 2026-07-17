@@ -142,24 +142,24 @@ describe("generateReducedMotion", () => {
   it("removes position/rotation/scale keyframes", () => {
     const reduced = generateReducedMotion(animation);
     const layer = reduced.layers![0];
-    expect(layer.ks.p.a).toBe(0);
-    expect(layer.ks.r.a).toBe(0);
-    expect(layer.ks.s.a).toBe(0);
+    expect(layer.ks!.p!.a).toBe(0);
+    expect(layer.ks!.r!.a).toBe(0);
+    expect(layer.ks!.s!.a).toBe(0);
   });
 
   it("preserves opacity fades", () => {
     const reduced = generateReducedMotion(animation);
     const layer = reduced.layers![0];
-    expect(layer.ks.o.a).toBe(1);
-    expect(Array.isArray(layer.ks.o.k)).toBe(true);
+    expect(layer.ks!.o!.a).toBe(1);
+    expect(Array.isArray(layer.ks!.o!.k)).toBe(true);
   });
 
   it("preserves final visual state (colors, shapes)", () => {
     const reduced = generateReducedMotion(animation);
     const layer = reduced.layers![0];
-    expect(layer.ks.p.k).toEqual([500, 300]);
-    expect(layer.ks.r.k).toBe(360);
-    expect(layer.ks.s.k).toEqual([100, 100]);
+    expect(layer.ks!.p!.k).toEqual([500, 300]);
+    expect(layer.ks!.r!.k).toBe(360);
+    expect(layer.ks!.s!.k).toEqual([100, 100]);
   });
 });
 
