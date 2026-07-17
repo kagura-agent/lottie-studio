@@ -10,6 +10,7 @@ import {
   handlePolish,
   handlePresetCommand,
   handleRetime,
+  handleA11y,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -94,6 +95,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "polish") {
     return handlePolish(animationId, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "a11y") {
+    return handleA11y(animationId, message);
   }
 
   if (parsedCmd && parsedCmd.type === "duration") {

@@ -5,5 +5,6 @@ export { handleCritique } from "./critique";
 export { handlePolish } from "./polish";
 export { handlePresetCommand } from "./presets";
 export { handleRetime } from "./retime";
+export { handleA11y } from "./a11y";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

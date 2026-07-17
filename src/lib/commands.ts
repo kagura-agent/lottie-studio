@@ -97,6 +97,7 @@ export type Command =
   | { type: "rename_layer"; oldName: string; newName: string }
   | { type: "critique" }
   | { type: "polish" }
+  | { type: "a11y" }
   | { type: "help" }
   | { type: "plugins_list" }
   | { type: "plugin_install"; slug: string }
@@ -494,6 +495,10 @@ export function parseCommand(input: string): Command | null {
 
     case "polish":
       return { type: "polish" };
+
+    case "a11y":
+    case "accessibility":
+      return { type: "a11y" };
 
     case "help":
     case "commands":
