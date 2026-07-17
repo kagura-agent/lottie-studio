@@ -9,6 +9,7 @@ import {
   handleCritique,
   handlePolish,
   handlePresetCommand,
+  handleRetime,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -93,6 +94,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "polish") {
     return handlePolish(animationId, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "duration") {
+    return handleRetime(animationId, parsedCmd.durationMs, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

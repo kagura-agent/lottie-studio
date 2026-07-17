@@ -4,5 +4,6 @@ export { handleLayerCommand } from "./layers";
 export { handleCritique } from "./critique";
 export { handlePolish } from "./polish";
 export { handlePresetCommand } from "./presets";
+export { handleRetime } from "./retime";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";
