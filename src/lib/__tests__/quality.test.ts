@@ -224,7 +224,7 @@ describe("analyzeQuality", () => {
     const result = analyzeQuality(anim);
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);
-    expect(result.checks).toHaveLength(5);
+    expect(result.checks).toHaveLength(6);
     expect(["pass", "warn", "fail"]).toContain(result.status);
   });
 
