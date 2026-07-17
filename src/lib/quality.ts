@@ -3,6 +3,8 @@
  * Pure functions, no dependencies beyond standard lib.
  */
 
+import { validateStructure } from "./validation";
+
 export type CheckStatus = "pass" | "warn" | "fail";
 
 export interface QualityCheck {
@@ -255,6 +257,37 @@ export function checkFrameRate(animation: LottieAnimation): QualityCheck {
   return { id: "frame-rate", label: "Frame Rate", status, score, detail, suggestion };
 }
 
+function checkStructuralValidity(animation: LottieAnimation): QualityCheck[] {
+  const result = validateStructure(animation as Record<string, unknown>);
+  if (result.issues.length === 0) {
+    return [{
+      id: "structural-validity",
+      label: "Structural Validity",
+      status: "pass",
+      score: 100,
+      detail: "No structural issues detected",
+    }];
+  }
+
+  const errors = result.issues.filter((i) => i.severity === "error");
+  const warnings = result.issues.filter((i) => i.severity === "warning");
+
+  const status: CheckStatus = errors.length > 0 ? "fail" : "warn";
+  const score = errors.length > 0 ? Math.max(0, 40 - errors.length * 10) : Math.max(40, 80 - warnings.length * 10);
+  const detail = `${errors.length} error(s), ${warnings.length} warning(s): ${result.issues.slice(0, 3).map((i) => i.message).join("; ")}${result.issues.length > 3 ? "..." : ""}`;
+
+  return [{
+    id: "structural-validity",
+    label: "Structural Validity",
+    status,
+    score,
+    detail,
+    suggestion: errors.length > 0
+      ? "Fix structural errors: " + errors.slice(0, 2).map((i) => i.message).join("; ")
+      : "Address structural warnings: " + warnings.slice(0, 2).map((i) => i.message).join("; "),
+  }];
+}
+
 // --- Main analysis function ---
 
 export function analyzeQuality(animation: LottieAnimation, jsonString?: string): QualityResult {
@@ -266,6 +299,7 @@ export function analyzeQuality(animation: LottieAnimation, jsonString?: string):
     checkHiddenLayers(animation),
     checkLoopSmoothness(animation),
     checkFrameRate(animation),
+    ...checkStructuralValidity(animation),
   ];
 
   // Weighted average (all equal weight for now)

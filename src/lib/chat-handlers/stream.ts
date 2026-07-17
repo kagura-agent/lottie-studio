@@ -9,6 +9,7 @@ import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
 import { analyzeQuality } from "@/lib/quality";
+import { validateStructure } from "@/lib/validation";
 import { summarizeChanges } from "@/lib/animation-diff";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -318,6 +319,13 @@ export async function handleMainChat(
           if (validation.warnings.length > 0) {
             const validationWarning = validation.warnings.join('; ');
             warning = warning ? `${warning} ${validationWarning}` : validationWarning;
+          }
+
+          const structuralValidation = validateStructure(lottieJson as Record<string, unknown>);
+          if (structuralValidation.issues.length > 0) {
+            const structWarning = '⚠️ Animation has structural issues: ' +
+              structuralValidation.issues.map((i) => i.message).join('; ');
+            warning = warning ? `${warning} ${structWarning}` : structWarning;
           }
 
           fs.writeFileSync(animationFile, JSON.stringify(lottieJson));
