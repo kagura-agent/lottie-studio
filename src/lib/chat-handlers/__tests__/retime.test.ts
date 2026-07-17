@@ -34,7 +34,7 @@ describe("handleRetime", () => {
 
   it("returns 404 for non-existent animation", async () => {
     const { db } = await import("@/lib/db");
-    (db.prepare as any) = vi.fn(() => ({ run: vi.fn(), get: vi.fn(() => undefined) }));
+    vi.spyOn(db, "prepare").mockReturnValue({ run: vi.fn(), get: vi.fn(() => undefined) } as unknown as ReturnType<typeof db.prepare>);
 
     const res = await handleRetime("missing-id", 4000, "/duration 4s");
     expect(res.status).toBe(404);
@@ -42,11 +42,11 @@ describe("handleRetime", () => {
 
   it("returns done event with retimed animation", async () => {
     const { db } = await import("@/lib/db");
-    (db.prepare as any) = vi.fn((sql: string) => {
+    vi.spyOn(db, "prepare").mockImplementation(((sql: string) => {
       if (sql.includes("SELECT id FROM animations")) return { get: () => ({ id: "test" }) };
       if (sql.includes("SELECT MAX")) return { get: () => ({ max_num: 1 }) };
       return { run: vi.fn(), get: vi.fn() };
-    });
+    }) as typeof db.prepare);
 
     const res = await handleRetime("test-id", 4000, "/duration 4s");
     const text = await res.text();
