@@ -422,7 +422,8 @@ describe("useChatSend", () => {
   });
 
   describe("command handling", () => {
-    async function setupCommand(commandObj: object, inputText: string, optsOverrides = {}) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async function setupCommand(commandObj: object, inputText: string, _optsOverrides = {}) {
       const { parseCommand } = await import("@/lib/commands");
       const { apiFetch } = await import("@/lib/apiFetch");
       vi.mocked(parseCommand).mockReturnValueOnce(commandObj as ReturnType<typeof parseCommand>);
@@ -566,7 +567,7 @@ describe("useChatSend", () => {
     });
 
     it("/variations handles network error", async () => {
-      const { mockApiFetch } = await setupCommand(
+      await setupCommand(
         { type: "variations", prompt: "test" },
         "/variations test"
       );
