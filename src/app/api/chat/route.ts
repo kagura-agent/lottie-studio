@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { isUndoIntent } from "@/lib/chat-utils";
 import { extractIp, checkRate } from "@/lib/rateLimit";
 import { parseCommand } from "@/lib/commands";

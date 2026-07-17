@@ -19,7 +19,7 @@ import {
   reorderSequenceItems,
   VALID_TRANSITIONS,
 } from "@/lib/db";
-import type { Preset, Sequence, SequenceItem } from "@/lib/db";
+import type { SequenceItem } from "@/lib/db";
 
 const createdPresetIds: string[] = [];
 const createdSequenceIds: string[] = [];

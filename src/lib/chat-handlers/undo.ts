@@ -76,6 +76,7 @@ export function handleUndo(animationId: string, message: string): Response {
     // For simplicity, we support redo only if the immediately previous version (before the undo
     // version) exists and has different content.
     const steps = effectiveIntent.steps || 1;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const targetNum = currentVersionNum + steps;
 
     // In append-only model, there's no "future" version to redo to unless we track undo stack.
