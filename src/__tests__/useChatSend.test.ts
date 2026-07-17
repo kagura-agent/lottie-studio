@@ -1350,7 +1350,7 @@ describe("useChatSend", () => {
       act(() => { result.current.handleStop(); });
 
       // Close the reader to unblock
-      try { readerController?.close(); } catch { /* ok */ }
+      try { (readerController as ReadableStreamDefaultController | null)?.close(); } catch { /* ok */ }
 
       await sendPromise;
 
