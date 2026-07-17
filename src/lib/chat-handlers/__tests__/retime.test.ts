@@ -46,7 +46,7 @@ describe("handleRetime", () => {
       if (sql.includes("SELECT id FROM animations")) return { get: () => ({ id: "test" }) };
       if (sql.includes("SELECT MAX")) return { get: () => ({ max_num: 1 }) };
       return { run: vi.fn(), get: vi.fn() };
-    }) as typeof db.prepare);
+    }) as unknown as typeof db.prepare);
 
     const res = await handleRetime("test-id", 4000, "/duration 4s");
     const text = await res.text();
