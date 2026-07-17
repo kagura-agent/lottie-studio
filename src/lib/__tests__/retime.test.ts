@@ -29,7 +29,10 @@ describe("retime", () => {
     expect(result.fr).toBe(30);
     expect(result.layers![0].ip).toBe(0);
     expect(result.layers![0].op).toBe(120);
-    const kf = (result.layers![0] as any).ks.o.k;
+    const layer = result.layers![0] as Record<string, unknown>;
+    const ks = layer.ks as Record<string, unknown>;
+    const o = ks.o as Record<string, unknown>;
+    const kf = o.k as Array<Record<string, unknown>>;
     expect(kf[0].t).toBe(0);
     expect(kf[1].t).toBe(60);
     expect(kf[2].t).toBe(120);
@@ -63,7 +66,10 @@ describe("retime", () => {
     };
     const result = retime(input, 1000);
     expect(result.op).toBe(30);
-    const kf = (result.layers![0] as any).ks.o.k;
+    const layer = result.layers![0] as Record<string, unknown>;
+    const ks = layer.ks as Record<string, unknown>;
+    const o = ks.o as Record<string, unknown>;
+    const kf = o.k as Array<Record<string, unknown>>;
     expect(kf[0].t).toBe(15);
   });
 
@@ -86,7 +92,11 @@ describe("retime", () => {
     };
     const result = retime(input, 6000);
     expect(result.op).toBe(180);
-    const kf = (result.layers![0] as any).shapes[0].it[0].o.k;
+    const layer = result.layers![0] as Record<string, unknown>;
+    const shapes = layer.shapes as Array<Record<string, unknown>>;
+    const it = shapes[0].it as Array<Record<string, unknown>>;
+    const o = it[0].o as Record<string, unknown>;
+    const kf = o.k as Array<Record<string, unknown>>;
     expect(kf[0].t).toBe(0);
     expect(kf[1].t).toBe(90);
     expect(kf[2].t).toBe(180);
@@ -125,8 +135,11 @@ describe("retime", () => {
       }],
     };
     const result = retime(input, 4000);
-    const kf = (result.layers![0] as any).ks.o.k[0];
-    expect(kf.o).toEqual({ x: [0.42], y: [0] });
-    expect(kf.i).toEqual({ x: [0.58], y: [1] });
+    const layer = result.layers![0] as Record<string, unknown>;
+    const ks = layer.ks as Record<string, unknown>;
+    const o = ks.o as Record<string, unknown>;
+    const kfArr = o.k as Array<Record<string, unknown>>;
+    expect(kfArr[0].o).toEqual({ x: [0.42], y: [0] });
+    expect(kfArr[0].i).toEqual({ x: [0.58], y: [1] });
   });
 });
