@@ -62,8 +62,7 @@ vi.mock("node:fs", () => ({
 import { db } from "@/lib/db";
 import { animationEvents, emitWebhook } from "@/lib/events";
 import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from "@/lib/llm";
-import { buildSystemPrompt, buildDesignTokensPrompt } from "@/lib/prompts";
-import { compactHistory } from "@/lib/chat-utils";
+import { buildDesignTokensPrompt } from "@/lib/prompts";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import { validateAndFix, roundDecimals, removeEmptyGroups, removeHiddenLayers } from "@/lib/optimizer";

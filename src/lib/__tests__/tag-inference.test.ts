@@ -3,7 +3,6 @@ import {
   inferTags,
   serializeTags,
   deserializeTags,
-  TAG_VOCABULARY,
 } from "../tag-inference";
 
 describe("inferTags", () => {

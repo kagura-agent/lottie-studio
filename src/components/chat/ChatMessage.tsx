@@ -7,7 +7,7 @@ import VariationGrid from "@/components/VariationGrid";
 import SequencePlayer from "@/components/SequencePlayer";
 import FeedbackButtons from "@/components/FeedbackButtons";
 import VersionBadge from "@/components/chat/VersionBadge";
-import type { Message, Variation, QualityHint } from "@/lib/chat-types";
+import type { Message, Variation } from "@/lib/chat-types";
 
 interface ChatMessageProps {
   msg: Message;
