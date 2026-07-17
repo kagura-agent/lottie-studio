@@ -10,6 +10,8 @@ type Shape = { ty: "rc"; nm: string; p: SP; s: SP; r: SP }
   | { ty: "sh"; nm: string; ks: { a: 0; k: { v: number[][]; i: number[][]; o: number[][]; c: boolean } } }
   | { ty: "fl"; nm: string; c: SP; o: SP }
   | { ty: "st"; nm: string; c: SP; o: SP; w: SP }
+  | { ty: "gf"; nm: string; t: number; s: SP; e: SP; g: { p: number; k: SP }; o: SP }
+  | { ty: "gs"; nm: string; t: number; s: SP; e: SP; g: { p: number; k: SP }; o: SP; w: SP }
   | { ty: "gr"; nm: string; it: Shape[] }
   | { ty: "tr"; p: SP; a: SP; s: SP; r: SP; o: SP };
 
@@ -50,6 +52,92 @@ export function parseColor(color: string | undefined): [number, number, number, 
   if (m) return [+m[1]/255, +m[2]/255, +m[3]/255, m[4] !== undefined ? +m[4] : 1];
   if (c in COLORS) { const [r,g,b] = COLORS[c]; return [r/255, g/255, b/255, 1]; }
   return null;
+}
+
+// --- Gradient Types & Parsing ---
+interface GradientStop { offset: number; r: number; g: number; b: number; opacity: number }
+interface GradientDef {
+  type: "linear" | "radial";
+  units: "objectBoundingBox" | "userSpaceOnUse";
+  stops: GradientStop[];
+  x1: number; y1: number; x2: number; y2: number; // linear
+  cx: number; cy: number; r: number; fx: number; fy: number; // radial
+}
+
+function parseGradientDefs(root: El): Map<string, GradientDef> {
+  const map = new Map<string, GradientDef>();
+  for (const child of root.children) {
+    if (child.tag !== "defs") continue;
+    for (const def of child.children) {
+      if (def.tag !== "lineargradient" && def.tag !== "radialgradient") continue;
+      const id = def.attrs.id;
+      if (!id) continue;
+      const units = (def.attrs.gradientUnits || def.attrs.gradientunits || "objectBoundingBox") as GradientDef["units"];
+      const stops: GradientStop[] = [];
+      for (const stop of def.children) {
+        if (stop.tag !== "stop") continue;
+        const offset = parseFloat(stop.attrs.offset || "0");
+        const colorStr = stop.attrs["stop-color"] || "black";
+        const c = parseColor(colorStr) || [0, 0, 0, 1];
+        const opacity = stop.attrs["stop-opacity"] !== undefined ? parseFloat(stop.attrs["stop-opacity"]) : c[3];
+        stops.push({ offset, r: c[0], g: c[1], b: c[2], opacity });
+      }
+      if (def.tag === "lineargradient") {
+        const defaultX2 = units === "objectBoundingBox" ? 1 : 0;
+        map.set(id, {
+          type: "linear", units, stops,
+          x1: parseFloat(def.attrs.x1 || "0"), y1: parseFloat(def.attrs.y1 || "0"),
+          x2: parseFloat(def.attrs.x2 ?? String(defaultX2)), y2: parseFloat(def.attrs.y2 || "0"),
+          cx: 0, cy: 0, r: 0, fx: 0, fy: 0,
+        });
+      } else {
+        const defaultVal = units === "objectBoundingBox" ? 0.5 : 0;
+        const cx = parseFloat(def.attrs.cx ?? String(defaultVal));
+        const cy = parseFloat(def.attrs.cy ?? String(defaultVal));
+        const r = parseFloat(def.attrs.r ?? String(defaultVal));
+        const fx = parseFloat(def.attrs.fx ?? String(cx));
+        const fy = parseFloat(def.attrs.fy ?? String(cy));
+        map.set(id, {
+          type: "radial", units, stops, x1: 0, y1: 0, x2: 0, y2: 0,
+          cx, cy, r, fx, fy,
+        });
+      }
+    }
+  }
+  return map;
+}
+
+function buildGradientShape(grad: GradientDef, mode: "fill" | "stroke", strokeWidth: number): Shape {
+  const colorStops: number[] = [];
+  const opacityStops: number[] = [];
+  for (const s of grad.stops) {
+    colorStops.push(s.offset, s.r, s.g, s.b);
+    opacityStops.push(s.offset, s.opacity);
+  }
+  const k = [...colorStops, ...opacityStops];
+  const t = grad.type === "linear" ? 1 : 2;
+  let startX: number, startY: number, endX: number, endY: number;
+  if (grad.type === "linear") {
+    if (grad.units === "objectBoundingBox") {
+      startX = grad.x1 * 100; startY = grad.y1 * 100;
+      endX = grad.x2 * 100; endY = grad.y2 * 100;
+    } else {
+      startX = grad.x1; startY = grad.y1;
+      endX = grad.x2; endY = grad.y2;
+    }
+  } else {
+    if (grad.units === "objectBoundingBox") {
+      startX = grad.cx * 100; startY = grad.cy * 100;
+      endX = (grad.cx + grad.r) * 100; endY = grad.cy * 100;
+    } else {
+      startX = grad.cx; startY = grad.cy;
+      endX = grad.cx + grad.r; endY = grad.cy;
+    }
+  }
+  if (mode === "stroke") {
+    return { ty: "gs", nm: "Gradient Stroke", t, s: sp([startX, startY]), e: sp([endX, endY]), g: { p: grad.stops.length, k: sp(k) }, o: sp(100), w: sp(strokeWidth) };
+  }
+  return { ty: "gf", nm: "Gradient Fill", t, s: sp([startX, startY]), e: sp([endX, endY]), g: { p: grad.stops.length, k: sp(k) }, o: sp(100) };
 }
 
 // --- SVG XML Parsing ---
@@ -158,14 +246,31 @@ export function parsePath(d: string): PathData[] {
 }
 
 // --- Shape Builders ---
-function styleShapes(shapes: Shape[], el: El) {
+function resolveGradientRef(value: string | undefined, gradients: Map<string, GradientDef>): GradientDef | null {
+  if (!value) return null;
+  const m = value.match(/^url\(#([^)]+)\)$/);
+  if (!m) return null;
+  return gradients.get(m[1]) || null;
+}
+
+function styleShapes(shapes: Shape[], el: El, gradients: Map<string, GradientDef>) {
   const { fill, stroke, opacity } = el.attrs;
   const sw = el.attrs["stroke-width"];
-  const fc = parseColor(fill !== undefined ? fill : (stroke ? "none" : "black"));
-  if (fc) shapes.push({ ty:"fl", nm:"Fill", c:sp([fc[0],fc[1],fc[2],1]), o:sp(opacity ? +opacity*100 : 100) });
+  const fillGrad = resolveGradientRef(fill, gradients);
+  if (fillGrad) {
+    shapes.push(buildGradientShape(fillGrad, "fill", 0));
+  } else {
+    const fc = parseColor(fill !== undefined ? fill : (stroke ? "none" : "black"));
+    if (fc) shapes.push({ ty:"fl", nm:"Fill", c:sp([fc[0],fc[1],fc[2],1]), o:sp(opacity ? +opacity*100 : 100) });
+  }
   if (stroke && stroke !== "none") {
-    const sc = parseColor(stroke);
-    if (sc) shapes.push({ ty:"st", nm:"Stroke", c:sp([sc[0],sc[1],sc[2],1]), o:sp(100), w:sp(sw ? +sw : 1) });
+    const strokeGrad = resolveGradientRef(stroke, gradients);
+    if (strokeGrad) {
+      shapes.push(buildGradientShape(strokeGrad, "stroke", sw ? +sw : 1));
+    } else {
+      const sc = parseColor(stroke);
+      if (sc) shapes.push({ ty:"st", nm:"Stroke", c:sp([sc[0],sc[1],sc[2],1]), o:sp(100), w:sp(sw ? +sw : 1) });
+    }
   }
 }
 
@@ -173,63 +278,63 @@ function trShape(t: ReturnType<typeof parseTransform>): Shape {
   return { ty:"tr", p:sp([t.tx,t.ty]), a:sp([0,0]), s:sp([t.sx,t.sy]), r:sp(t.rotation), o:sp(100) };
 }
 
-function cvtRect(el: El): Shape[] {
+function cvtRect(el: El, g: Map<string, GradientDef>): Shape[] {
   const x=+(el.attrs.x||0), y=+(el.attrs.y||0), w=+(el.attrs.width||0), h=+(el.attrs.height||0), rx=+(el.attrs.rx||0);
   const s: Shape[] = [{ ty:"rc", nm:"Rect", p:sp([x+w/2,y+h/2]), s:sp([w,h]), r:sp(rx) }];
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtCircle(el: El): Shape[] {
+function cvtCircle(el: El, g: Map<string, GradientDef>): Shape[] {
   const cx=+(el.attrs.cx||0), cy=+(el.attrs.cy||0), r=+(el.attrs.r||0);
   const s: Shape[] = [{ ty:"el", nm:"Ellipse", p:sp([cx,cy]), s:sp([r*2,r*2]) }];
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtEllipse(el: El): Shape[] {
+function cvtEllipse(el: El, g: Map<string, GradientDef>): Shape[] {
   const cx=+(el.attrs.cx||0), cy=+(el.attrs.cy||0), rx=+(el.attrs.rx||0), ry=+(el.attrs.ry||0);
   const s: Shape[] = [{ ty:"el", nm:"Ellipse", p:sp([cx,cy]), s:sp([rx*2,ry*2]) }];
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtLine(el: El): Shape[] {
+function cvtLine(el: El, g: Map<string, GradientDef>): Shape[] {
   const x1=+(el.attrs.x1||0),y1=+(el.attrs.y1||0),x2=+(el.attrs.x2||0),y2=+(el.attrs.y2||0);
   const s: Shape[] = [{ ty:"sh", nm:"Line", ks:{a:0,k:{v:[[x1,y1],[x2,y2]],i:[[0,0],[0,0]],o:[[0,0],[0,0]],c:false}} }];
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtPoly(el: El, closed: boolean): Shape[] {
+function cvtPoly(el: El, closed: boolean, g: Map<string, GradientDef>): Shape[] {
   const nums = (el.attrs.points||"").trim().split(/[\s,]+/).map(Number);
   const v: number[][] = [];
   for (let i=0; i<nums.length-1; i+=2) v.push([nums[i], nums[i+1]]);
   if (!v.length) return [];
   const s: Shape[] = [{ ty:"sh", nm:closed?"Polygon":"Polyline", ks:{a:0,k:{v, i:v.map(()=>[0,0]), o:v.map(()=>[0,0]), c:closed}} }];
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtPath(el: El): Shape[] {
+function cvtPath(el: El, g: Map<string, GradientDef>): Shape[] {
   if (!el.attrs.d) return [];
   const pds = parsePath(el.attrs.d);
   const s: Shape[] = pds.map(pd => ({ ty:"sh" as const, nm:"Path", ks:{a:0 as const, k:{v:pd.vertices, i:pd.inTangents, o:pd.outTangents, c:pd.closed}} }));
-  styleShapes(s, el); return s;
+  styleShapes(s, el, g); return s;
 }
 
-function cvtElement(el: El, w: string[]): Shape[] {
+function cvtElement(el: El, w: string[], g: Map<string, GradientDef>): Shape[] {
   switch (el.tag) {
-    case "rect": return cvtRect(el);
-    case "circle": return cvtCircle(el);
-    case "ellipse": return cvtEllipse(el);
-    case "line": return cvtLine(el);
-    case "polyline": return cvtPoly(el, false);
-    case "polygon": return cvtPoly(el, true);
-    case "path": return cvtPath(el);
-    case "g": return cvtGroup(el, w);
+    case "rect": return cvtRect(el, g);
+    case "circle": return cvtCircle(el, g);
+    case "ellipse": return cvtEllipse(el, g);
+    case "line": return cvtLine(el, g);
+    case "polyline": return cvtPoly(el, false, g);
+    case "polygon": return cvtPoly(el, true, g);
+    case "path": return cvtPath(el, g);
+    case "g": return cvtGroup(el, w, g);
     default: w.push(`Unsupported element <${el.tag}> skipped`); return [];
   }
 }
 
-function cvtGroup(el: El, w: string[]): Shape[] {
+function cvtGroup(el: El, w: string[], g: Map<string, GradientDef>): Shape[] {
   const items: Shape[] = [];
-  for (const child of el.children) items.push(...cvtElement(child, w));
+  for (const child of el.children) items.push(...cvtElement(child, w, g));
   if (!items.length) return [];
   items.push(trShape(parseTransform(el.attrs.transform)));
   return [{ ty:"gr", nm: el.attrs.id || el.attrs.class || "Group", it: items }];
@@ -251,17 +356,19 @@ export function convertSvgToLottie(svgString: string): { data: LottieJson; warni
   if (root.attrs.width) { const v = +root.attrs.width; if (!isNaN(v)) w = v; }
   if (root.attrs.height) { const v = +root.attrs.height; if (!isNaN(v)) h = v; }
 
+  const gradients = parseGradientDefs(root);
+
   const op = 60;
   const layers: LottieLayer[] = [];
   let li = 0;
 
   for (const child of root.children) {
     if (["defs","style","title","desc","metadata"].includes(child.tag)) {
-      if (child.tag === "defs" || child.tag === "style")
-        warnings.push(`<${child.tag}> ignored; CSS/definitions not supported`);
+      if (child.tag === "style")
+        warnings.push(`<style> ignored; CSS not supported`);
       continue;
     }
-    const shapes = cvtElement(child, warnings);
+    const shapes = cvtElement(child, warnings, gradients);
     if (!shapes.length) continue;
     const t = parseTransform(child.tag !== "g" ? child.attrs.transform : undefined);
     layers.push({
