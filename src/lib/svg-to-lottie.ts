@@ -17,7 +17,8 @@ type Shape = { ty: "rc"; nm: string; p: SP; s: SP; r: SP }
 
 export interface LottieLayer {
   ty: number; nm: string; ind: number; ip: number; op: number; st: number;
-  ks: { o: SP; r: SP; p: SP; a: SP; s: SP }; shapes: Shape[];
+  ks: { o: SP; r: SP; p: SP; a: SP; s: SP }; shapes?: Shape[];
+  t?: { d: { k: { s: { s: number; f: string; t: string; fc: number[]; j: number; lh: number; ls: number; tr: number }; t: number }[] }; p: Record<string, never>; m: { g: number; a: SP } };
 }
 
 export interface LottieJson {
@@ -145,9 +146,16 @@ export function parseSvgXml(svg: string): El | null {
   svg = svg.replace(/<\?xml[^?]*\?>/g, "").replace(/<!--[\s\S]*?-->/g, "").trim();
   const stack: El[] = [];
   let root: El | null = null;
-  const re = /<\/?([a-zA-Z][\w:-]*)((?:\s+[\w-]+\s*=\s*"[^"]*"|\s+[\w-]+\s*=\s*'[^']*')*)\s*(\/?)>/g;
+  const re = /<\/?([a-zA-Z][\w:-]*)((?:\s+[\w-]+\s*=\s*"[^"]*"|\s+[\w-]+\s*=\s*'[^']*')*)\s*(\/?)>|([^<]+)/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(svg)) !== null) {
+    if (match[4] !== undefined) {
+      const text = match[4].trim();
+      if (text && stack.length > 0) {
+        stack[stack.length - 1].attrs["__text"] = text;
+      }
+      continue;
+    }
     const full = match[0], tag = match[1].toLowerCase(), attrStr = match[2] || "";
     const selfClose = match[3] === "/" || full.endsWith("/>");
     if (full.startsWith("</")) { stack.pop(); continue; }
@@ -328,6 +336,7 @@ function cvtElement(el: El, w: string[], g: Map<string, GradientDef>): Shape[] {
     case "polygon": return cvtPoly(el, true, g);
     case "path": return cvtPath(el, g);
     case "g": return cvtGroup(el, w, g);
+    case "text": return [];
     default: w.push(`Unsupported element <${el.tag}> skipped`); return [];
   }
 }
@@ -368,6 +377,37 @@ export function convertSvgToLottie(svgString: string): { data: LottieJson; warni
         warnings.push(`<style> ignored; CSS not supported`);
       continue;
     }
+
+    if (child.tag === "text") {
+      const t = parseTransform(child.attrs.transform);
+      const x = +(child.attrs.x || 0) + t.tx;
+      const y = +(child.attrs.y || 0) + t.ty;
+      const fontSize = parseFloat(child.attrs["font-size"] || "24");
+      const fontFamily = child.attrs["font-family"] || "Arial";
+      const fc = parseColor(child.attrs.fill) || [0, 0, 0, 1];
+      const anchor = child.attrs["text-anchor"] || "start";
+      const j = anchor === "middle" ? 1 : anchor === "end" ? 2 : 0;
+      let text: string;
+      if (child.children.length > 0) {
+        text = child.children.filter(c => c.tag === "tspan").map(c => c.attrs["__text"] || "").join("\n");
+        if (!text) text = "";
+      } else {
+        text = child.attrs["__text"] || "";
+      }
+      layers.push({
+        ty: 5, nm: child.attrs.id || "Text Layer", ind: li,
+        ip: 0, op, st: 0,
+        ks: { o: sp(100), r: sp(t.rotation), p: sp([x, y, 0]), a: sp([0, 0, 0]), s: sp([t.sx, t.sy, 100]) },
+        t: {
+          d: { k: [{ s: { s: fontSize, f: fontFamily, t: text, fc: [fc[0], fc[1], fc[2], fc[3]], j, lh: fontSize * 1.2, ls: 0, tr: 0 }, t: 0 }] },
+          p: {},
+          m: { g: 1, a: sp([0, 0]) },
+        },
+      });
+      li++;
+      continue;
+    }
+
     const shapes = cvtElement(child, warnings, gradients);
     if (!shapes.length) continue;
     const t = parseTransform(child.tag !== "g" ? child.attrs.transform : undefined);
