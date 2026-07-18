@@ -199,7 +199,7 @@ describe("ChatMessage", () => {
   });
 
   it("renders VariationGrid when variations present", () => {
-    render(<ChatMessage {...makeProps({ variations: [{ id: "v1", lottieJson: {} }] as Message["variations"] })} />);
+    render(<ChatMessage {...makeProps({ variations: [{ style: "v1", animation: {}, description: "test" }] as Message["variations"] })} />);
     expect(screen.getByTestId("variation-grid")).toBeInTheDocument();
   });
 
