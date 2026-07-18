@@ -41,6 +41,14 @@ describe("parseColor", () => {
     expect(parseColor("transparent")).toBeNull();
     expect(parseColor(undefined)).toBeNull();
   });
+
+  it("returns null for invalid hex length", () => {
+    expect(parseColor("#abcd")).toBeNull();
+  });
+
+  it("returns null for unknown color name", () => {
+    expect(parseColor("unknowncolor")).toBeNull();
+  });
 });
 
 describe("parseTransform", () => {
@@ -120,6 +128,58 @@ describe("parsePath", () => {
     expect(paths).toHaveLength(2);
     expect(paths[0].v).toEqual([[0, 0], [10, 10]]);
     expect(paths[1].v).toEqual([[20, 20], [30, 30]]);
+  });
+
+  it("parses smooth cubic (S) command", () => {
+    const paths = parsePath("M 0 0 C 10 20 30 40 50 50 S 90 60 100 50");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v).toHaveLength(3);
+    expect(paths[0].v[2]).toEqual([100, 50]);
+  });
+
+  it("parses relative smooth cubic (s) command", () => {
+    const paths = parsePath("M 0 0 C 10 20 30 40 50 50 s 40 10 50 0");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v).toHaveLength(3);
+    expect(paths[0].v[2]).toEqual([100, 50]);
+  });
+
+  it("parses relative quadratic (q) command", () => {
+    const paths = parsePath("M 0 0 q 25 50 50 0");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v).toEqual([[0, 0], [50, 0]]);
+    expect(paths[0].o[0][1]).toBeCloseTo(33.333, 2);
+  });
+
+  it("parses absolute arc (A) command", () => {
+    const paths = parsePath("M 0 0 A 25 25 0 0 1 50 0");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v).toEqual([[0, 0], [50, 0]]);
+    expect(paths[0].o[0][1]).not.toBe(0);
+  });
+
+  it("parses relative arc (a) command", () => {
+    const paths = parsePath("M 10 10 a 20 20 0 1 0 40 0");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v).toEqual([[10, 10], [50, 10]]);
+  });
+
+  it("returns empty array for empty d", () => {
+    const paths = parsePath("");
+    expect(paths).toHaveLength(0);
+  });
+
+  it("skips unknown command letters gracefully", () => {
+    const paths = parsePath("M 0 0 L 10 10 X 99 L 20 20");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].v[0]).toEqual([0, 0]);
+  });
+
+  it("flushes open subpath at end without Z", () => {
+    const paths = parsePath("M 0 0 L 10 10 L 20 0");
+    expect(paths).toHaveLength(1);
+    expect(paths[0].c).toBe(false);
+    expect(paths[0].v).toHaveLength(3);
   });
 });
 
@@ -349,5 +409,140 @@ describe("convertSvgToLottie", () => {
     const svg = '<svg viewBox="0 0 100 100"><text>Hello</text></svg>';
     const { warnings } = convertSvgToLottie(svg);
     expect(warnings.some(w => w.includes("text"))).toBe(false);
+  });
+
+  it("handles fill with explicit opacity attribute", () => {
+    const svg = '<svg viewBox="0 0 100 100"><rect width="50" height="50" fill="red" opacity="0.5"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    const fill = lottie.layers[0].shapes![1] as { ty: string; o: { k: number } };
+    expect(fill.ty).toBe("fl");
+    expect(fill.o.k).toBe(50);
+  });
+
+  it("handles path with empty d attribute", () => {
+    const svg = '<svg viewBox="0 0 100 100"><path d="" fill="red"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    expect(lottie.layers).toHaveLength(0);
+  });
+
+  it("handles polygon with empty points", () => {
+    const svg = '<svg viewBox="0 0 100 100"><polygon points="" fill="red"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    expect(lottie.layers).toHaveLength(0);
+  });
+
+  it("handles polygon with malformed points (odd number)", () => {
+    const svg = '<svg viewBox="0 0 100 100"><polygon points="10,20,30" fill="red"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    const path = layer.shapes![0] as { ks: { k: { v: number[][] } } };
+    expect(path.ks.k.v).toEqual([[10, 20]]);
+  });
+
+  it("resolves gradient fill reference from defs", () => {
+    const svg = `<svg viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="grad1">
+          <stop offset="0" stop-color="red"/>
+          <stop offset="1" stop-color="blue"/>
+        </linearGradient>
+      </defs>
+      <rect width="100" height="100" fill="url(#grad1)"/>
+    </svg>`;
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    const gf = layer.shapes!.find(s => s.ty === "gf");
+    expect(gf).toBeDefined();
+  });
+
+  it("falls back to no fill when gradient ref is missing", () => {
+    const svg = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="url(#nonexistent)"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    const fill = layer.shapes!.find(s => s.ty === "fl");
+    expect(fill).toBeUndefined();
+  });
+
+  it("resolves gradient stroke reference", () => {
+    const svg = `<svg viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="sg1">
+          <stop offset="0" stop-color="red"/>
+          <stop offset="1" stop-color="blue"/>
+        </linearGradient>
+      </defs>
+      <rect width="100" height="100" fill="none" stroke="url(#sg1)" stroke-width="2"/>
+    </svg>`;
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    const gs = layer.shapes!.find(s => s.ty === "gs");
+    expect(gs).toBeDefined();
+  });
+
+  it("converts nested groups with class naming", () => {
+    const svg = `<svg viewBox="0 0 100 100">
+      <g class="outer">
+        <g class="inner">
+          <rect width="10" height="10" fill="red"/>
+        </g>
+      </g>
+    </svg>`;
+    const { data: lottie } = convertSvgToLottie(svg);
+    const outerGroup = lottie.layers[0].shapes![0] as { ty: string; nm: string; it: Array<{ ty: string; nm: string; it?: Array<{ ty: string }> }> };
+    expect(outerGroup.ty).toBe("gr");
+    expect(outerGroup.nm).toBe("outer");
+    const innerGroup = outerGroup.it.find(s => s.ty === "gr");
+    expect(innerGroup).toBeDefined();
+    expect(innerGroup!.nm).toBe("inner");
+  });
+
+  it("group containing text element returns empty for text child", () => {
+    const svg = `<svg viewBox="0 0 100 100">
+      <g id="mixed">
+        <rect width="10" height="10" fill="red"/>
+        <text>ignored inside group</text>
+      </g>
+    </svg>`;
+    const { data: lottie } = convertSvgToLottie(svg);
+    const group = lottie.layers[0].shapes![0] as { ty: string; it: Array<{ ty: string }> };
+    expect(group.ty).toBe("gr");
+    // rect + fill + transform only (text produces no shapes)
+    expect(group.it.filter(s => s.ty === "sh")).toHaveLength(0);
+  });
+
+  it("converts text with tspan children", () => {
+    const svg = `<svg viewBox="0 0 200 100">
+      <text x="10" y="30" font-size="16" fill="red">
+        <tspan>Hello</tspan>
+        <tspan>World</tspan>
+      </text>
+    </svg>`;
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    expect(layer.ty).toBe(5);
+    expect(layer.t!.d.k[0].s.t).toBe("Hello\nWorld");
+  });
+
+  it("converts line element", () => {
+    const svg = '<svg viewBox="0 0 100 100"><line x1="0" y1="0" x2="100" y2="100" stroke="black"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    const layer = lottie.layers[0];
+    const shape = layer.shapes![0] as { ty: string; ks: { k: { v: number[][] } } };
+    expect(shape.ty).toBe("sh");
+    expect(shape.ks.k.v).toEqual([[0, 0], [100, 100]]);
+  });
+
+  it("warns for <style> elements", () => {
+    const svg = '<svg viewBox="0 0 100 100"><style>.a{fill:red}</style><rect width="50" height="50"/></svg>';
+    const { warnings } = convertSvgToLottie(svg);
+    expect(warnings.some(w => w.includes("style"))).toBe(true);
+  });
+
+  it("default fill is black when no fill or stroke specified", () => {
+    const svg = '<svg viewBox="0 0 100 100"><rect width="50" height="50"/></svg>';
+    const { data: lottie } = convertSvgToLottie(svg);
+    const fill = lottie.layers[0].shapes![1] as { ty: string; c: { k: number[] } };
+    expect(fill.ty).toBe("fl");
+    expect(fill.c.k).toEqual([0, 0, 0, 1]);
   });
 });
