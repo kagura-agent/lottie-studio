@@ -340,8 +340,14 @@ describe("convertSvgToLottie", () => {
   });
 
   it("returns warnings for unsupported elements", () => {
-    const svg = '<svg viewBox="0 0 100 100"><text>Hello</text><rect width="50" height="50"/></svg>';
+    const svg = '<svg viewBox="0 0 100 100"><image href="test.png" width="50" height="50"/><rect width="50" height="50"/></svg>';
     const { warnings } = convertSvgToLottie(svg);
-    expect(warnings.some(w => w.includes("text"))).toBe(true);
+    expect(warnings.some(w => w.includes("image"))).toBe(true);
+  });
+
+  it("does not warn for supported <text> elements", () => {
+    const svg = '<svg viewBox="0 0 100 100"><text>Hello</text></svg>';
+    const { warnings } = convertSvgToLottie(svg);
+    expect(warnings.some(w => w.includes("text"))).toBe(false);
   });
 });
