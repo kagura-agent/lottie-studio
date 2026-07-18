@@ -15,7 +15,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#lg1)"/>
       </svg>`;
       const { data, warnings } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.ty).toBe("gf");
       expect(shape.t).toBe(1);
       expect(shape.s.k).toEqual([0, 0]);
@@ -31,7 +31,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#lg2)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.s.k).toEqual([0, 0]);
       expect(shape.e.k).toEqual([100, 0]);
     });
@@ -47,7 +47,7 @@ describe("SVG gradient support", () => {
         <rect width="200" height="200" fill="url(#lg3)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.s.k).toEqual([10, 20]);
       expect(shape.e.k).toEqual([190, 180]);
     });
@@ -63,7 +63,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#lg4)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.s.k).toEqual([0, 0]);
       expect(shape.e.k).toEqual([0, 0]);
     });
@@ -81,7 +81,7 @@ describe("SVG gradient support", () => {
         <circle cx="50" cy="50" r="50" fill="url(#rg1)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.ty).toBe("gf");
       expect(shape.t).toBe(2);
       expect(shape.s.k).toEqual([50, 50]);
@@ -94,7 +94,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#rg2)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.s.k).toEqual([50, 50]);
       expect(shape.e.k).toEqual([100, 50]);
     });
@@ -110,7 +110,7 @@ describe("SVG gradient support", () => {
         <rect width="200" height="200" fill="url(#rg3)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.s.k).toEqual([100, 100]);
       expect(shape.e.k).toEqual([180, 100]);
     });
@@ -129,7 +129,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#op1)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.g.p).toBe(3);
       const k = shape.g.k.k;
       // color stops: [0,r,g,b, 0.5,r,g,b, 1,r,g,b]
@@ -151,7 +151,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="none" stroke="url(#sg1)" stroke-width="3"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shapes = data.layers[0].shapes;
+      const shapes = data.layers[0].shapes!;
       const gs = shapes.find((s: any) => s.ty === "gs") as any;
       expect(gs).toBeDefined();
       expect(gs.t).toBe(1);
@@ -173,7 +173,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="url(#ms1)"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.g.p).toBe(4);
       const k = shape.g.k.k;
       expect(k[0]).toBe(0);
@@ -192,7 +192,7 @@ describe("SVG gradient support", () => {
         <rect width="100" height="100" fill="red"/>
       </svg>`;
       const { data } = convertSvgToLottie(svg);
-      const shape = data.layers[0].shapes[1] as any;
+      const shape = data.layers[0].shapes![1] as any;
       expect(shape.ty).toBe("fl");
     });
   });

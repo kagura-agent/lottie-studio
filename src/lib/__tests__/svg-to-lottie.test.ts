@@ -225,12 +225,12 @@ describe("convertSvgToLottie", () => {
     expect(layer.ty).toBe(4);
     expect(layer.shapes).toHaveLength(2); // rect + fill
 
-    const rect = layer.shapes[0] as { ty: string; s: { k: number[] }; p: { k: number[] } };
+    const rect = layer.shapes![0] as { ty: string; s: { k: number[] }; p: { k: number[] } };
     expect(rect.ty).toBe("rc");
     expect(rect.s.k).toEqual([100, 50]);
     expect(rect.p.k).toEqual([60, 45]); // center: x + w/2, y + h/2
 
-    const fill = layer.shapes[1] as { ty: string; c: { k: number[] } };
+    const fill = layer.shapes![1] as { ty: string; c: { k: number[] } };
     expect(fill.ty).toBe("fl");
     expect(fill.c.k).toEqual([1, 0, 0, 1]);
   });
@@ -240,7 +240,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const ellipse = layer.shapes[0] as { ty: string; p: { k: number[] }; s: { k: number[] } };
+    const ellipse = layer.shapes![0] as { ty: string; p: { k: number[] }; s: { k: number[] } };
     expect(ellipse.ty).toBe("el");
     expect(ellipse.p.k).toEqual([50, 50]);
     expect(ellipse.s.k).toEqual([60, 60]); // r*2
@@ -251,7 +251,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const el = layer.shapes[0] as { ty: string; p: { k: number[] }; s: { k: number[] } };
+    const el = layer.shapes![0] as { ty: string; p: { k: number[] }; s: { k: number[] } };
     expect(el.ty).toBe("el");
     expect(el.p.k).toEqual([50, 40]);
     expect(el.s.k).toEqual([60, 40]); // rx*2, ry*2
@@ -262,7 +262,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const pathShape = layer.shapes[0] as { ty: string; ks: { k: { v: number[][]; i: number[][]; o: number[][]; c: boolean } } };
+    const pathShape = layer.shapes![0] as { ty: string; ks: { k: { v: number[][]; i: number[][]; o: number[][]; c: boolean } } };
     expect(pathShape.ty).toBe("sh");
     expect(pathShape.ks.k.v).toEqual([[10, 10], [50, 10]]);
     expect(pathShape.ks.k.o[0]).toEqual([10, 10]); // out tangent on first vertex
@@ -280,13 +280,13 @@ describe("convertSvgToLottie", () => {
 
     expect(lottie.layers).toHaveLength(3);
 
-    const fill0 = lottie.layers[0].shapes[1] as { c: { k: number[] } };
+    const fill0 = lottie.layers[0].shapes![1] as { c: { k: number[] } };
     expect(fill0.c.k).toEqual([0, 1, 0, 1]);
 
-    const fill1 = lottie.layers[1].shapes[1] as { c: { k: number[] } };
+    const fill1 = lottie.layers[1].shapes![1] as { c: { k: number[] } };
     expect(fill1.c.k).toEqual([0, 0, 1, 1]);
 
-    const fill2 = lottie.layers[2].shapes[1] as { c: { k: number[] } };
+    const fill2 = lottie.layers[2].shapes![1] as { c: { k: number[] } };
     expect(fill2.c.k).toEqual([1, 0, 0, 1]);
   });
 
@@ -302,7 +302,7 @@ describe("convertSvgToLottie", () => {
     expect(lottie.layers).toHaveLength(1);
     const layer = lottie.layers[0];
     // Group element produces a group shape
-    const group = layer.shapes[0] as { ty: string; nm: string; it: Array<{ ty: string }> };
+    const group = layer.shapes![0] as { ty: string; nm: string; it: Array<{ ty: string }> };
     expect(group.ty).toBe("gr");
     expect(group.nm).toBe("myGroup");
     // rect + fill + circle + fill + transform
@@ -333,7 +333,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const stroke = layer.shapes.find(s => s.ty === "st") as { ty: string; c: { k: number[] }; w: { k: number } } | undefined;
+    const stroke = layer.shapes!.find(s => s.ty === "st") as { ty: string; c: { k: number[] }; w: { k: number } } | undefined;
     expect(stroke).toBeDefined();
     expect(stroke!.c.k).toEqual([1, 0, 0, 1]);
     expect(stroke!.w.k).toBe(3);
@@ -382,7 +382,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const path = layer.shapes[0] as { ty: string; ks: { k: { v: number[][]; c: boolean } } };
+    const path = layer.shapes![0] as { ty: string; ks: { k: { v: number[][]; c: boolean } } };
     expect(path.ty).toBe("sh");
     expect(path.ks.k.v).toEqual([[50, 0], [100, 100], [0, 100]]);
     expect(path.ks.k.c).toBe(true);
@@ -393,7 +393,7 @@ describe("convertSvgToLottie", () => {
     const { data: lottie } = convertSvgToLottie(svg);
 
     const layer = lottie.layers[0];
-    const path = layer.shapes[0] as { ty: string; ks: { k: { v: number[][]; c: boolean } } };
+    const path = layer.shapes![0] as { ty: string; ks: { k: { v: number[][]; c: boolean } } };
     expect(path.ty).toBe("sh");
     expect(path.ks.k.v).toEqual([[10, 10], [50, 50], [90, 10]]);
     expect(path.ks.k.c).toBe(false);
