@@ -82,6 +82,7 @@ describe("completePartialJson", () => {
     // Backslash outside string hits the `continue` without setting escaped
     // Result is null because the backslash makes JSON unparseable
     expect(completePartialJson('[1, \\2]')).toBeNull();
+    expect(completePartialJson("\\")).toBeNull();
   });
 
   it("handles extra closing brackets returning null", () => {
@@ -94,9 +95,18 @@ describe("completePartialJson", () => {
     expect(completePartialJson("[1]]")).toBeNull();
   });
 
+  it("returns null for mismatched closing brackets", () => {
+    expect(completePartialJson("[}")).toBeNull();
+    expect(completePartialJson("{]}")).toBeNull();
+  });
+
   it("handles trailing colon cleanup", () => {
     const result = completePartialJson('{"a": 1, "b":');
     expect(result).toEqual({ a: 1 });
+  });
+
+  it("handles trailing colon with single key", () => {
+    expect(completePartialJson('{"a":')).toBeNull();
   });
 
   it("handles trailing whitespace after comma", () => {
@@ -116,6 +126,10 @@ describe("completePartialJson", () => {
     const result = completePartialJson('{"a": 1, "b');
     expect(result).not.toBeNull();
     expect((result as Record<string, unknown>).a).toBe(1);
+  });
+
+  it("returns null when both completion attempts fail", () => {
+    expect(completePartialJson('{"""}')).toBeNull();
   });
 
   it("deeply nested incomplete structures", () => {
