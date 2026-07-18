@@ -193,6 +193,117 @@ describe("webhooks", () => {
     });
   });
 
+  describe("deliver retry logic", () => {
+    const userId = "test-user-retry";
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      db.prepare(
+        "INSERT OR IGNORE INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)"
+      ).run(userId, "retry@test.local", "hash", "Retry Tester");
+      db.prepare("DELETE FROM webhooks WHERE user_id = ?").run(userId);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function insertWebhook(id: string) {
+      db.prepare(
+        "INSERT INTO webhooks (id, user_id, url, secret, events, format) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run(id, userId, "https://retry.com/hook", "sec", JSON.stringify(["animation.created"]), "generic");
+    }
+
+    it("retries on 5xx and succeeds on second attempt", async () => {
+      const id = crypto.randomUUID();
+      insertWebhook(id);
+
+      let callCount = 0;
+      vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) return new Response("error", { status: 500 });
+        return new Response("ok", { status: 200 });
+      });
+
+      const promise = dispatchWebhookEvent("animation.created", { test: true }, userId);
+      await vi.advanceTimersByTimeAsync(1000);
+      await promise;
+
+      expect(callCount).toBe(2);
+      const deliveries = db.prepare("SELECT * FROM webhook_deliveries WHERE webhook_id = ?").all(id) as { success: number }[];
+      expect(deliveries[0].success).toBe(1);
+    });
+
+    it("returns failure after all retries exhausted on network errors", async () => {
+      const id = crypto.randomUUID();
+      insertWebhook(id);
+
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("connection refused"));
+
+      const promise = dispatchWebhookEvent("animation.created", { test: true }, userId);
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(4000);
+      await promise;
+
+      const deliveries = db.prepare("SELECT * FROM webhook_deliveries WHERE webhook_id = ?").all(id) as { success: number; status_code: number | null }[];
+      expect(deliveries[0].success).toBe(0);
+      expect(deliveries[0].status_code).toBeNull();
+    });
+
+    it("does not retry on 4xx errors", async () => {
+      const id = crypto.randomUUID();
+      insertWebhook(id);
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("bad request", { status: 400 })
+      );
+
+      const promise = dispatchWebhookEvent("animation.created", { test: true }, userId);
+      await promise;
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const deliveries = db.prepare("SELECT * FROM webhook_deliveries WHERE webhook_id = ?").all(id) as { success: number; status_code: number }[];
+      expect(deliveries[0].success).toBe(0);
+      expect(deliveries[0].status_code).toBe(400);
+    });
+  });
+
+  describe("global dispatch (no userId)", () => {
+    const userA = "test-user-global-a";
+    const userB = "test-user-global-b";
+
+    beforeEach(() => {
+      for (const u of [userA, userB]) {
+        db.prepare(
+          "INSERT OR IGNORE INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)"
+        ).run(u, `${u}@test.local`, "hash", "Tester");
+        db.prepare("DELETE FROM webhooks WHERE user_id = ?").run(u);
+      }
+    });
+
+    it("dispatches to all active webhooks across users when no userId given", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("ok", { status: 200 })
+      );
+
+      const idA = crypto.randomUUID();
+      const idB = crypto.randomUUID();
+      db.prepare(
+        "INSERT INTO webhooks (id, user_id, url, secret, events, format) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run(idA, userA, "https://a.com/hook", "sec", JSON.stringify(["animation.created"]), "generic");
+      db.prepare(
+        "INSERT INTO webhooks (id, user_id, url, secret, events, format) VALUES (?, ?, ?, ?, ?, ?)"
+      ).run(idB, userB, "https://b.com/hook", "sec", JSON.stringify(["animation.created"]), "generic");
+
+      await dispatchWebhookEvent("animation.created", { test: true });
+
+      const urls = fetchSpy.mock.calls.map(c => c[0]);
+      expect(urls).toContain("https://a.com/hook");
+      expect(urls).toContain("https://b.com/hook");
+      fetchSpy.mockRestore();
+    });
+  });
+
   describe("payload formatting", () => {
     const userId = "test-user-format";
 

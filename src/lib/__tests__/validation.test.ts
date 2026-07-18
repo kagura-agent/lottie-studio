@@ -190,6 +190,116 @@ describe("validateStructure", () => {
     });
   });
 
+  describe("scalar easing values", () => {
+    it("detects scalar out.x outside [0,1]", () => {
+      const anim = makeLottie({
+        layers: [{
+          ty: 4, nm: "Scalar", ind: 0, ip: 0, op: 60,
+          shapes: [{ ty: "fl" }],
+          ks: { p: { a: 1, k: [{ t: 0, s: [0, 0], e: [100, 100], o: { x: 1.5, y: 0 }, i: { x: 0.5, y: 1 } }, { t: 60, s: [100, 100] }] } },
+        }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_easing_value" }));
+    });
+
+    it("detects scalar in.x outside [0,1]", () => {
+      const anim = makeLottie({
+        layers: [{
+          ty: 4, nm: "Scalar", ind: 0, ip: 0, op: 60,
+          shapes: [{ ty: "fl" }],
+          ks: { p: { a: 1, k: [{ t: 0, s: [0, 0], e: [100, 100], o: { x: 0.5, y: 0 }, i: { x: -0.5, y: 1 } }, { t: 60, s: [100, 100] }] } },
+        }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_easing_value" }));
+    });
+
+    it("passes with scalar easing values within range", () => {
+      const anim = makeLottie({
+        layers: [{
+          ty: 4, nm: "Scalar", ind: 0, ip: 0, op: 60,
+          shapes: [{ ty: "fl" }],
+          ks: { p: { a: 1, k: [{ t: 0, s: [0, 0], e: [100, 100], o: { x: 0.5, y: 0 }, i: { x: 0.5, y: 1 } }, { t: 60, s: [100, 100] }] } },
+        }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues.filter(i => i.code === "invalid_easing_value")).toHaveLength(0);
+    });
+
+    it("detects negative array easing values", () => {
+      const anim = makeLottie({
+        layers: [{
+          ty: 4, nm: "Neg", ind: 0, ip: 0, op: 60,
+          shapes: [{ ty: "fl" }],
+          ks: { p: { a: 1, k: [{ t: 0, s: [0, 0], e: [100, 100], o: { x: [-0.1], y: [0] }, i: { x: [0.5], y: [1] } }, { t: 60, s: [100, 100] }] } },
+        }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_easing_value" }));
+    });
+  });
+
+  describe("null layer properties", () => {
+    it("detects layer with null ty", () => {
+      const anim = makeLottie({
+        layers: [{ ty: null, nm: "NullType", ind: 0, ip: 0, op: 60, ks: {} }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues).toContainEqual(expect.objectContaining({ code: "missing_layer_type" }));
+    });
+
+    it("skips ind tracking when ind is null", () => {
+      const anim = makeLottie({
+        layers: [
+          { ty: 4, nm: "A", ind: null, ip: 0, op: 60, ks: {}, shapes: [{ ty: "fl" }] },
+          { ty: 4, nm: "B", ind: null, ip: 0, op: 60, ks: {}, shapes: [{ ty: "fl" }] },
+        ],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues.filter(i => i.code === "duplicate_layer_index")).toHaveLength(0);
+    });
+
+    it("skips parent validation when parent is null", () => {
+      const anim = makeLottie({
+        layers: [{ ty: 4, nm: "A", ind: 0, ip: 0, op: 60, parent: null, ks: {}, shapes: [{ ty: "fl" }] }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues.filter(i => i.code === "invalid_parent_reference")).toHaveLength(0);
+    });
+  });
+
+  describe("nested shape groups", () => {
+    it("detects missing ty in nested shape group items", () => {
+      const anim = makeLottie({
+        layers: [{
+          ty: 4, nm: "Nested", ind: 0, ip: 0, op: 60, ks: {},
+          shapes: [{ ty: "gr", it: [{ /* missing ty */ }] }],
+        }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues).toContainEqual(expect.objectContaining({ code: "missing_shape_type" }));
+    });
+  });
+
+  describe("layers without optional properties", () => {
+    it("skips timing validation when ip/op missing", () => {
+      const anim = makeLottie({
+        layers: [{ ty: 4, nm: "NoTiming", ind: 0, ks: {}, shapes: [{ ty: "fl" }] }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues.filter(i => i.code === "out_of_bounds_timing")).toHaveLength(0);
+    });
+
+    it("skips easing validation when ks missing", () => {
+      const anim = makeLottie({
+        layers: [{ ty: 4, nm: "NoKs", ind: 0, ip: 0, op: 60, shapes: [{ ty: "fl" }] }],
+      });
+      const result = validateStructure(anim);
+      expect(result.issues.filter(i => i.code === "invalid_easing_value")).toHaveLength(0);
+    });
+  });
+
   describe("orphan precomp references", () => {
     it("detects precomp referencing missing asset", () => {
       const anim = makeLottie({
