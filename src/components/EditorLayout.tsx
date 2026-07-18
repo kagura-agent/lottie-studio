@@ -1,27 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, type MouseEvent } from "react";
+import { useState, useCallback, useEffect, useRef, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
-import type { LoopConfig } from "@/types/loopConfig";
 import type { Command } from "@/lib/commands";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import LottiePreview from "./LottiePreview";
-import { useProgressivePreview } from "@/hooks/chat/useProgressivePreview";
 const JsonEditor = dynamic(() => import("./JsonEditor"), { ssr: false });
 import ChatPanel from "./ChatPanel";
 import LayerPanel from "./LayerPanel";
 import Controls from "./Controls";
-import BackgroundPicker, { type CanvasBackground } from "./BackgroundPicker";
+import BackgroundPicker from "./BackgroundPicker";
 import ArtboardPicker from "./ArtboardPicker";
 import ExportDropdown from "./ExportDropdown";
 const ColorPalette = dynamic(() => import("./ColorPalette"), { ssr: false });
 const TimingEditor = dynamic(() => import("./TimingEditor"), { ssr: false });
 const EasingEditor = dynamic(() => import("./EasingEditor"), { ssr: false });
-import { useAnimationSocket } from "@/hooks/useAnimationSocket";
-import { useAnimationHistory } from "@/hooks/useAnimationHistory";
-import { useBeforeAfter } from "@/hooks/useBeforeAfter";
 import BeforeAfterComparison from "./BeforeAfterComparison";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -41,15 +36,17 @@ import { ThemeIndicator } from "./ThemePanel";
 const OnboardingTour = dynamic(() => import("./OnboardingTour"), { ssr: false });
 import OfflineIndicator from "./OfflineIndicator";
 const SubmitTemplateModal = dynamic(() => import("./SubmitTemplateModal"), { ssr: false });
-import MobileTabBar, { type MobileTab } from "./MobileTabBar";
+import MobileTabBar from "./MobileTabBar";
 import BottomSheet from "./BottomSheet";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { optimizeLottie } from "@/lib/optimizer";
 import { rescaleDuration } from "@/lib/rescaleDuration";
-import { rescaleForExport } from "@/lib/rescaleForExport";
-import { ExportPreset, getPresetFilename } from "@/lib/exportPresets";
-import { useToast } from "@/contexts/ToastContext";
-import { saveAnimation } from "@/lib/offlineStorage";
+
+import { useExportState } from "@/hooks/editor/useExportState";
+import { usePlaybackControls } from "@/hooks/editor/usePlaybackControls";
+import { usePanelState } from "@/hooks/editor/usePanelState";
+import { useVersionHistory } from "@/hooks/editor/useVersionHistory";
+import { useAnimationState } from "@/hooks/editor/useAnimationState";
 
 interface EditorPageProps {
   id: string | null;
@@ -59,801 +56,127 @@ interface EditorPageProps {
   initialPrompt?: string;
 }
 
-/**
- * Iteratively export a GIF with reducing quality/framerate until it fits under maxSize.
- * Strategy: reduce GIF quality (increase quality number = lower quality),
- * then reduce framerate by skipping frames.
- */
-async function exportWithSizeLimit(
-  animationData: object,
-  maxSize: number,
-  onProgress: (p: number) => void
-): Promise<Blob> {
-  const { exportToGif } = await import("@/lib/gifExporter");
-
-  // First attempt with default settings
-  let blob = await exportToGif({ animationData, onProgress });
-  if (blob.size <= maxSize) return blob;
-
-  // Second attempt: reduce framerate by truncating frames (simulate by adjusting fr)
-  // We'll modify the animation data to halve the framerate
-  const data = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
-  const originalFr = (data.fr as number) || 30;
-
-  // Try progressively lower framerates: 15, 10, 8, 5
-  const fpsAttempts = [15, 10, 8, 5];
-  for (const targetFps of fpsAttempts) {
-    if (targetFps >= originalFr) continue;
-    const ratio = targetFps / originalFr;
-    const adjusted = JSON.parse(JSON.stringify(data));
-    adjusted.fr = targetFps;
-    // Scale op proportionally to maintain duration
-    adjusted.op = Math.round(((adjusted.op as number) || 60) * ratio);
-    if (adjusted.ip) adjusted.ip = Math.round((adjusted.ip as number) * ratio);
-    // Scale layer timing
-    if (Array.isArray(adjusted.layers)) {
-      for (const layer of adjusted.layers) {
-        if (typeof layer.ip === "number") layer.ip = Math.round(layer.ip * ratio);
-        if (typeof layer.op === "number") layer.op = Math.round(layer.op * ratio);
-      }
-    }
-    onProgress(0);
-    blob = await exportToGif({ animationData: adjusted, onProgress });
-    if (blob.size <= maxSize) return blob;
-  }
-
-  // If still too large, return the smallest we got
-  return blob;
-}
-
 export default function EditorPage({ id, initialName, initialData, remixedFrom, initialPrompt }: EditorPageProps) {
   const t = useTranslations();
-  const { toast } = useToast();
   const router = useRouter();
-  const [currentId, setCurrentId] = useState<string | null>(id);
-  const [duplicating, setDuplicating] = useState(false);
-  const [jsonText, setJsonText] = useState(() => initialData ? JSON.stringify(initialData, null, 2) : "");
-  const [animationData, setAnimationData] = useState<object | null>(initialData);
-  const { previewData: progressivePreviewData, isPreviewActive, updatePreview: updateProgressivePreview, clearPreview: clearProgressivePreview } = useProgressivePreview();
-  const { pushState, undo, redo, canUndo, canRedo } = useAnimationHistory(initialData ?? {});
-  const beforeAfter = useBeforeAfter();
-  const [name, setName] = useState(initialName);
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
-  const [loopConfig, setLoopConfig] = useState<LoopConfig>(() => {
-    if (typeof window !== "undefined" && currentId) {
-      try {
-        const stored = localStorage.getItem(`lottie-loop-${currentId}`);
-        if (stored) return JSON.parse(stored) as LoopConfig;
-      } catch { /* ignore */ }
-    }
-    return { mode: "loop" };
-  });
-  const [currentFrame, setCurrentFrame] = useState(0);
-  const [totalFrames, setTotalFrames] = useState(0);
-  const [seekFrame, setSeekFrame] = useState<number | undefined>(undefined);
-  const [rightPanel, setRightPanel] = useState<"chat" | "json" | "layers">("chat");
-  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
-  const [gifExporting, setGifExporting] = useState(false);
-  const [gifProgress, setGifProgress] = useState(0);
-  const [apngExporting, setApngExporting] = useState(false);
-  const [apngProgress, setApngProgress] = useState(0);
-  const [videoExporting, setVideoExporting] = useState(false);
-  const [videoProgress, setVideoProgress] = useState(0);
-  const [mp4Exporting, setMp4Exporting] = useState(false);
-  const [mp4Progress, setMp4Progress] = useState(0);
-  const [presetExporting, setPresetExporting] = useState(false);
-  const [presetProgress, setPresetProgress] = useState(0);
-  const [presetExportingId, setPresetExportingId] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<MobileTab>("chat");
-  const [jsonSheetOpen, setJsonSheetOpen] = useState(false);
-  const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const isMobile = useIsMobile();
-  const [insertText, setInsertText] = useState("");
-  const [selectedLayerIndex, setSelectedLayerIndex] = useState<number | null>(null);
-  const [versionPanelOpen, setVersionPanelOpen] = useState(false);
-  const [versionPreviewData, setVersionPreviewData] = useState<object | null>(null);
-  const [previewingVersion, setPreviewingVersion] = useState<number | null>(null);
-  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [embedOpen, setEmbedOpen] = useState(false);
-  const [submitTemplateOpen, setSubmitTemplateOpen] = useState(false);
-  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
-  const [themePanelOpen, setThemePanelOpen] = useState(false);
-  const [shareChat, setShareChat] = useState(false);
-  const [shareChatSaving, setShareChatSaving] = useState(false);
-  const [canvasBg, setCanvasBg] = useState<CanvasBackground>(() => {
-    if (typeof window !== "undefined" && currentId) {
-      return (localStorage.getItem(`lottie-bg-${currentId}`) as CanvasBackground) || "checkered";
-    }
-    return "checkered";
-  });
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const menuRef = useRef<HTMLDivElement>(null);
+  const panels = usePanelState(menuRef);
+  const version = useVersionHistory();
+  const anim = useAnimationState(id, initialName, initialData, panels.shareChat, panels.setShareChat, router);
+  const playback = usePlaybackControls(anim.currentId);
+  const exportState = useExportState(anim.animationData, anim.name);
 
-  const isNewMode = currentId === null;
-
-  const handleBgChange = useCallback((bg: CanvasBackground) => {
-    setCanvasBg(bg);
-    if (currentId) localStorage.setItem(`lottie-bg-${currentId}`, bg);
-  }, [currentId]);
-
-  // Artboard dimensions derived from current animation data
-  const currentWidth = (animationData as Record<string, unknown>)?.w as number ?? 512;
-  const currentHeight = (animationData as Record<string, unknown>)?.h as number ?? 512;
-
-  const handleArtboardChange = useCallback((w: number, h: number) => {
-    // Store as last-used dimensions globally
-    localStorage.setItem("lottie-artboard-last", JSON.stringify({ w, h }));
-    if (currentId) {
-      localStorage.setItem(`lottie-artboard-${currentId}`, JSON.stringify({ w, h }));
-    }
-
-    if (!animationData) return;
-
-    const cloned = JSON.parse(JSON.stringify(animationData));
-    cloned.w = w;
-    cloned.h = h;
-    setAnimationData(cloned);
-    setJsonText(JSON.stringify(cloned, null, 2));
-    pushState(cloned);
-  }, [currentId, animationData, pushState]);
-
-  // Close mobile menu on outside click
+  // Persist loop config to localStorage
   useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const handler = (e: globalThis.MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [mobileMenuOpen]);
-
-  const handleExternalUpdate = useCallback(async () => {
-    if (!currentId) return;
-    try {
-      const res = await fetch(`/api/animations/${currentId}`);
-      if (!res.ok) return;
-      const result = await res.json();
-      if (result.data) {
-        const text = JSON.stringify(result.data, null, 2);
-        setJsonText(text);
-        setAnimationData(result.data);
-        pushState(result.data);
-      }
-      if (result.name) setName(result.name);
-    } catch {
-      // ignore fetch errors
+    if (anim.currentId) {
+      localStorage.setItem(`lottie-loop-${anim.currentId}`, JSON.stringify(playback.loopConfig));
     }
-  }, [currentId, pushState]);
+  }, [anim.currentId, playback.loopConfig]);
 
-  useAnimationSocket(currentId, handleExternalUpdate);
-
-  const handleVersionPreview = useCallback((lottieJson: object, versionNum: number) => {
-    setVersionPreviewData(lottieJson);
-    setPreviewingVersion(versionNum);
-  }, []);
-
-  const handleExitVersionPreview = useCallback(() => {
-    setVersionPreviewData(null);
-    setPreviewingVersion(null);
-  }, []);
-
-  // Load share_chat setting from API on mount
-  useEffect(() => {
-    if (!currentId) return;
-    let cancelled = false;
-    fetch(`/api/animations/${currentId}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (!cancelled && data && data.share_chat !== undefined) {
-          setShareChat(!!data.share_chat);
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [currentId]);
-
-  useEffect(() => {
-    if (!currentId || !shareChat) return;
-    fetch(`/api/animations/${currentId}/view`, { method: "POST" }).catch(() => {});
-  }, [currentId, shareChat]);
-
-  // Callback for ChatPanel when a new animation is created (blank-canvas flow)
-  const handleAnimationCreated = useCallback(async (newId: string, newData?: object) => {
-    setCurrentId(newId);
-    if (newData) {
-      if (animationData) {
-        beforeAfter.setBeforeState(animationData);
-        beforeAfter.setAfterState(newData);
-      }
-      const text = JSON.stringify(newData, null, 2);
-      setJsonText(text);
-      setAnimationData(newData);
-      pushState(newData);
-      saveAnimation(newId, name, newData, { synced: true }).catch(() => {});
-    } else {
-      // Fetch animation data if not provided inline
-      try {
-        const res = await fetch(`/api/animations/${newId}`);
-        if (res.ok) {
-          const result = await res.json();
-          if (result.data) {
-            if (animationData) {
-              beforeAfter.setBeforeState(animationData);
-              beforeAfter.setAfterState(result.data);
-            }
-            setJsonText(JSON.stringify(result.data, null, 2));
-            setAnimationData(result.data);
-            pushState(result.data);
-            saveAnimation(newId, result.name || name, result.data, { synced: true }).catch(() => {});
-          }
-          if (result.name) setName(result.name);
-        }
-      } catch {
-        // ignore fetch errors
-      }
-    }
-    window.history.replaceState(null, '', `/editor/${newId}`);
-  }, [pushState, name, animationData, beforeAfter]);
-
-  // Capture and upload a thumbnail after animation is created or updated via chat
-  const handleAnimationUpdated = useCallback((animId: string, data: object) => {
-    clearProgressivePreview();
-    import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
-      captureAndUploadThumbnail(animId, data);
-    });
-    saveAnimation(animId, name, data, { synced: true }).catch(() => {});
-  }, [name, clearProgressivePreview]);
-
-  const handleProgressivePreview = useCallback((data: object | null) => {
-    if (data) {
-      updateProgressivePreview(data as import("@/lib/partial-lottie").PartialLottie);
-    } else {
-      clearProgressivePreview();
-    }
-  }, [updateProgressivePreview, clearProgressivePreview]);
-
-  const applyHistoryState = useCallback((data: object) => {
-    const text = JSON.stringify(data, null, 2);
-    setJsonText(text);
-    setAnimationData(data);
-  }, []);
-
-  const handleUndo = useCallback(() => {
-    const state = undo();
-    if (state) applyHistoryState(state);
-  }, [undo, applyHistoryState]);
-
-  const handleRedo = useCallback(() => {
-    const state = redo();
-    if (state) applyHistoryState(state);
-  }, [redo, applyHistoryState]);
-
-
-  useEffect(() => {
-    if (currentId) {
-      localStorage.setItem(`lottie-loop-${currentId}`, JSON.stringify(loopConfig));
-    }
-  }, [currentId, loopConfig]);
-
-  const handleJsonChange = useCallback((value: string) => {
-    setJsonText(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      try {
-        const parsed = JSON.parse(value);
-        setAnimationData(parsed);
-        pushState(parsed);
-      } catch {
-        setAnimationData(null);
-      }
-    }, 500);
-  }, [pushState]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  const handleExport = () => {
-    if (!animationData) return;
-    const json = JSON.stringify(animationData, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${sanitized}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportDotLottie = async () => {
-    if (!animationData) return;
-    const { exportDotLottie } = await import("@/lib/dotlottieExporter");
-    const blob = await exportDotLottie(animationData, name || "animation");
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = (name || "animation") + ".lottie";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportGif = async (e: MouseEvent) => {
-    e.preventDefault();
-    if (!animationData || gifExporting) return;
-    setGifExporting(true);
-    setGifProgress(0);
-    try {
-      const { exportToGif } = await import("@/lib/gifExporter");
-      const blob = await exportToGif({
-        animationData,
-        onProgress: setGifProgress,
-      });
-      const url = URL.createObjectURL(blob);
-      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${sanitized}.gif`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ message: "GIF exported successfully!", type: "success" });
-    } catch (err) {
-      console.error("GIF export failed:", err);
-      toast({ message: "GIF export failed. Please try again.", type: "error" });
-    } finally {
-      setGifExporting(false);
-      setGifProgress(0);
-    }
-  };
-
-  const handleExportApng = async (e: MouseEvent) => {
-    e.preventDefault();
-    if (!animationData || apngExporting) return;
-    setApngExporting(true);
-    setApngProgress(0);
-    try {
-      const { exportToApng } = await import("@/lib/apngExporter");
-      const blob = await exportToApng({
-        animationData,
-        onProgress: setApngProgress,
-      });
-      const url = URL.createObjectURL(blob);
-      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${sanitized}.apng`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("APNG export failed:", err);
-      toast({ message: "APNG export failed. Please try again.", type: "error" });
-    } finally {
-      setApngExporting(false);
-      setApngProgress(0);
-    }
-  };
-
-  const handleExportVideo = async (e: MouseEvent) => {
-    e.preventDefault();
-    if (!animationData || videoExporting) return;
-    setVideoExporting(true);
-    setVideoProgress(0);
-    try {
-      const { exportToVideo, getVideoExtension } = await import("@/lib/videoExporter");
-      const blob = await exportToVideo({
-        animationData,
-        onProgress: setVideoProgress,
-      });
-      const ext = getVideoExtension();
-      const url = URL.createObjectURL(blob);
-      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${sanitized}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ message: "Video exported successfully!", type: "success" });
-    } catch (err) {
-      console.error("Video export failed:", err);
-      toast({ message: "Video export failed. Please try again.", type: "error" });
-    } finally {
-      setVideoExporting(false);
-      setVideoProgress(0);
-    }
-  };
-
-  const handleExportMp4 = async (e: MouseEvent) => {
-    e.preventDefault();
-    if (!animationData || mp4Exporting) return;
-    setMp4Exporting(true);
-    setMp4Progress(0);
-    try {
-      const { exportToMp4, isMP4ExportSupported, formatFileSize } = await import("@/lib/mp4Exporter");
-      if (!isMP4ExportSupported()) {
-        toast({ message: "MP4 export requires Chrome 94+ or Edge 94+ (WebCodecs API).", type: "error" });
-        return;
-      }
-      const blob = await exportToMp4({
-        animationData,
-        onProgress: setMp4Progress,
-      });
-      const url = URL.createObjectURL(blob);
-      const sanitized = name.replace(/[^a-zA-Z0-9_\-. ]/g, "_").trim() || "animation";
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${sanitized}.mp4`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ message: `MP4 exported (${formatFileSize(blob.size)})`, type: "success" });
-    } catch (err) {
-      console.error("MP4 export failed:", err);
-      const message = err instanceof Error ? err.message : "MP4 export failed. Please try again.";
-      toast({ message, type: "error" });
-    } finally {
-      setMp4Exporting(false);
-      setMp4Progress(0);
-    }
-  };
-
-  const handleExportPreset = async (preset: ExportPreset) => {
-    if (!animationData || presetExporting) return;
-    setPresetExporting(true);
-    setPresetProgress(0);
-    setPresetExportingId(preset.id);
-    try {
-      // Rescale animation data to preset dimensions
-      const { animationData: rescaledData } = rescaleForExport(animationData, {
-        targetWidth: preset.width,
-        targetHeight: preset.height,
-        fit: "contain",
-      });
-
-      let blob: Blob;
-      const onProgress = (p: number) => setPresetProgress(p);
-
-      if (preset.format === "json") {
-        const json = JSON.stringify(rescaledData, null, 2);
-        blob = new Blob([json], { type: "application/json" });
-      } else if (preset.format === "dotlottie") {
-        const { exportDotLottie } = await import("@/lib/dotlottieExporter");
-        blob = await exportDotLottie(rescaledData, name || "animation");
-      } else if (preset.format === "gif") {
-        const { exportToGif } = await import("@/lib/gifExporter");
-
-        if (preset.maxFileSize) {
-          blob = await exportWithSizeLimit(rescaledData, preset.maxFileSize, onProgress);
-        } else {
-          blob = await exportToGif({ animationData: rescaledData, onProgress });
-        }
-      } else if (preset.format === "mp4") {
-        const { exportToMp4, isMP4ExportSupported } = await import("@/lib/mp4Exporter");
-        if (!isMP4ExportSupported()) {
-          toast({ message: "MP4 export requires Chrome 94+ or Edge 94+ (WebCodecs API).", type: "error" });
-          return;
-        }
-        blob = await exportToMp4({ animationData: rescaledData, onProgress });
-      } else if (preset.format === "apng") {
-        const { exportToApng } = await import("@/lib/apngExporter");
-        blob = await exportToApng({ animationData: rescaledData, onProgress });
-      } else if (preset.format === "tgs") {
-        const { exportToTgs } = await import("@/lib/tgsExporter");
-        const result = await exportToTgs(rescaledData);
-        if (result.warnings.length > 0) {
-          toast({ message: result.warnings.join(". "), type: "info" });
-        }
-        blob = result.blob;
-      } else {
-        // webp fallback to apng
-        const { exportToApng } = await import("@/lib/apngExporter");
-        blob = await exportToApng({ animationData: rescaledData, onProgress });
-      }
-
-      const url = URL.createObjectURL(blob);
-      const filename = getPresetFilename(name, preset);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Preset export failed:", err);
-      toast({ message: `Export failed for ${preset.platform}. Please try again.`, type: "error" });
-    } finally {
-      setPresetExporting(false);
-      setPresetProgress(0);
-      setPresetExportingId(null);
-    }
-  };
-
-  const handleSave = useCallback(async () => {
-    if (!currentId) return;
-    setSaving(true);
-    setSaveStatus("idle");
-    try {
-      const parsed = JSON.parse(jsonText);
-      const res = await fetch(`/api/animations/${currentId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, data: parsed }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch {
-      setSaveStatus("error");
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    } finally {
-      setSaving(false);
-    }
-  }, [currentId, jsonText, name]);
-
-  const handleDuplicate = useCallback(async () => {
-    if (!currentId || duplicating) return;
-    setDuplicating(true);
-    try {
-      const res = await fetch(`/api/animations/${currentId}/duplicate`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Duplicate failed");
-      const result = await res.json();
-      const newId = result.id;
-      if (newId) {
-        router.push(`/editor/${newId}`);
-        toast({ message: "Animation duplicated!", type: "success" });
-      }
-    } catch (err) {
-      console.error("Duplicate failed:", err);
-      toast({ message: "Failed to duplicate animation. Please try again.", type: "error" });
-    } finally {
-      setDuplicating(false);
-    }
-  }, [currentId, duplicating, router, toast]);
-
-  const handleToggleShareChat = useCallback(async () => {
-    if (!currentId || shareChatSaving) return;
-    const newValue = !shareChat;
-    setShareChat(newValue);
-    setShareChatSaving(true);
-    try {
-      const res = await fetch(`/api/animations/${currentId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ share_chat: newValue }),
-      });
-      if (!res.ok) {
-        setShareChat(!newValue); // revert on failure
-      }
-    } catch {
-      setShareChat(!newValue); // revert on failure
-    } finally {
-      setShareChatSaving(false);
-    }
-  }, [currentId, shareChat, shareChatSaving]);
+  // Wrap handleSelectLayer to also switch panels
+  const handleSelectLayer = useCallback((layerName: string, layerIndex: number) => {
+    anim.handleSelectLayer(layerName, layerIndex);
+    panels.setRightPanel("chat");
+    panels.setMobileView("chat");
+  }, [anim, panels]);
 
   const speeds = [0.5, 1, 2];
   useKeyboardShortcuts({
-    onUndo: handleUndo,
-    onRedo: handleRedo,
-    onTogglePlay: () => setIsPlaying((p) => !p),
-    onSave: handleSave,
+    onUndo: anim.handleUndo,
+    onRedo: anim.handleRedo,
+    onTogglePlay: () => playback.setIsPlaying((p) => !p),
+    onSave: anim.handleSave,
     onSeekBackward: () => {
-      setSeekFrame(Math.max(0, currentFrame - 1));
-      setIsPlaying(false);
+      playback.setSeekFrame(Math.max(0, playback.currentFrame - 1));
+      playback.setIsPlaying(false);
     },
     onSeekForward: () => {
-      setSeekFrame(Math.min(totalFrames - 1, currentFrame + 1));
-      setIsPlaying(false);
+      playback.setSeekFrame(Math.min(playback.totalFrames - 1, playback.currentFrame + 1));
+      playback.setIsPlaying(false);
     },
     onSeekStart: () => {
-      setSeekFrame(0);
-      setIsPlaying(false);
+      playback.setSeekFrame(0);
+      playback.setIsPlaying(false);
     },
     onSeekEnd: () => {
-      setSeekFrame(Math.max(0, totalFrames - 1));
-      setIsPlaying(false);
+      playback.setSeekFrame(Math.max(0, playback.totalFrames - 1));
+      playback.setIsPlaying(false);
     },
     onSpeedDown: () => {
-      const idx = speeds.indexOf(speed);
-      if (idx > 0) setSpeed(speeds[idx - 1]);
+      const idx = speeds.indexOf(playback.speed);
+      if (idx > 0) playback.setSpeed(speeds[idx - 1]);
     },
     onSpeedUp: () => {
-      const idx = speeds.indexOf(speed);
-      if (idx < speeds.length - 1) setSpeed(speeds[idx + 1]);
+      const idx = speeds.indexOf(playback.speed);
+      if (idx < speeds.length - 1) playback.setSpeed(speeds[idx + 1]);
     },
-    onShowHelp: () => setShortcutsHelpOpen((v) => !v),
-    onToggleFullscreen: () => setFullscreenOpen((v) => !v),
+    onShowHelp: () => panels.setShortcutsHelpOpen((v) => !v),
+    onToggleFullscreen: () => panels.setFullscreenOpen((v) => !v),
     onToggleVersionHistory: () => {
-      if (!isNewMode) {
-        setVersionPanelOpen((v) => {
-          if (v) handleExitVersionPreview();
+      if (!anim.isNewMode) {
+        panels.setVersionPanelOpen((v) => {
+          if (v) version.handleExitVersionPreview();
           return !v;
         });
       }
     },
   });
 
-  // Global Ctrl+K / Cmd+K for command palette
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setCommandPaletteOpen(true);
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, []);
-
-  const handleFrameChange = useCallback((frame: number, total: number) => {
-    setCurrentFrame(frame);
-    setTotalFrames(total);
-  }, []);
-
-  const handleSeek = useCallback((frame: number) => {
-    setSeekFrame(frame);
-    setIsPlaying(false);
-  }, []);
-
-  const handleRestart = useCallback(() => {
-    setSeekFrame(0);
-    setIsPlaying(true);
-    // Clear seekFrame after a tick so LottiePreview processes it
-    setTimeout(() => setSeekFrame(undefined), 50);
-  }, []);
-
-  const handleSelectLayer = useCallback((layerName: string, layerIndex: number) => {
-    setInsertText(layerName);
-    setSelectedLayerIndex(layerIndex);
-    setRightPanel("chat");
-    setMobileView("chat");
-    setTimeout(() => setInsertText(""), 0);
-  }, []);
-
-  const handleToggleVisibility = useCallback((layerIndex: number, hidden: boolean) => {
-    if (!animationData) return;
-    const cloned = JSON.parse(JSON.stringify(animationData));
-    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
-      cloned.layers[layerIndex].hd = hidden;
-      setAnimationData(cloned);
-      setJsonText(JSON.stringify(cloned, null, 2));
-      pushState(cloned);
-    }
-  }, [animationData, pushState]);
-
-  const handleChangeOpacity = useCallback((layerIndex: number, opacity: number) => {
-    if (!animationData) return;
-    const cloned = JSON.parse(JSON.stringify(animationData));
-    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
-      const layer = cloned.layers[layerIndex];
-      if (!layer.ks) layer.ks = {};
-      if (!layer.ks.o) layer.ks.o = { a: 0, k: 100 };
-      if (layer.ks.o.a === 1 && Array.isArray(layer.ks.o.k)) {
-        // Animated opacity: set all keyframe values
-        for (const kf of layer.ks.o.k) {
-          if (kf && typeof kf === 'object' && 's' in kf) {
-            kf.s = [opacity];
-          }
-          if (kf && typeof kf === 'object' && 'e' in kf) {
-            kf.e = [opacity];
-          }
-        }
-      } else {
-        // Static opacity
-        layer.ks.o.a = 0;
-        layer.ks.o.k = opacity;
-      }
-      setAnimationData(cloned);
-      setJsonText(JSON.stringify(cloned, null, 2));
-      pushState(cloned);
-    }
-  }, [animationData, pushState]);
-
-  const handlePreviewOpacity = useCallback((layerIndex: number, opacity: number) => {
-    // Preview-only handler: updates canvas without pushing undo state
-    if (!animationData) return;
-    const cloned = JSON.parse(JSON.stringify(animationData));
-    if (cloned.layers && cloned.layers[layerIndex] !== undefined) {
-      const layer = cloned.layers[layerIndex];
-      if (!layer.ks) layer.ks = {};
-      if (!layer.ks.o) layer.ks.o = { a: 0, k: 100 };
-      if (layer.ks.o.a === 1 && Array.isArray(layer.ks.o.k)) {
-        // Animated opacity: set all keyframe values
-        for (const kf of layer.ks.o.k) {
-          if (kf && typeof kf === 'object' && 's' in kf) {
-            kf.s = [opacity];
-          }
-          if (kf && typeof kf === 'object' && 'e' in kf) {
-            kf.e = [opacity];
-          }
-        }
-      } else {
-        // Static opacity
-        layer.ks.o.a = 0;
-        layer.ks.o.k = opacity;
-      }
-      // Update canvas preview without pushing to undo history
-      setAnimationData(cloned);
-      setJsonText(JSON.stringify(cloned, null, 2));
-    }
-  }, [animationData]);
-
-  const handleReorderLayers = useCallback((fromIndex: number, toIndex: number) => {
-    if (!animationData) return;
-    const cloned = JSON.parse(JSON.stringify(animationData));
-    if (cloned.layers && cloned.layers[fromIndex] !== undefined && cloned.layers[toIndex] !== undefined) {
-      // Remove layer from fromIndex
-      const [movedLayer] = cloned.layers.splice(fromIndex, 1);
-      // Insert at toIndex
-      cloned.layers.splice(toIndex, 0, movedLayer);
-      setAnimationData(cloned);
-      setJsonText(JSON.stringify(cloned, null, 2));
-      pushState(cloned);
-    }
-  }, [animationData, pushState]);
-
   const handleCommand = useCallback((command: Command) => {
     switch (command.type) {
       case "play":
-        setIsPlaying(true);
+        playback.setIsPlaying(true);
         break;
       case "pause":
-        setIsPlaying(false);
+        playback.setIsPlaying(false);
         break;
       case "speed":
-        setSpeed(command.speed);
+        playback.setSpeed(command.speed);
         break;
       case "loop":
-        setLoopConfig({ mode: "loop" });
+        playback.setLoopConfig({ mode: "loop" });
         break;
       case "once":
-        setLoopConfig({ mode: "once" });
+        playback.setLoopConfig({ mode: "once" });
         break;
       case "export_gif":
-        handleExportGif({ preventDefault: () => {} } as MouseEvent);
+        exportState.handleExportGif({ preventDefault: () => {} } as MouseEvent);
         break;
       case "export_apng":
-        handleExportApng({ preventDefault: () => {} } as MouseEvent);
+        exportState.handleExportApng({ preventDefault: () => {} } as MouseEvent);
         break;
       case "export_video":
-        handleExportVideo({ preventDefault: () => {} } as MouseEvent);
+        exportState.handleExportVideo({ preventDefault: () => {} } as MouseEvent);
         break;
       case "export_json":
-        handleExport();
+        exportState.handleExport();
         break;
       case "export_dotlottie":
-        handleExportDotLottie();
+        exportState.handleExportDotLottie();
         break;
       case "undo":
-        handleUndo();
+        anim.handleUndo();
         break;
       case "redo":
-        handleRedo();
+        anim.handleRedo();
         break;
       case "resize":
-        handleArtboardChange(command.width, command.height);
+        anim.handleArtboardChange(command.width, command.height);
         break;
       case "background":
-        handleBgChange(command.color as CanvasBackground);
+        anim.handleBgChange(command.color as import("./BackgroundPicker").CanvasBackground);
         break;
       case "fullscreen":
-        setFullscreenOpen(true);
+        panels.setFullscreenOpen(true);
         break;
       case "optimize":
-        if (animationData) {
-          const { optimized, stats } = optimizeLottie(animationData);
-          setAnimationData(optimized as object);
-          setJsonText(JSON.stringify(optimized, null, 2));
-          pushState(optimized as object);
+        if (anim.animationData) {
+          const { optimized, stats } = optimizeLottie(anim.animationData);
+          anim.setAnimationData(optimized as object);
+          anim.setJsonText(JSON.stringify(optimized, null, 2));
+          anim.pushState(optimized as object);
           const pct = stats.originalSize > 0
             ? Math.round((1 - stats.optimizedSize / stats.originalSize) * 100)
             : 0;
@@ -865,23 +188,23 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           const summary = pct > 0
             ? `✨ Optimized! ${sizeStr} (${pct}% smaller)${parts.length ? ". " + parts.join(", ") : ""}`
             : `✨ Already optimized — no changes needed (${(stats.optimizedSize / 1024).toFixed(1)} KB)`;
-          setInsertText(summary);
+          anim.setInsertText(summary);
         }
         break;
       case "duration":
-        if (animationData) {
-          const rescaled = rescaleDuration(animationData, command.durationMs);
-          setAnimationData(rescaled as object);
-          setJsonText(JSON.stringify(rescaled, null, 2));
-          pushState(rescaled as object);
+        if (anim.animationData) {
+          const rescaled = rescaleDuration(anim.animationData, command.durationMs);
+          anim.setAnimationData(rescaled as object);
+          anim.setJsonText(JSON.stringify(rescaled, null, 2));
+          anim.pushState(rescaled as object);
           const secs = (command.durationMs / 1000).toFixed(1);
-          setInsertText(`⏱️ Duration set to ${secs}s`);
+          anim.setInsertText(`⏱️ Duration set to ${secs}s`);
         }
         break;
       case "goto": {
-        const fr = (animationData as Record<string, unknown>)?.fr as number ?? 30;
-        const ip = (animationData as Record<string, unknown>)?.ip as number ?? 0;
-        const op = (animationData as Record<string, unknown>)?.op as number ?? totalFrames;
+        const fr = (anim.animationData as Record<string, unknown>)?.fr as number ?? 30;
+        const ip = (anim.animationData as Record<string, unknown>)?.ip as number ?? 0;
+        const op = (anim.animationData as Record<string, unknown>)?.op as number ?? playback.totalFrames;
         const animTotalFrames = op - ip;
         let targetFrame: number;
         switch (command.target.unit) {
@@ -899,15 +222,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             break;
         }
         targetFrame = Math.max(0, Math.min(targetFrame, animTotalFrames - 1));
-        setSeekFrame(targetFrame);
-        setIsPlaying(false);
+        playback.setSeekFrame(targetFrame);
+        playback.setIsPlaying(false);
         const timeAtFrame = (targetFrame / fr).toFixed(2);
-        setInsertText(`⏭️ Seeked to frame ${targetFrame} (${timeAtFrame}s)`);
+        anim.setInsertText(`⏭️ Seeked to frame ${targetFrame} (${timeAtFrame}s)`);
         break;
       }
       case "marker_add":
-        if (animationData) {
-          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+        if (anim.animationData) {
+          const cloned = JSON.parse(JSON.stringify(anim.animationData)) as Record<string, unknown>;
           if (!Array.isArray(cloned.markers)) cloned.markers = [];
           const markers = cloned.markers as Array<{ cm: string; tm: number; dr: number }>;
           const existingIdx = markers.findIndex((m) => m.cm === command.name);
@@ -917,41 +240,39 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           } else {
             markers.push(newMarker);
           }
-          setAnimationData(cloned as object);
-          setJsonText(JSON.stringify(cloned, null, 2));
-          pushState(cloned as object);
+          anim.setAnimationData(cloned as object);
+          anim.setJsonText(JSON.stringify(cloned, null, 2));
+          anim.pushState(cloned as object);
         }
         break;
       case "marker_remove":
-        if (animationData) {
-          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+        if (anim.animationData) {
+          const cloned = JSON.parse(JSON.stringify(anim.animationData)) as Record<string, unknown>;
           if (Array.isArray(cloned.markers)) {
             cloned.markers = (cloned.markers as Array<{ cm: string; tm: number; dr: number }>).filter((m) => m.cm !== command.name);
             if ((cloned.markers as unknown[]).length === 0) delete cloned.markers;
-            setAnimationData(cloned as object);
-            setJsonText(JSON.stringify(cloned, null, 2));
-            pushState(cloned as object);
+            anim.setAnimationData(cloned as object);
+            anim.setJsonText(JSON.stringify(cloned, null, 2));
+            anim.pushState(cloned as object);
           }
         }
         break;
       case "marker_list":
-        // Feedback handled in ChatPanel
         break;
       case "marker_clear":
-        if (animationData) {
-          const cloned = JSON.parse(JSON.stringify(animationData)) as Record<string, unknown>;
+        if (anim.animationData) {
+          const cloned = JSON.parse(JSON.stringify(anim.animationData)) as Record<string, unknown>;
           delete cloned.markers;
-          setAnimationData(cloned as object);
-          setJsonText(JSON.stringify(cloned, null, 2));
-          pushState(cloned as object);
+          anim.setAnimationData(cloned as object);
+          anim.setJsonText(JSON.stringify(cloned, null, 2));
+          anim.pushState(cloned as object);
         }
         break;
       case "compose":
-        // Handled server-side via ChatPanel streamResponse — no-op here
         break;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleUndo, handleRedo, handleArtboardChange, handleBgChange, animationData, pushState]);
+  }, [anim, playback, exportState, panels]);
 
   return (
     <div className="flex flex-col h-[100dvh]">
@@ -959,9 +280,9 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
       {/* Accessibility: save status announcer */}
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {saveStatus === "saved" && "Animation saved"}
-        {saveStatus === "error" && "Save failed"}
-        {saving && "Saving animation..."}
+        {anim.saveStatus === "saved" && "Animation saved"}
+        {anim.saveStatus === "error" && "Save failed"}
+        {anim.saving && "Saving animation..."}
       </div>
 
       {/* Header */}
@@ -976,8 +297,8 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         </Link>
         <input
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={anim.name}
+          onChange={(e) => anim.setName(e.target.value)}
           aria-label="Animation name"
           className="bg-transparent border-b border-zinc-700 text-zinc-100 text-base md:text-lg font-semibold px-1 py-0.5 focus:outline-none focus:border-zinc-400 transition-colors flex-1 min-w-0"
         />
@@ -994,68 +315,68 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         {/* Desktop export dropdown */}
         <div data-tour="export" className="shrink-0">
         <ExportDropdown
-          animationData={animationData}
-          isNewMode={isNewMode}
-          currentId={currentId}
-          gifExporting={gifExporting}
-          gifProgress={gifProgress}
-          apngExporting={apngExporting}
-          apngProgress={apngProgress}
-          videoExporting={videoExporting}
-          videoProgress={videoProgress}
-          mp4Exporting={mp4Exporting}
-          mp4Progress={mp4Progress}
-          presetExporting={presetExporting}
-          presetProgress={presetProgress}
-          presetExportingId={presetExportingId}
-          onExportJson={handleExport}
-          onExportGif={handleExportGif}
-          onExportApng={handleExportApng}
-          onExportDotLottie={handleExportDotLottie}
-          onExportVideo={handleExportVideo}
-          onExportMp4={handleExportMp4}
-          onExportPreset={handleExportPreset}
-          onOpenPresetDialog={() => setPresetDialogOpen(true)}
-          onDuplicate={handleDuplicate}
-          isDuplicating={duplicating}
+          animationData={anim.animationData}
+          isNewMode={anim.isNewMode}
+          currentId={anim.currentId}
+          gifExporting={exportState.gifExporting}
+          gifProgress={exportState.gifProgress}
+          apngExporting={exportState.apngExporting}
+          apngProgress={exportState.apngProgress}
+          videoExporting={exportState.videoExporting}
+          videoProgress={exportState.videoProgress}
+          mp4Exporting={exportState.mp4Exporting}
+          mp4Progress={exportState.mp4Progress}
+          presetExporting={exportState.presetExporting}
+          presetProgress={exportState.presetProgress}
+          presetExportingId={exportState.presetExportingId}
+          onExportJson={exportState.handleExport}
+          onExportGif={exportState.handleExportGif}
+          onExportApng={exportState.handleExportApng}
+          onExportDotLottie={exportState.handleExportDotLottie}
+          onExportVideo={exportState.handleExportVideo}
+          onExportMp4={exportState.handleExportMp4}
+          onExportPreset={exportState.handleExportPreset}
+          onOpenPresetDialog={() => panels.setPresetDialogOpen(true)}
+          onDuplicate={anim.handleDuplicate}
+          isDuplicating={anim.duplicating}
         />
         </div>
-        {!isNewMode && animationData && (
+        {!anim.isNewMode && anim.animationData && (
           <QualityPanel
-            animationData={animationData}
+            animationData={anim.animationData}
             onSuggestionClick={(suggestion) => {
-              setInsertText(suggestion);
-              setRightPanel("chat");
-              setMobileView("chat");
-              setTimeout(() => setInsertText(""), 0);
+              anim.setInsertText(suggestion);
+              panels.setRightPanel("chat");
+              panels.setMobileView("chat");
+              setTimeout(() => anim.setInsertText(""), 0);
             }}
           />
         )}
-        <ThemeIndicator onClick={() => setThemePanelOpen((v) => !v)} />
+        <ThemeIndicator onClick={() => panels.setThemePanelOpen((v) => !v)} />
         <button
-          onClick={() => setSubmitTemplateOpen(true)}
-          disabled={isNewMode}
+          onClick={() => panels.setSubmitTemplateOpen(true)}
+          disabled={anim.isNewMode}
           aria-label="Submit as template"
           className="hidden md:inline-flex px-3 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Submit as Template
         </button>
         <button
-          onClick={() => setEmbedOpen(true)}
-          disabled={isNewMode}
+          onClick={() => panels.setEmbedOpen(true)}
+          disabled={anim.isNewMode}
           aria-label="Open embed dialog"
           className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-zinc-600 text-zinc-300 text-sm font-medium hover:border-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('editor.embed')}
         </button>
         <button
-          onClick={handleToggleShareChat}
-          disabled={isNewMode || shareChatSaving}
+          onClick={anim.handleToggleShareChat}
+          disabled={anim.isNewMode || anim.shareChatSaving}
           title="Include chat history in share page"
-          aria-label={shareChat ? "Chat history is shared" : "Share chat history"}
-          aria-pressed={shareChat}
+          aria-label={panels.shareChat ? "Chat history is shared" : "Share chat history"}
+          aria-pressed={panels.shareChat}
           className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-            shareChat
+            panels.shareChat
               ? "border-emerald-600 text-emerald-400 hover:border-emerald-500"
               : "border-zinc-600 text-zinc-400 hover:border-zinc-400 hover:text-zinc-200"
           }`}
@@ -1063,104 +384,104 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
-          {shareChat ? "Chat shared" : "Share chat"}
+          {panels.shareChat ? "Chat shared" : "Share chat"}
         </button>
         <button
-          onClick={handleSave}
-          disabled={saving || animationData === null || isNewMode}
+          onClick={anim.handleSave}
+          disabled={anim.saving || anim.animationData === null || anim.isNewMode}
           aria-label="Save animation"
           className="px-3 md:px-4 py-1.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          {saving ? "..." : t('common.save')}
+          {anim.saving ? "..." : t('common.save')}
         </button>
-        {saveStatus === "saved" && (
+        {anim.saveStatus === "saved" && (
           <span className="text-emerald-400 text-sm shrink-0">✓</span>
         )}
-        {saveStatus === "error" && (
+        {anim.saveStatus === "error" && (
           <span className="text-red-400 text-sm shrink-0">{t('editor.saveError')}</span>
         )}
         {/* Mobile overflow menu */}
         <div className="relative md:hidden" ref={menuRef}>
           <button
-            onClick={() => setMobileMenuOpen((v) => !v)}
+            onClick={() => panels.setMobileMenuOpen((v) => !v)}
             aria-label="Open menu"
-            aria-expanded={mobileMenuOpen}
+            aria-expanded={panels.mobileMenuOpen}
             aria-haspopup="true"
             className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition-colors"
           >
             ⋯
           </button>
-          {mobileMenuOpen && (
+          {panels.mobileMenuOpen && (
             <div className="absolute right-0 top-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1">
               <button
-                onClick={() => { handleExport(); setMobileMenuOpen(false); }}
-                disabled={animationData === null || isNewMode}
+                onClick={() => { exportState.handleExport(); panels.setMobileMenuOpen(false); }}
+                disabled={anim.animationData === null || anim.isNewMode}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Export JSON
               </button>
               <button
-                onClick={(e) => { handleExportGif(e as unknown as MouseEvent); setMobileMenuOpen(false); }}
-                disabled={animationData === null || gifExporting}
+                onClick={(e) => { exportState.handleExportGif(e as unknown as MouseEvent); panels.setMobileMenuOpen(false); }}
+                disabled={anim.animationData === null || exportState.gifExporting}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {gifExporting ? `Export GIF (${Math.round(gifProgress * 100)}%)` : "Export GIF"}
+                {exportState.gifExporting ? `Export GIF (${Math.round(exportState.gifProgress * 100)}%)` : "Export GIF"}
               </button>
               <button
-                onClick={(e) => { handleExportApng(e as unknown as MouseEvent); setMobileMenuOpen(false); }}
-                disabled={animationData === null || apngExporting}
+                onClick={(e) => { exportState.handleExportApng(e as unknown as MouseEvent); panels.setMobileMenuOpen(false); }}
+                disabled={anim.animationData === null || exportState.apngExporting}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {apngExporting ? `Export APNG (${Math.round(apngProgress * 100)}%)` : "Export APNG"}
+                {exportState.apngExporting ? `Export APNG (${Math.round(exportState.apngProgress * 100)}%)` : "Export APNG"}
               </button>
               <button
-                onClick={() => { handleExportDotLottie(); setMobileMenuOpen(false); }}
-                disabled={animationData === null}
+                onClick={() => { exportState.handleExportDotLottie(); panels.setMobileMenuOpen(false); }}
+                disabled={anim.animationData === null}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Export .lottie
               </button>
               <button
-                onClick={(e) => { handleExportVideo(e as unknown as MouseEvent); setMobileMenuOpen(false); }}
-                disabled={animationData === null || videoExporting}
+                onClick={(e) => { exportState.handleExportVideo(e as unknown as MouseEvent); panels.setMobileMenuOpen(false); }}
+                disabled={anim.animationData === null || exportState.videoExporting}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {videoExporting ? `Export Video (${Math.round(videoProgress * 100)}%)` : "Export Video"}
+                {exportState.videoExporting ? `Export Video (${Math.round(exportState.videoProgress * 100)}%)` : "Export Video"}
               </button>
               <button
-                onClick={() => { setEmbedOpen(true); setMobileMenuOpen(false); }}
-                disabled={isNewMode}
+                onClick={() => { panels.setEmbedOpen(true); panels.setMobileMenuOpen(false); }}
+                disabled={anim.isNewMode}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t('editor.embed')}
               </button>
               <button
-                onClick={() => { handleToggleShareChat(); setMobileMenuOpen(false); }}
-                disabled={isNewMode || shareChatSaving}
+                onClick={() => { anim.handleToggleShareChat(); panels.setMobileMenuOpen(false); }}
+                disabled={anim.isNewMode || anim.shareChatSaving}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {shareChat ? "✓ Chat history shared" : "Share chat history"}
+                {panels.shareChat ? "✓ Chat history shared" : "Share chat history"}
               </button>
               <button
                 onClick={() => {
-                  if (!currentId) return;
-                  navigator.clipboard.writeText(`${window.location.origin}/share/${currentId}`);
-                  setShareStatus("copied");
-                  setTimeout(() => setShareStatus("idle"), 2000);
-                  setMobileMenuOpen(false);
+                  if (!anim.currentId) return;
+                  navigator.clipboard.writeText(`${window.location.origin}/share/${anim.currentId}`);
+                  anim.setShareStatus("copied");
+                  setTimeout(() => anim.setShareStatus("idle"), 2000);
+                  panels.setMobileMenuOpen(false);
                 }}
-                disabled={isNewMode}
+                disabled={anim.isNewMode}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {shareStatus === "copied" ? "✓ Link Copied" : "Copy Share Link"}
+                {anim.shareStatus === "copied" ? "✓ Link Copied" : "Copy Share Link"}
               </button>
               <div className="border-t border-zinc-700 my-1" />
               <button
-                onClick={() => { handleDuplicate(); setMobileMenuOpen(false); }}
-                disabled={isNewMode || duplicating}
+                onClick={() => { anim.handleDuplicate(); panels.setMobileMenuOpen(false); }}
+                disabled={anim.isNewMode || anim.duplicating}
                 className="w-full px-4 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {duplicating ? "Duplicating..." : t('common.duplicate')}
+                {anim.duplicating ? "Duplicating..." : t('common.duplicate')}
               </button>
             </div>
           )}
@@ -1179,53 +500,53 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
         <div role="region" aria-label="Animation preview" className="flex flex-col h-[40vh] shrink-0 md:h-auto md:shrink md:w-1/2 md:min-h-0 md:border-r border-zinc-800">
           <div className="flex-1 p-2 md:p-4 min-h-0 relative" data-tour="canvas">
             <ErrorBoundary
-              key={currentId ?? "new"}
+              key={anim.currentId ?? "new"}
               fallbackMessage={t('common.error')}
-              onReset={() => setAnimationData(animationData)}
+              onReset={() => anim.setAnimationData(anim.animationData)}
             >
               <LottiePreview
-                animationData={versionPreviewData ?? progressivePreviewData ?? animationData}
-                isPlaying={isPlaying}
-                speed={speed}
-                loopConfig={loopConfig}
-                onFrameChange={handleFrameChange}
-                seekToFrame={seekFrame}
-                background={canvasBg}
-                placeholder={isNewMode && animationData === null && !progressivePreviewData}
-                ariaLabel={name || "Animation preview"}
+                animationData={version.versionPreviewData ?? anim.progressivePreviewData ?? anim.animationData}
+                isPlaying={playback.isPlaying}
+                speed={playback.speed}
+                loopConfig={playback.loopConfig}
+                onFrameChange={playback.handleFrameChange}
+                seekToFrame={playback.seekFrame}
+                background={anim.canvasBg}
+                placeholder={anim.isNewMode && anim.animationData === null && !anim.progressivePreviewData}
+                ariaLabel={anim.name || "Animation preview"}
               />
-              {isPreviewActive && (
+              {anim.isPreviewActive && (
                 <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
                   <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
                   Generating…
                 </div>
               )}
             </ErrorBoundary>
-            {beforeAfter.isComparing && beforeAfter.beforeData && beforeAfter.afterData && (
+            {anim.beforeAfter.isComparing && anim.beforeAfter.beforeData && anim.beforeAfter.afterData && (
               <BeforeAfterComparison
-                beforeData={beforeAfter.beforeData}
-                afterData={beforeAfter.afterData}
-                comparisonMode={beforeAfter.comparisonMode}
-                onModeChange={beforeAfter.setComparisonMode}
-                onAccept={() => beforeAfter.accept()}
+                beforeData={anim.beforeAfter.beforeData}
+                afterData={anim.beforeAfter.afterData}
+                comparisonMode={anim.beforeAfter.comparisonMode}
+                onModeChange={anim.beforeAfter.setComparisonMode}
+                onAccept={() => anim.beforeAfter.accept()}
                 onRevert={() => {
-                  const data = beforeAfter.revert();
+                  const data = anim.beforeAfter.revert();
                   if (data) {
-                    setAnimationData(data);
-                    setJsonText(JSON.stringify(data, null, 2));
-                    pushState(data);
+                    anim.setAnimationData(data);
+                    anim.setJsonText(JSON.stringify(data, null, 2));
+                    anim.pushState(data);
                   }
                 }}
-                isPlaying={isPlaying}
-                speed={speed}
-                loopConfig={loopConfig}
-                seekToFrame={seekFrame}
-                background={canvasBg}
+                isPlaying={playback.isPlaying}
+                speed={playback.speed}
+                loopConfig={playback.loopConfig}
+                seekToFrame={playback.seekFrame}
+                background={anim.canvasBg}
               />
             )}
-            {beforeAfter.beforeData && !beforeAfter.isComparing && (
+            {anim.beforeAfter.beforeData && !anim.beforeAfter.isComparing && (
               <button
-                onClick={() => beforeAfter.setBeforeState(beforeAfter.beforeData!)}
+                onClick={() => anim.beforeAfter.setBeforeState(anim.beforeAfter.beforeData!)}
                 title="Compare before/after"
                 aria-label="Toggle before/after comparison"
                 className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-md bg-zinc-800/80 backdrop-blur-sm border border-zinc-700/50 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/80 transition-colors"
@@ -1236,87 +557,87 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 </svg>
               </button>
             )}
-            {previewingVersion !== null && (
+            {version.previewingVersion !== null && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600/90 text-white text-sm font-medium shadow-lg backdrop-blur-sm">
-                <span>{t('versionHistory.previewingVersion', { version: previewingVersion })}</span>
+                <span>{t('versionHistory.previewingVersion', { version: version.previewingVersion })}</span>
                 <button
-                  onClick={handleExitVersionPreview}
+                  onClick={version.handleExitVersionPreview}
                   className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-xs transition-colors"
                 >
                   {t('versionHistory.exitPreview')}
                 </button>
               </div>
             )}
-            {isNewMode && animationData === null && (
+            {anim.isNewMode && anim.animationData === null && (
               <div className="mt-4">
-                <ImportLottie onImported={handleAnimationCreated} />
+                <ImportLottie onImported={anim.handleAnimationCreated} />
               </div>
             )}
           </div>
           <KeyframeTimeline
-            animationData={animationData}
-            currentFrame={currentFrame}
-            totalFrames={totalFrames}
-            onSeek={handleSeek}
-            markers={animationData ? ((animationData as Record<string, unknown>).markers as Array<{ cm: string; tm: number; dr: number }>) ?? undefined : undefined}
+            animationData={anim.animationData}
+            currentFrame={playback.currentFrame}
+            totalFrames={playback.totalFrames}
+            onSeek={playback.handleSeek}
+            markers={anim.animationData ? ((anim.animationData as Record<string, unknown>).markers as Array<{ cm: string; tm: number; dr: number }>) ?? undefined : undefined}
             onPlaySegment={(start) => {
-              setSeekFrame(start);
-              setIsPlaying(true);
+              playback.setSeekFrame(start);
+              playback.setIsPlaying(true);
             }}
           />
           <div className="flex items-center border-t border-zinc-800" data-tour="controls">
             <Controls
-              isPlaying={isPlaying}
-              onTogglePlay={() => setIsPlaying((p) => !p)}
-              speed={speed}
-              onSpeedChange={setSpeed}
-              loopConfig={loopConfig}
-              onLoopConfigChange={setLoopConfig}
-              currentFrame={currentFrame}
-              totalFrames={totalFrames}
-              onSeek={handleSeek}
-              frameRate={(animationData as Record<string, unknown>)?.fr as number ?? 30}
+              isPlaying={playback.isPlaying}
+              onTogglePlay={() => playback.setIsPlaying((p) => !p)}
+              speed={playback.speed}
+              onSpeedChange={playback.setSpeed}
+              loopConfig={playback.loopConfig}
+              onLoopConfigChange={playback.setLoopConfig}
+              currentFrame={playback.currentFrame}
+              totalFrames={playback.totalFrames}
+              onSeek={playback.handleSeek}
+              frameRate={(anim.animationData as Record<string, unknown>)?.fr as number ?? 30}
             />
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
-              <ArtboardPicker width={currentWidth} height={currentHeight} onChange={handleArtboardChange} />
+              <ArtboardPicker width={anim.currentWidth} height={anim.currentHeight} onChange={anim.handleArtboardChange} />
             </div>
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
-              <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
+              <BackgroundPicker value={anim.canvasBg} onChange={anim.handleBgChange} />
             </div>
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <ColorPalette
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
             </div>
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <TimingEditor
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
             </div>
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <EasingEditor
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
             </div>
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <button
-                onClick={() => setFullscreenOpen(true)}
-                disabled={!animationData}
+                onClick={() => panels.setFullscreenOpen(true)}
+                disabled={!anim.animationData}
                 title={t('editor.fullscreen')}
                 aria-label="Toggle fullscreen preview"
                 className="flex items-center justify-center w-8 h-8 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1332,23 +653,23 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           </div>
           <div className="hidden md:flex justify-center gap-2 px-4 pb-3">
             <button
-              onClick={handleUndo}
-              disabled={!canUndo}
+              onClick={anim.handleUndo}
+              disabled={!anim.canUndo}
               title="Undo (Ctrl+Z)"
               className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               Undo
             </button>
             <button
-              onClick={handleRedo}
-              disabled={!canRedo}
+              onClick={anim.handleRedo}
+              disabled={!anim.canRedo}
               title="Redo (Ctrl+Shift+Z)"
               className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               Redo
             </button>
             <button
-              onClick={handleRestart}
+              onClick={playback.handleRestart}
               className="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               Restart
@@ -1365,10 +686,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           <div role="tablist" aria-label="Editor panels" className="hidden md:flex items-center gap-1 px-2 py-1.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
             <button
               role="tab"
-              aria-selected={rightPanel === "chat"}
-              onClick={() => setRightPanel("chat")}
+              aria-selected={panels.rightPanel === "chat"}
+              onClick={() => panels.setRightPanel("chat")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                rightPanel === "chat"
+                panels.rightPanel === "chat"
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
@@ -1377,10 +698,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             </button>
             <button
               role="tab"
-              aria-selected={rightPanel === "json"}
-              onClick={() => setRightPanel("json")}
+              aria-selected={panels.rightPanel === "json"}
+              onClick={() => panels.setRightPanel("json")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                rightPanel === "json"
+                panels.rightPanel === "json"
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
@@ -1389,10 +710,10 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             </button>
             <button
               role="tab"
-              aria-selected={rightPanel === "layers"}
-              onClick={() => setRightPanel("layers")}
+              aria-selected={panels.rightPanel === "layers"}
+              onClick={() => panels.setRightPanel("layers")}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                rightPanel === "layers"
+                panels.rightPanel === "layers"
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
@@ -1401,7 +722,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             </button>
             <div className="flex-1" />
             <button
-              onClick={() => setShortcutsHelpOpen(true)}
+              onClick={() => panels.setShortcutsHelpOpen(true)}
               title={t('editor.shortcuts')}
               aria-label="Show keyboard shortcuts"
               className="px-2.5 py-1.5 rounded text-xs font-medium transition-colors text-zinc-400 hover:text-zinc-200"
@@ -1412,13 +733,13 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               </svg>
             </button>
             <button
-              onClick={() => setVersionPanelOpen((v) => !v)}
-              disabled={isNewMode}
+              onClick={() => panels.setVersionPanelOpen((v) => !v)}
+              disabled={anim.isNewMode}
               title={t('editor.versions')}
               aria-label="Toggle version history"
-              aria-expanded={versionPanelOpen}
+              aria-expanded={panels.versionPanelOpen}
               className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                versionPanelOpen
+                panels.versionPanelOpen
                   ? "bg-zinc-700 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
@@ -1432,36 +753,36 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           <div className="flex-1 min-h-0" data-tour="chat-input">
             {/* On mobile: show chat or layers based on mobileView. On desktop: use rightPanel */}
             {isMobile ? (
-              mobileView === "chat" ? (
+              panels.mobileView === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} onProgressivePreview={handleProgressivePreview} />
+                  <ChatPanel animationId={anim.currentId ?? undefined} insertText={anim.insertText} onAnimationCreated={anim.handleAnimationCreated} onAnimationUpdated={anim.handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={anim.selectedLayerIndex} animationData={anim.animationData} onLayerContextConsumed={() => anim.setSelectedLayerIndex(null)} onProgressivePreview={anim.handleProgressivePreview} />
                 </ErrorBoundary>
-              ) : mobileView === "layers" ? (
+              ) : panels.mobileView === "layers" ? (
                 <LayerPanel
-                  animationData={animationData}
+                  animationData={anim.animationData}
                   onSelectLayer={handleSelectLayer}
-                  onToggleVisibility={handleToggleVisibility}
-                  onChangeOpacity={handleChangeOpacity}
-                  onPreviewOpacity={handlePreviewOpacity}
-                  onReorderLayers={handleReorderLayers}
+                  onToggleVisibility={anim.handleToggleVisibility}
+                  onChangeOpacity={anim.handleChangeOpacity}
+                  onPreviewOpacity={anim.handlePreviewOpacity}
+                  onReorderLayers={anim.handleReorderLayers}
                 />
               ) : null
             ) : (
-              rightPanel === "chat" ? (
+              panels.rightPanel === "chat" ? (
                 <ErrorBoundary fallbackMessage={t('common.error')}>
-                  <ChatPanel animationId={currentId ?? undefined} insertText={insertText} onAnimationCreated={handleAnimationCreated} onAnimationUpdated={handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={selectedLayerIndex} animationData={animationData} onLayerContextConsumed={() => setSelectedLayerIndex(null)} onProgressivePreview={handleProgressivePreview} />
+                  <ChatPanel animationId={anim.currentId ?? undefined} insertText={anim.insertText} onAnimationCreated={anim.handleAnimationCreated} onAnimationUpdated={anim.handleAnimationUpdated} onCommand={handleCommand} initialPrompt={initialPrompt} selectedLayerIndex={anim.selectedLayerIndex} animationData={anim.animationData} onLayerContextConsumed={() => anim.setSelectedLayerIndex(null)} onProgressivePreview={anim.handleProgressivePreview} />
                 </ErrorBoundary>
-              ) : rightPanel === "layers" ? (
+              ) : panels.rightPanel === "layers" ? (
                 <LayerPanel
-                  animationData={animationData}
+                  animationData={anim.animationData}
                   onSelectLayer={handleSelectLayer}
-                  onToggleVisibility={handleToggleVisibility}
-                  onChangeOpacity={handleChangeOpacity}
-                  onPreviewOpacity={handlePreviewOpacity}
-                  onReorderLayers={handleReorderLayers}
+                  onToggleVisibility={anim.handleToggleVisibility}
+                  onChangeOpacity={anim.handleChangeOpacity}
+                  onPreviewOpacity={anim.handlePreviewOpacity}
+                  onReorderLayers={anim.handleReorderLayers}
                 />
               ) : (
-                <JsonEditor value={jsonText} onChange={handleJsonChange} />
+                <JsonEditor value={anim.jsonText} onChange={anim.handleJsonChange} />
               )
             )}
           </div>
@@ -1471,68 +792,68 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
 
       {/* Mobile bottom tab bar */}
       <MobileTabBar
-        activeTab={mobileView}
+        activeTab={panels.mobileView}
         onTabChange={(tab) => {
           if (tab === "settings") {
-            setSettingsSheetOpen(true);
+            panels.setSettingsSheetOpen(true);
             return;
           }
-          setMobileView(tab);
-          if (tab === "chat") setRightPanel("chat");
-          else if (tab === "layers") setRightPanel("layers");
+          panels.setMobileView(tab);
+          if (tab === "chat") panels.setRightPanel("chat");
+          else if (tab === "layers") panels.setRightPanel("layers");
         }}
       />
 
       {/* Mobile bottom sheet for JSON editor */}
       <BottomSheet
-        open={jsonSheetOpen}
-        onClose={() => setJsonSheetOpen(false)}
+        open={panels.jsonSheetOpen}
+        onClose={() => panels.setJsonSheetOpen(false)}
         title="JSON Editor"
       >
         <div className="h-[60dvh]">
-          <JsonEditor value={jsonText} onChange={handleJsonChange} />
+          <JsonEditor value={anim.jsonText} onChange={anim.handleJsonChange} />
         </div>
       </BottomSheet>
 
       {/* Mobile bottom sheet for settings */}
       <BottomSheet
-        open={settingsSheetOpen}
-        onClose={() => setSettingsSheetOpen(false)}
+        open={panels.settingsSheetOpen}
+        onClose={() => panels.setSettingsSheetOpen(false)}
         title="Settings"
       >
         <div className="px-4 py-3 space-y-4">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Canvas</h3>
             <div className="flex items-center gap-3">
-              <ArtboardPicker width={currentWidth} height={currentHeight} onChange={handleArtboardChange} />
-              <BackgroundPicker value={canvasBg} onChange={handleBgChange} />
+              <ArtboardPicker width={anim.currentWidth} height={anim.currentHeight} onChange={anim.handleArtboardChange} />
+              <BackgroundPicker value={anim.canvasBg} onChange={anim.handleBgChange} />
             </div>
           </div>
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tools</h3>
             <div className="flex items-center gap-3">
               <ColorPalette
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
               <TimingEditor
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
               <EasingEditor
-                animationData={animationData}
+                animationData={anim.animationData}
                 onChange={(updated) => {
-                  setAnimationData(updated as object);
-                  setJsonText(JSON.stringify(updated, null, 2));
-                  pushState(updated as object);
+                  anim.setAnimationData(updated as object);
+                  anim.setJsonText(JSON.stringify(updated, null, 2));
+                  anim.pushState(updated as object);
                 }}
               />
             </div>
@@ -1541,14 +862,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">View</h3>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => { setJsonSheetOpen(true); setSettingsSheetOpen(false); }}
+                onClick={() => { panels.setJsonSheetOpen(true); panels.setSettingsSheetOpen(false); }}
                 className="px-3 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors"
               >
                 JSON Editor
               </button>
               <button
-                onClick={() => { setVersionPanelOpen(true); setSettingsSheetOpen(false); }}
-                disabled={isNewMode}
+                onClick={() => { panels.setVersionPanelOpen(true); panels.setSettingsSheetOpen(false); }}
+                disabled={anim.isNewMode}
                 className="px-3 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:border-zinc-500 transition-colors disabled:opacity-50"
               >
                 Version History
@@ -1557,83 +878,83 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
           </div>
         </div>
       </BottomSheet>
-      {currentId && (
+      {anim.currentId && (
         <VersionHistory
-          animationId={currentId}
-          open={versionPanelOpen}
+          animationId={anim.currentId}
+          open={panels.versionPanelOpen}
           onClose={() => {
-            setVersionPanelOpen(false);
-            handleExitVersionPreview();
+            panels.setVersionPanelOpen(false);
+            version.handleExitVersionPreview();
           }}
-          onPreview={handleVersionPreview}
-          onExitPreview={handleExitVersionPreview}
-          previewingVersion={previewingVersion}
+          onPreview={version.handleVersionPreview}
+          onExitPreview={version.handleExitVersionPreview}
+          previewingVersion={version.previewingVersion}
         />
       )}
       <ShortcutsHelp
-        open={shortcutsHelpOpen}
-        onClose={() => setShortcutsHelpOpen(false)}
+        open={panels.shortcutsHelpOpen}
+        onClose={() => panels.setShortcutsHelpOpen(false)}
       />
       <CommandPalette
-        open={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
+        open={panels.commandPaletteOpen}
+        onClose={() => panels.setCommandPaletteOpen(false)}
         onCommand={handleCommand}
         onInsertText={(text) => {
-          setInsertText(text);
-          setRightPanel("chat");
-          setMobileView("chat");
-          setTimeout(() => setInsertText(""), 0);
+          anim.setInsertText(text);
+          panels.setRightPanel("chat");
+          panels.setMobileView("chat");
+          setTimeout(() => anim.setInsertText(""), 0);
         }}
         onNavigate={(path) => router.push(path)}
-        onSave={handleSave}
-        onToggleFullscreen={() => setFullscreenOpen((v) => !v)}
-        onToggleJson={() => setRightPanel("json")}
-        onToggleLayers={() => setRightPanel("layers")}
-        onShowShortcuts={() => setShortcutsHelpOpen(true)}
+        onSave={anim.handleSave}
+        onToggleFullscreen={() => panels.setFullscreenOpen((v) => !v)}
+        onToggleJson={() => panels.setRightPanel("json")}
+        onToggleLayers={() => panels.setRightPanel("layers")}
+        onShowShortcuts={() => panels.setShortcutsHelpOpen(true)}
         onToggleVersionHistory={() => {
-          if (!isNewMode) setVersionPanelOpen((v) => !v);
+          if (!anim.isNewMode) panels.setVersionPanelOpen((v) => !v);
         }}
-        onExportJson={handleExport}
-        onExportGif={() => handleExportGif({ preventDefault: () => {} } as MouseEvent)}
-        onExportApng={() => handleExportApng({ preventDefault: () => {} } as MouseEvent)}
-        onExportVideo={() => handleExportVideo({ preventDefault: () => {} } as MouseEvent)}
-        onExportDotLottie={handleExportDotLottie}
+        onExportJson={exportState.handleExport}
+        onExportGif={() => exportState.handleExportGif({ preventDefault: () => {} } as MouseEvent)}
+        onExportApng={() => exportState.handleExportApng({ preventDefault: () => {} } as MouseEvent)}
+        onExportVideo={() => exportState.handleExportVideo({ preventDefault: () => {} } as MouseEvent)}
+        onExportDotLottie={exportState.handleExportDotLottie}
       />
-      {fullscreenOpen && (
+      {panels.fullscreenOpen && (
         <FullscreenPreview
-          animationData={animationData}
-          isPlaying={isPlaying}
-          speed={speed}
-          currentFrame={currentFrame}
-          totalFrames={totalFrames}
-          onTogglePlay={() => setIsPlaying((p) => !p)}
-          onSpeedChange={setSpeed}
-          onSeek={handleSeek}
-          onClose={() => setFullscreenOpen(false)}
+          animationData={anim.animationData}
+          isPlaying={playback.isPlaying}
+          speed={playback.speed}
+          currentFrame={playback.currentFrame}
+          totalFrames={playback.totalFrames}
+          onTogglePlay={() => playback.setIsPlaying((p) => !p)}
+          onSpeedChange={playback.setSpeed}
+          onSeek={playback.handleSeek}
+          onClose={() => panels.setFullscreenOpen(false)}
         />
       )}
-      {currentId && (
+      {anim.currentId && (
         <EmbedDialog
-          animationId={currentId}
-          open={embedOpen}
-          onClose={() => setEmbedOpen(false)}
+          animationId={anim.currentId}
+          open={panels.embedOpen}
+          onClose={() => panels.setEmbedOpen(false)}
         />
       )}
-      <ThemePanel open={themePanelOpen} onClose={() => setThemePanelOpen(false)} />
-      {currentId && (
+      <ThemePanel open={panels.themePanelOpen} onClose={() => panels.setThemePanelOpen(false)} />
+      {anim.currentId && (
         <SubmitTemplateModal
-          open={submitTemplateOpen}
-          onClose={() => setSubmitTemplateOpen(false)}
-          animationId={currentId}
+          open={panels.submitTemplateOpen}
+          onClose={() => panels.setSubmitTemplateOpen(false)}
+          animationId={anim.currentId}
         />
       )}
       <ExportPresetDialog
-        open={presetDialogOpen}
-        onClose={() => setPresetDialogOpen(false)}
-        onExport={(preset) => { setPresetDialogOpen(false); handleExportPreset(preset); }}
-        animationData={animationData}
-        exporting={presetExporting}
-        exportProgress={presetProgress}
+        open={panels.presetDialogOpen}
+        onClose={() => panels.setPresetDialogOpen(false)}
+        onExport={(preset) => { panels.setPresetDialogOpen(false); exportState.handleExportPreset(preset); }}
+        animationData={anim.animationData}
+        exporting={exportState.presetExporting}
+        exportProgress={exportState.presetProgress}
       />
       <OnboardingTour />
     </div>
