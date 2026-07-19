@@ -14,11 +14,11 @@ function createMockMatchMedia() {
     matches,
     media: QUERY,
     onchange: null,
-    addEventListener: vi.fn((_event: string, cb: ChangeHandler) => {
-      listeners.add(cb);
+    addEventListener: vi.fn((_event: string, cb: EventListenerOrEventListenerObject) => {
+      listeners.add(cb as ChangeHandler);
     }),
-    removeEventListener: vi.fn((_event: string, cb: ChangeHandler) => {
-      listeners.delete(cb);
+    removeEventListener: vi.fn((_event: string, cb: EventListenerOrEventListenerObject) => {
+      listeners.delete(cb as ChangeHandler);
     }),
     addListener: vi.fn(),
     removeListener: vi.fn(),
