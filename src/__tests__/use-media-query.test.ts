@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useMediaQuery, useIsMobile, useIsTablet } from "@/hooks/useMediaQuery";
 
 type ChangeHandler = (e: MediaQueryListEvent) => void;
 
@@ -7,7 +9,7 @@ function createMockMatchMedia() {
   const listeners = new Map<string, Set<ChangeHandler>>();
   const states = new Map<string, boolean>();
 
-  const matchMedia = vi.fn((query: string) => {
+  const matchMedia = vi.fn((query: string): MediaQueryList => {
     if (!listeners.has(query)) {
       listeners.set(query, new Set());
     }
@@ -23,7 +25,7 @@ function createMockMatchMedia() {
       }),
       addListener: vi.fn(),
       removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
     };
   });
 
@@ -40,9 +42,22 @@ function createMockMatchMedia() {
   return { matchMedia, setMatch, listeners };
 }
 
-describe("useMediaQuery store logic", () => {
+describe("useMediaQuery SSR", () => {
+  it("server snapshot returns false via renderToString", async () => {
+    const React = await import("react");
+    const { renderToString } = await import("react-dom/server");
+    function TestComponent() {
+      const match = useMediaQuery("(min-width: 768px)");
+      return React.createElement("span", null, String(match));
+    }
+    const html = renderToString(React.createElement(TestComponent));
+    expect(html).toContain("false");
+  });
+});
+
+describe("useMediaQuery", () => {
   let mock: ReturnType<typeof createMockMatchMedia>;
-  const originalMatchMedia = globalThis.window?.matchMedia;
+  const originalMatchMedia = window.matchMedia;
 
   beforeEach(() => {
     mock = createMockMatchMedia();
@@ -61,98 +76,103 @@ describe("useMediaQuery store logic", () => {
     });
   });
 
-  it("matchMedia is called with the correct query", () => {
-    window.matchMedia("(min-width: 768px)");
-    expect(mock.matchMedia).toHaveBeenCalledWith("(min-width: 768px)");
-  });
-
-  it("returns false when query does not match", () => {
-    const mql = window.matchMedia("(min-width: 768px)");
-    expect(mql.matches).toBe(false);
+  it("returns false by default when query does not match", () => {
+    const { result } = renderHook(() => useMediaQuery("(min-width: 768px)"));
+    expect(result.current).toBe(false);
   });
 
   it("returns true when query matches", () => {
-    mock.matchMedia.mockImplementation((query: string) => ({
-      matches: true,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-
-    const mql = window.matchMedia("(min-width: 768px)");
-    expect(mql.matches).toBe(true);
+    mock.setMatch("(min-width: 768px)", true);
+    const { result } = renderHook(() => useMediaQuery("(min-width: 768px)"));
+    expect(result.current).toBe(true);
   });
 
-  it("addEventListener registers a change listener", () => {
-    const mql = window.matchMedia("(min-width: 1024px)");
-    const callback = vi.fn();
-    mql.addEventListener("change", callback);
+  it("responds to matchMedia change events", () => {
+    const { result } = renderHook(() => useMediaQuery("(min-width: 768px)"));
+    expect(result.current).toBe(false);
 
-    expect(mql.addEventListener).toHaveBeenCalledWith("change", callback);
+    act(() => {
+      mock.setMatch("(min-width: 768px)", true);
+    });
+    expect(result.current).toBe(true);
+
+    act(() => {
+      mock.setMatch("(min-width: 768px)", false);
+    });
+    expect(result.current).toBe(false);
   });
 
-  it("change listener fires when match state changes", () => {
-    const callback = vi.fn();
-    const mql = window.matchMedia("(max-width: 767px)");
-    mql.addEventListener("change", callback);
+  it("cleanup removes listeners on unmount", () => {
+    const { unmount } = renderHook(() => useMediaQuery("(min-width: 768px)"));
+    expect(mock.listeners.get("(min-width: 768px)")!.size).toBeGreaterThan(0);
 
+    unmount();
+    expect(mock.listeners.get("(min-width: 768px)")!.size).toBe(0);
+  });
+});
+
+describe("useIsMobile", () => {
+  let mock: ReturnType<typeof createMockMatchMedia>;
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    mock = createMockMatchMedia();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: mock.matchMedia,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: originalMatchMedia,
+    });
+  });
+
+  it("uses max-width: 767px breakpoint", () => {
+    renderHook(() => useIsMobile());
+    expect(mock.matchMedia).toHaveBeenCalledWith("(max-width: 767px)");
+  });
+
+  it("returns true when viewport is mobile-sized", () => {
     mock.setMatch("(max-width: 767px)", true);
-    expect(callback).toHaveBeenCalledTimes(1);
-    expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({ matches: true })
-    );
-
-    mock.setMatch("(max-width: 767px)", false);
-    expect(callback).toHaveBeenCalledTimes(2);
-    expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({ matches: false })
-    );
-  });
-
-  it("removeEventListener stops notifications", () => {
-    const callback = vi.fn();
-    const mql = window.matchMedia("(max-width: 767px)");
-    mql.addEventListener("change", callback);
-
-    mock.setMatch("(max-width: 767px)", true);
-    expect(callback).toHaveBeenCalledTimes(1);
-
-    mql.removeEventListener("change", callback);
-    mock.setMatch("(max-width: 767px)", false);
-    expect(callback).toHaveBeenCalledTimes(1);
+    const { result } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(true);
   });
 });
 
-describe("useIsMobile breakpoint", () => {
-  it("uses max-width: 767px (below Tailwind md)", () => {
-    const query = "(max-width: 767px)";
-    expect(query).toBe("(max-width: 767px)");
+describe("useIsTablet", () => {
+  let mock: ReturnType<typeof createMockMatchMedia>;
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    mock = createMockMatchMedia();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: mock.matchMedia,
+    });
   });
 
-  it("767px is one less than the Tailwind md breakpoint (768px)", () => {
-    expect(768 - 1).toBe(767);
+  afterEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: originalMatchMedia,
+    });
   });
-});
 
-describe("useMediaQuery exports", () => {
-  it("exports useMediaQuery, useIsMobile, and useIsTablet", async () => {
-    const mod = await import("@/hooks/useMediaQuery");
-    expect(typeof mod.useMediaQuery).toBe("function");
-    expect(typeof mod.useIsMobile).toBe("function");
-    expect(typeof mod.useIsTablet).toBe("function");
+  it("uses max-width: 1023px breakpoint", () => {
+    renderHook(() => useIsTablet());
+    expect(mock.matchMedia).toHaveBeenCalledWith("(max-width: 1023px)");
   });
-});
 
-describe("useMediaQuery hook implementation", () => {
-  it("uses useSyncExternalStore with SSR-safe server snapshot", async () => {
-    const source = await import("@/hooks/useMediaQuery?raw");
-    const code = typeof source === "string" ? source : (source as { default: string }).default;
-    expect(code).toContain("useSyncExternalStore");
-    // Server snapshot must return false to match SSR output
-    expect(code).toContain("false");
+  it("returns true when viewport is tablet-sized", () => {
+    mock.setMatch("(max-width: 1023px)", true);
+    const { result } = renderHook(() => useIsTablet());
+    expect(result.current).toBe(true);
   });
 });
