@@ -367,7 +367,7 @@ describe("useChatMessages", () => {
     act(() => {
       result.current.setMessages((prev) => [
         ...prev,
-        { id: "3", role: "assistant" as const, content: "c", suggestions: [{ label: "x", prompt: "y" }] },
+        { id: "3", role: "assistant" as const, content: "c", suggestions: ["x"] },
       ]);
     });
 
