@@ -2476,4 +2476,77 @@ describe("useChatSend", () => {
       expect(result.current.isThinking).toBe(false);
     });
   });
+
+  describe("fence buffer while-loop inside json block (lines 203-205)", () => {
+    it("flushes multiple non-fence chars from fenceBuffer inside a json block", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      // Enter json block, then send "``xy" char-by-char while inside.
+      // After "``x": fenceBuffer="``x", "```".startsWith("``x") is false →
+      // flush fenceBuffer[0] ("`"), slice to "`x", while loop: "`x" — "```".startsWith("`x") false →
+      // flush "`", slice to "x", "```".startsWith("x") false → flush "x", empty. Lines 203-205 hit.
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "```json\n" },
+        { type: "token", text: "`" },
+        { type: "token", text: "`" },
+        { type: "token", text: "x" },
+        { type: "token", text: "y" },
+        { type: "done", reply: "done" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("repair fence buffer while-loop inside json block (line 262)", () => {
+    it("flushes multiple non-fence chars from repairFenceBuffer inside a json block", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      // Same pattern but for repair_token: enter json block, then "``x" triggers the while loop
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "```json\n" },
+        { type: "repair_token", text: "`" },
+        { type: "repair_token", text: "`" },
+        { type: "repair_token", text: "x" },
+        { type: "repair_token", text: "y" },
+        { type: "done", reply: "done" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("handleRandomAnimation error handling (lines 552-553)", () => {
+    it("sets error for non-AbortError in /random command", async () => {
+      const { parseCommand } = await import("@/lib/commands");
+      const { apiFetch } = await import("@/lib/apiFetch");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "random" } as ReturnType<typeof parseCommand>);
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockRejectedValue(new Error("Network failure"));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/random"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(result.current.error).toBe("Network failure");
+    });
+  });
 });
