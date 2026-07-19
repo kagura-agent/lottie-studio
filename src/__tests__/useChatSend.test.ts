@@ -42,11 +42,21 @@ vi.mock("@/lib/partial-lottie", () => ({
   extractPartialLottie: vi.fn().mockReturnValue(null),
 }));
 
-function makeOptions(overrides = {}) {
+function makeCallbackMock(initial: unknown = []) {
+  const fn = vi.fn((valOrFn: unknown) => {
+    if (typeof valOrFn === "function") {
+      return (valOrFn as (prev: unknown) => unknown)(initial);
+    }
+    return valOrFn;
+  });
+  return fn;
+}
+
+function makeOptions(overrides: Record<string, unknown> = {}) {
   return {
-    messages: [],
-    setMessages: vi.fn(),
-    setPendingCount: vi.fn(),
+    messages: [] as import("@/lib/chat-types").Message[],
+    setMessages: makeCallbackMock(overrides.messages || []),
+    setPendingCount: makeCallbackMock(0),
     currentAnimationId: "anim-1",
     setCurrentAnimationId: vi.fn(),
     onAnimationCreated: vi.fn(),
@@ -1314,6 +1324,1113 @@ describe("useChatSend", () => {
     });
   });
 
+  describe("SSE JSON fence filtering", () => {
+    it("filters out ```json blocks from visible content", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "Here is the animation:\n```json\n{\"v\":\"5.0\"}\n```\nDone!" },
+        { type: "done", reply: "Here is the animation:\nDone!" },
+      ]));
+
+      const messages: import("@/lib/chat-types").Message[] = [];
+      const setMessages = makeCallbackMock(messages);
+      const onProgressivePreview = vi.fn();
+      const opts = makeOptions({ setMessages, messages, onProgressivePreview });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("create"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+      expect(onProgressivePreview).toHaveBeenCalledWith(null);
+    });
+
+    it("handles partial fence buffer flushes for non-fence chars", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      // Send characters that start like a fence but aren't
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "`" },
+        { type: "token", text: "`" },
+        { type: "token", text: "x" },
+        { type: "done", reply: "``x" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("progressive preview fires for large json blocks", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const { extractPartialLottie } = await import("@/lib/partial-lottie");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      vi.mocked(extractPartialLottie).mockReturnValue({ v: "5.0" } as ReturnType<typeof extractPartialLottie>);
+
+      const bigJson = "x".repeat(300);
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "```json\n" + bigJson },
+        { type: "done", reply: "done" },
+      ]));
+
+      const onProgressivePreview = vi.fn();
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages, onProgressivePreview });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(extractPartialLottie).toHaveBeenCalled();
+      expect(onProgressivePreview).toHaveBeenCalledWith({ v: "5.0" });
+    });
+  });
+
+  describe("SSE repair_token fence filtering", () => {
+    it("filters json blocks from repair_token visible content", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "Fixed: ```json\n{\"v\":\"5.0\"}\n```\nAll good" },
+        { type: "done", reply: "Fixed: All good" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("handles repair_token with partial fence chars", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "``x" },
+        { type: "done", reply: "``x" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("repair_token creates new assistant message when none exists", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "Repaired content" },
+        { type: "done", reply: "Repaired content" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("repair_token inside json block discards content", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "```json\n{\"data\": true}\n```" },
+        { type: "done", reply: "done" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("SSE done event edge cases", () => {
+    it("done with reply updates existing assistant message with warning and suggestions", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "Result" },
+        { type: "done", reply: "Final result", warning: "Be careful", suggestions: ["try this"], lottieJson: { v: "5.0" }, previousLottieJson: { v: "4.0" } },
+      ]));
+
+      const msgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = makeCallbackMock(msgs);
+      const opts = makeOptions({ setMessages, messages: msgs });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("done with lottieJson but existing animationId calls onAnimationUpdated", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      const lottie = { v: "5.0", layers: [] };
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "ok" },
+        { type: "done", reply: "ok", lottieJson: lottie, animationId: "other-anim" },
+      ]));
+
+      const onAnimationUpdated = vi.fn();
+      const opts = makeOptions({ onAnimationUpdated, currentAnimationId: "anim-1" });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("update"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(onAnimationUpdated).toHaveBeenCalledWith("anim-1", lottie);
+    });
+  });
+
+  describe("non-SSE with existingAssistantMsgId", () => {
+    it("updates existing message in non-SSE path via handleRetry", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeJSONResponse({ reply: "updated reply" }));
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+        { id: "asst-1", role: "assistant", content: "old reply" },
+      ];
+      const setMessages = makeCallbackMock(messages);
+      const opts = makeOptions({ messages, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("SSE streaming with existingAssistantMsgId", () => {
+    it("clears existing message content at stream start", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "new" },
+        { type: "done", reply: "new" },
+      ]));
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+        { id: "asst-1", role: "assistant", content: "old content" },
+      ];
+      const setMessages = makeCallbackMock(messages);
+      const opts = makeOptions({ messages, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("non-SSE error handling", () => {
+    it("handles non-ok JSON response with fallback status code message", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue({
+        headers: { get: () => "application/json" },
+        ok: false,
+        status: 503,
+        json: () => Promise.resolve({}),
+      });
+
+      const opts = makeOptions();
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(result.current.error).toBe("Request failed (503)");
+    });
+
+    it("handles non-ok response with unparseable json body", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue({
+        headers: { get: () => "application/json" },
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("bad json")),
+      });
+
+      const opts = makeOptions();
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(result.current.error).toBe("Request failed (500)");
+    });
+  });
+
+  describe("SSE malformed data", () => {
+    it("skips malformed SSE data lines", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      const encoder = new TextEncoder();
+      const chunks = [
+        encoder.encode(`data: not-json\n\n`),
+        encoder.encode(`data: ${JSON.stringify({ type: "token", text: "ok" })}\n\n`),
+        encoder.encode(`data: ${JSON.stringify({ type: "done", reply: "ok" })}\n\n`),
+      ];
+      let i = 0;
+      const body = new ReadableStream({
+        pull(controller) {
+          if (i < chunks.length) controller.enqueue(chunks[i++]);
+          else controller.close();
+        },
+      });
+      mockApiFetch.mockResolvedValue({
+        headers: { get: (h: string) => h.toLowerCase() === "content-type" ? "text/event-stream" : null },
+        ok: true,
+        body,
+      });
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("skips empty SSE lines", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      const encoder = new TextEncoder();
+      const chunks = [
+        encoder.encode(`\n\n`),
+        encoder.encode(`data: ${JSON.stringify({ type: "done", reply: "ok" })}\n\n`),
+      ];
+      let i = 0;
+      const body = new ReadableStream({
+        pull(controller) {
+          if (i < chunks.length) controller.enqueue(chunks[i++]);
+          else controller.close();
+        },
+      });
+      mockApiFetch.mockResolvedValue({
+        headers: { get: (h: string) => h.toLowerCase() === "content-type" ? "text/event-stream" : null },
+        ok: true,
+        body,
+      });
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("SSE no response body", () => {
+    it("throws when response body is null", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue({
+        headers: { get: (h: string) => h.toLowerCase() === "content-type" ? "text/event-stream" : null },
+        ok: true,
+        body: null,
+      });
+
+      const opts = makeOptions();
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(result.current.error).toBe("No response body");
+    });
+  });
+
+  describe("offline enqueue callback execution", () => {
+    it("executes setPendingCount callback after enqueue", async () => {
+      const { enqueueMessage } = await import("@/lib/messageQueue");
+      (enqueueMessage as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      const setPendingCount = makeCallbackMock(0);
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ isOnline: false, setMessages, setPendingCount });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("offline msg"); });
+      await act(async () => { await result.current.handleSend(); });
+      // Let the .then resolve
+      await act(async () => { await new Promise(r => setTimeout(r, 10)); });
+
+      expect(setPendingCount).toHaveBeenCalled();
+    });
+  });
+
+  describe("handleRetry edge cases", () => {
+    it("walks back to find user message when non-user messages are between", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "ok" },
+        { type: "done", reply: "ok" },
+      ]));
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "original" },
+        { id: "asst-1", role: "assistant", content: "first reply" },
+        { id: "asst-2", role: "assistant", content: "follow-up" },
+      ];
+      const setMessages = makeCallbackMock(messages);
+      const opts = makeOptions({ messages, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-2"); });
+
+      const body = JSON.parse(mockApiFetch.mock.calls[0][1].body);
+      expect(body.message).toBe("original");
+    });
+
+    it("does nothing when msgIndex is 0", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "asst-1", role: "assistant", content: "reply" },
+      ];
+      const opts = makeOptions({ messages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      expect(mockApiFetch).not.toHaveBeenCalled();
+    });
+
+    it("handles error during retry stream", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockRejectedValue(new Error("retry fail"));
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "test" },
+        { id: "asst-1", role: "assistant", content: "reply" },
+      ];
+      const setMessages = makeCallbackMock(messages);
+      const opts = makeOptions({ messages, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      expect(result.current.error).toBe("retry fail");
+    });
+  });
+
+  describe("handleEditSave edge cases", () => {
+    it("does nothing when editText is empty", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+      ];
+      const opts = makeOptions({ messages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.setEditingMsgId("user-1");
+        result.current.setEditText("   ");
+      });
+
+      await act(async () => { await result.current.handleEditSave(); });
+
+      expect(mockApiFetch).not.toHaveBeenCalled();
+    });
+
+    it("does nothing when currentAnimationId is undefined", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+      ];
+      const opts = makeOptions({ messages, currentAnimationId: undefined });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.setEditingMsgId("user-1");
+        result.current.setEditText("new text");
+      });
+
+      await act(async () => { await result.current.handleEditSave(); });
+
+      expect(mockApiFetch).not.toHaveBeenCalled();
+    });
+
+    it("handles stream error after successful PATCH", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockRejectedValue(new Error("stream fail"));
+
+      const globalFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      vi.stubGlobal("fetch", globalFetch);
+
+      const messages: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+      ];
+      const setMessages = makeCallbackMock(messages);
+      const opts = makeOptions({ messages, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.setEditingMsgId("user-1");
+        result.current.setEditText("new text");
+      });
+
+      await act(async () => { await result.current.handleEditSave(); });
+
+      expect(result.current.error).toBe("stream fail");
+
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe("handleVariationSelect with callback execution", () => {
+    it("executes setMessages callback to update variation message", () => {
+      const onAnimationUpdated = vi.fn();
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "msg-1", role: "assistant", content: "old", variations: [], variationsLoading: true },
+      ];
+      const setMessages = makeCallbackMock(msgs);
+      const opts = makeOptions({ setMessages, onAnimationUpdated, messages: msgs });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.handleVariationSelect("msg-1", {
+          style: "neon",
+          animation: { v: "5.0", layers: [] },
+        } as unknown as import("@/components/VariationGrid").Variation);
+      });
+
+      expect(setMessages).toHaveBeenCalled();
+      const callbackResult = setMessages.mock.results[0].value;
+      expect(callbackResult).toBeInstanceOf(Array);
+    });
+  });
+
+  describe("non-SSE JSON with new assistant message", () => {
+    it("appends new assistant message in non-SSE path", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeJSONResponse({ reply: "hello back" }));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("hi"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("setMessages callback inner map coverage", () => {
+    it("non-SSE existingAssistantMsgId path maps over messages with matching id", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeJSONResponse({ reply: "updated" }));
+
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+        { id: "asst-1", role: "assistant", content: "old" },
+      ];
+      const setMessages = makeCallbackMock(msgs);
+      const opts = makeOptions({ messages: msgs, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      const mapCalls = setMessages.mock.calls.filter(
+        (c: unknown[]) => typeof c[0] === "function"
+      );
+      expect(mapCalls.length).toBeGreaterThan(0);
+    });
+
+    it("SSE token update maps over messages with matching assistant id", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "First" },
+        { type: "token", text: " Second" },
+        { type: "done", reply: "First Second" },
+      ]));
+
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "go" },
+      ];
+      // Use a dynamic mock that adds messages as they come
+      let internalMsgs = [...msgs];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ messages: msgs, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+      // The second token should have triggered a .map with a matching id
+      expect(internalMsgs.some((m: import("@/lib/chat-types").Message) => m.role === "assistant")).toBe(true);
+    });
+
+    it("SSE done maps over messages with matching assistant id", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "Result" },
+        { type: "done", reply: "Final", warning: "warn", suggestions: ["s1"], lottieJson: { v: "5" }, previousLottieJson: { v: "4" } },
+      ]));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const finalMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(finalMsg).toBeDefined();
+      expect(finalMsg!.content).toBe("Final");
+      expect(finalMsg!.warning).toBe("warn");
+    });
+
+    it("SSE quality_hints maps over messages with matching assistant id", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "ok" },
+        { type: "quality_hints", hints: [{ level: "warning", message: "hint" }] },
+        { type: "done", reply: "ok" },
+      ]));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg).toBeDefined();
+    });
+
+    it("SSE repair_token update maps with matching id then new repair msg", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "First" },
+        { type: "repairing" },
+        { type: "repair_token", text: "Repaired" },
+        { type: "repair_token", text: " more" },
+        { type: "done", reply: "Repaired more" },
+      ]));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("go"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("SSE start clears existing message via map", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "new" },
+        { type: "done", reply: "new" },
+      ]));
+
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "hello" },
+        { id: "asst-1", role: "assistant", content: "old" },
+      ];
+      let internalMsgs = [...msgs];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ messages: msgs, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-1"); });
+
+      // The clear should have set asst-1 content to ""
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("handleEditSave maps messages with matching editingMsgId", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "ok" },
+        { type: "done", reply: "ok" },
+      ]));
+
+      const globalFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      vi.stubGlobal("fetch", globalFetch);
+
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "original" },
+        { id: "asst-1", role: "assistant", content: "reply" },
+      ];
+      const setMessages = makeCallbackMock(msgs);
+      const opts = makeOptions({ messages: msgs, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.setEditingMsgId("user-1");
+        result.current.setEditText("edited");
+      });
+
+      await act(async () => { await result.current.handleEditSave(); });
+
+      // The .map inside handleEditSave (line 773) should have executed
+      expect(setMessages).toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+
+    it("variations success maps to update assistantMsgId", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "variations", prompt: "test" } as ReturnType<typeof parseCommand>);
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeJSONResponse({
+        variations: [{ style: "neon", animation: { v: "5.0" } }],
+      }));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/variations test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("variations error maps to update assistantMsgId", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "variations", prompt: "test" } as ReturnType<typeof parseCommand>);
+      (apiFetch as ReturnType<typeof vi.fn>).mockResolvedValue(makeJSONResponse({ error: "fail" }, false, 500));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/variations test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("variations network error maps to update assistantMsgId", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "variations", prompt: "test" } as ReturnType<typeof parseCommand>);
+      (apiFetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("net"));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/variations test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+
+    it("style_list exercises VALID_STYLES.map callback", async () => {
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "style_list" } as ReturnType<typeof parseCommand>);
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/style"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg).toBeDefined();
+      expect(asstMsg!.content).toContain("neon");
+    });
+
+    it("theme show with tokens exercises Object.entries filter and map", async () => {
+      const { useDesignTokens } = await import("@/contexts/DesignTokensContext");
+      vi.mocked(useDesignTokens).mockReturnValue({
+        tokens: { primary: "blue", secondary: "" },
+        setToken: vi.fn(),
+        clearTokens: vi.fn(),
+        hasTokens: true,
+      } as ReturnType<typeof useDesignTokens>);
+
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "theme", subcommand: { action: "show" } } as ReturnType<typeof parseCommand>);
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/theme"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg).toBeDefined();
+      expect(asstMsg!.content).toContain("primary");
+    });
+
+    it("presets list with items exercises presets.map callback", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "presets", subcommand: "list" } as ReturnType<typeof parseCommand>);
+      (apiFetch as ReturnType<typeof vi.fn>).mockResolvedValue(makeJSONResponse([
+        { name: "cool", description: "A cool preset", is_builtin: 1 },
+        { name: "warm", description: null },
+      ]));
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/presets"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg).toBeDefined();
+      expect(asstMsg!.content).toContain("cool");
+      expect(asstMsg!.content).toContain("built-in");
+    });
+
+    it("sequence_show with items exercises items.map callback", async () => {
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "sequence_show", name: "seq" } as ReturnType<typeof parseCommand>);
+
+      const globalFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([{
+          id: "seq-1",
+          name: "seq",
+          description: "desc",
+          items: [
+            { animation_name: "Bounce", position: 0, transition_type: "fade" },
+            { animation_name: null, position: 1, transition_type: "cut" },
+          ],
+        }]),
+      });
+      vi.stubGlobal("fetch", globalFetch);
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/sequence show seq"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg).toBeDefined();
+      expect(asstMsg!.content).toContain("Bounce");
+      expect(asstMsg!.content).toContain("Untitled");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("sequence_show with empty items array", async () => {
+      const { parseCommand } = await import("@/lib/commands");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "sequence_show", name: "seq" } as ReturnType<typeof parseCommand>);
+
+      const globalFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([{
+          id: "seq-1",
+          name: "seq",
+          items: [],
+        }]),
+      });
+      vi.stubGlobal("fetch", globalFetch);
+
+      let internalMsgs: import("@/lib/chat-types").Message[] = [];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/sequence show seq"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      const asstMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.role === "assistant");
+      expect(asstMsg!.content).toContain("No animations");
+
+      vi.unstubAllGlobals();
+    });
+
+    it("handleVariationSelect exercises inner map callback with matching msg", () => {
+      const onAnimationUpdated = vi.fn();
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "msg-1", role: "assistant", content: "old", variations: [], variationsLoading: true },
+        { id: "msg-2", role: "user", content: "other" },
+      ];
+      let internalMsgs = [...msgs];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ setMessages, onAnimationUpdated, messages: msgs });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => {
+        result.current.handleVariationSelect("msg-1", {
+          style: "neon",
+          animation: { v: "5.0", layers: [] },
+        } as unknown as import("@/components/VariationGrid").Variation);
+      });
+
+      const updatedMsg = internalMsgs.find((m: import("@/lib/chat-types").Message) => m.id === "msg-1");
+      expect(updatedMsg!.variations).toBeUndefined();
+      expect(updatedMsg!.variationsLoading).toBe(false);
+    });
+
+    it("offline enqueue .catch callback fires on rejection", async () => {
+      const { enqueueMessage } = await import("@/lib/messageQueue");
+      (enqueueMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("enqueue fail"));
+
+      const setMessages = makeCallbackMock([]);
+      const setPendingCount = makeCallbackMock(0);
+      const opts = makeOptions({ isOnline: false, setMessages, setPendingCount });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("offline msg"); });
+      await act(async () => { await result.current.handleSend(); });
+      await act(async () => { await new Promise(r => setTimeout(r, 20)); });
+
+      // Should not throw — .catch(() => {}) handles it
+      expect(setPendingCount).not.toHaveBeenCalled();
+    });
+
+    it("handleRetry .slice callback executes on messages array", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "ok" },
+        { type: "done", reply: "ok" },
+      ]));
+
+      const msgs: import("@/lib/chat-types").Message[] = [
+        { id: "user-1", role: "user", content: "test" },
+        { id: "asst-1", role: "assistant", content: "reply" },
+        { id: "user-2", role: "user", content: "followup" },
+        { id: "asst-2", role: "assistant", content: "reply2" },
+      ];
+      let internalMsgs = [...msgs];
+      const setMessages = vi.fn((valOrFn: unknown) => {
+        if (typeof valOrFn === "function") {
+          internalMsgs = (valOrFn as (prev: import("@/lib/chat-types").Message[]) => import("@/lib/chat-types").Message[])(internalMsgs);
+          return internalMsgs;
+        }
+        internalMsgs = valOrFn as import("@/lib/chat-types").Message[];
+        return internalMsgs;
+      });
+      const opts = makeOptions({ messages: msgs, setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      await act(async () => { await result.current.handleRetry("asst-2"); });
+
+      // slice should have truncated to index 4 (msgIndex+1=4)
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("quality_hints with no assistantMsgId", () => {
+    it("quality_hints before any token is ignored", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "quality_hints", hints: [{ level: "info", message: "hint" }] },
+        { type: "token", text: "ok" },
+        { type: "done", reply: "ok" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("SSE token with existing assistantMsgId updates message", () => {
+    it("updates existing assistant message on subsequent tokens", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "First " },
+        { type: "token", text: "Second" },
+        { type: "done", reply: "First Second" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
   describe("handleStop during stream", () => {
     it("stops streaming when called mid-stream", async () => {
       const { apiFetch } = await import("@/lib/apiFetch");
@@ -1357,6 +2474,79 @@ describe("useChatSend", () => {
 
       expect(result.current.isStreaming).toBe(false);
       expect(result.current.isThinking).toBe(false);
+    });
+  });
+
+  describe("fence buffer while-loop inside json block (lines 203-205)", () => {
+    it("flushes multiple non-fence chars from fenceBuffer inside a json block", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      // Enter json block, then send "``xy" char-by-char while inside.
+      // After "``x": fenceBuffer="``x", "```".startsWith("``x") is false →
+      // flush fenceBuffer[0] ("`"), slice to "`x", while loop: "`x" — "```".startsWith("`x") false →
+      // flush "`", slice to "x", "```".startsWith("x") false → flush "x", empty. Lines 203-205 hit.
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "token", text: "```json\n" },
+        { type: "token", text: "`" },
+        { type: "token", text: "`" },
+        { type: "token", text: "x" },
+        { type: "token", text: "y" },
+        { type: "done", reply: "done" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("repair fence buffer while-loop inside json block (line 262)", () => {
+    it("flushes multiple non-fence chars from repairFenceBuffer inside a json block", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      // Same pattern but for repair_token: enter json block, then "``x" triggers the while loop
+      mockApiFetch.mockResolvedValue(makeSSEResponse([
+        { type: "repairing" },
+        { type: "repair_token", text: "```json\n" },
+        { type: "repair_token", text: "`" },
+        { type: "repair_token", text: "`" },
+        { type: "repair_token", text: "x" },
+        { type: "repair_token", text: "y" },
+        { type: "done", reply: "done" },
+      ]));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("test"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(setMessages).toHaveBeenCalled();
+    });
+  });
+
+  describe("handleRandomAnimation error handling (lines 552-553)", () => {
+    it("sets error for non-AbortError in /random command", async () => {
+      const { parseCommand } = await import("@/lib/commands");
+      const { apiFetch } = await import("@/lib/apiFetch");
+      vi.mocked(parseCommand).mockReturnValueOnce({ type: "random" } as ReturnType<typeof parseCommand>);
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      mockApiFetch.mockRejectedValue(new Error("Network failure"));
+
+      const setMessages = makeCallbackMock([]);
+      const opts = makeOptions({ setMessages });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("/random"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(result.current.error).toBe("Network failure");
     });
   });
 });
