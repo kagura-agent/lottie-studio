@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useExportState } from "../useExportState";
+import type { ExportFormat } from "@/lib/exportPresets";
 
 // ── Toast mock ──────────────────────────────────────────────
 const mockToast = vi.fn();
@@ -474,7 +475,7 @@ describe("useExportState", () => {
     const makePreset = (
       overrides: Partial<{
         id: string;
-        format: string;
+        format: ExportFormat;
         platform: string;
         maxFileSize: number;
         width: number;
