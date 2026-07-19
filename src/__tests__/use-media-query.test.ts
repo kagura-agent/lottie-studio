@@ -19,10 +19,10 @@ function createMockMatchMedia() {
       onchange: null,
       addEventListener: vi.fn((_event: string, cb: ChangeHandler) => {
         listeners.get(query)!.add(cb);
-      }),
+      }) as any,
       removeEventListener: vi.fn((_event: string, cb: ChangeHandler) => {
         listeners.get(query)!.delete(cb);
-      }),
+      }) as any,
       addListener: vi.fn(),
       removeListener: vi.fn(),
       dispatchEvent: vi.fn(() => true),
