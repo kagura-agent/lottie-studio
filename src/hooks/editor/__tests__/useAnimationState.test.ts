@@ -11,8 +11,8 @@ vi.mock("@/contexts/ToastContext", () => ({
 }));
 
 const mockPushState = vi.fn();
-const mockUndo = vi.fn(() => null);
-const mockRedo = vi.fn(() => null);
+const mockUndo = vi.fn((): object | null => null);
+const mockRedo = vi.fn((): object | null => null);
 vi.mock("@/hooks/useAnimationHistory", () => ({
   useAnimationHistory: () => ({
     pushState: mockPushState,
@@ -56,12 +56,12 @@ vi.mock("@/hooks/chat/useProgressivePreview", () => ({
 
 const mockSaveAnimation = vi.fn(() => Promise.resolve());
 vi.mock("@/lib/offlineStorage", () => ({
-  saveAnimation: (...args: unknown[]) => mockSaveAnimation(...args),
+  saveAnimation: (...args: Parameters<typeof mockSaveAnimation>) => mockSaveAnimation(...args),
 }));
 
 const mockCaptureAndUploadThumbnail = vi.fn();
 vi.mock("@/lib/captureThumbnail", () => ({
-  captureAndUploadThumbnail: (...args: unknown[]) => mockCaptureAndUploadThumbnail(...args),
+  captureAndUploadThumbnail: (...args: Parameters<typeof mockCaptureAndUploadThumbnail>) => mockCaptureAndUploadThumbnail(...args),
 }));
 
 const mockGetItem = vi.fn();
