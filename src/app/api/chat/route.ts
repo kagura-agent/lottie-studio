@@ -6,6 +6,7 @@ import {
   handleCompose,
   handleLayerCommand,
   handleCritique,
+  handleFix,
   handlePolish,
   handlePresetCommand,
   handleRetime,
@@ -90,6 +91,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "critique") {
     return handleCritique(animationId, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "fix") {
+    return handleFix(animationId, message);
   }
 
   if (parsedCmd && parsedCmd.type === "polish") {

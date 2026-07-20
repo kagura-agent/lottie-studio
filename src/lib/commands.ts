@@ -96,6 +96,7 @@ export type Command =
   | { type: "delete_layer"; name: string }
   | { type: "rename_layer"; oldName: string; newName: string }
   | { type: "critique" }
+  | { type: "fix" }
   | { type: "polish" }
   | { type: "a11y" }
   | { type: "help" }
@@ -492,6 +493,9 @@ export function parseCommand(input: string): Command | null {
 
     case "critique":
       return { type: "critique" };
+
+    case "fix":
+      return { type: "fix" };
 
     case "polish":
       return { type: "polish" };

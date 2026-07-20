@@ -2,6 +2,7 @@ export { handleUndo } from "./undo";
 export { handleCompose } from "./compose";
 export { handleLayerCommand } from "./layers";
 export { handleCritique } from "./critique";
+export { handleFix } from "./fix";
 export { handlePolish } from "./polish";
 export { handlePresetCommand } from "./presets";
 export { handleRetime } from "./retime";
