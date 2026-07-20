@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/db", () => ({
@@ -43,50 +44,6 @@ async function collectSSE(response: Response): Promise<string[]> {
   return chunks;
 }
 
-// Helper to parse SSE data lines
-function parseSSEChunks(chunks: string[]): Array<Record<string, unknown>> {
-  const events: Array<Record<string, unknown>> = [];
-  for (const chunk of chunks) {
-    const lines = chunk.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          events.push(JSON.parse(line.slice(6)));
-        } catch {
-          // ignore non-JSON
-        }
-      }
-    }
-  }
-  return events;
-}
-
-// Helper to collect streaming response (non-SSE format used by createStreamingSSEResponse)
-async function collectStream(response: Response): Promise<Array<Record<string, unknown>>> {
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-  const events: Array<Record<string, unknown>> = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const text = decoder.decode(value);
-    const lines = text.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          events.push(JSON.parse(JSON.parse(line.slice(6)).text || "{}"));
-        } catch {
-          try {
-            events.push(JSON.parse(line.slice(6)));
-          } catch {
-            // ignore
-          }
-        }
-      }
-    }
-  }
-  return events;
-}
 
 describe("diagnoseAndFix", () => {
   describe("no layers", () => {
