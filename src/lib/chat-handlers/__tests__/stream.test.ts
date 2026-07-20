@@ -47,6 +47,18 @@ vi.mock("@/lib/optimizer", () => ({
   removeHiddenLayers: vi.fn(),
 }));
 
+vi.mock("@/lib/quality", () => ({
+  analyzeQuality: vi.fn(() => ({ checks: [] })),
+}));
+
+vi.mock("@/lib/animation-diff", () => ({
+  summarizeChanges: vi.fn(() => null),
+}));
+
+vi.mock("@/lib/validation", () => ({
+  validateStructure: vi.fn(() => ({ issues: [] })),
+}));
+
 vi.mock("node:crypto", () => ({
   randomUUID: () => "test-uuid",
 }));
@@ -66,6 +78,12 @@ import { buildDesignTokensPrompt } from "@/lib/prompts";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import { validateAndFix, roundDecimals, removeEmptyGroups, removeHiddenLayers } from "@/lib/optimizer";
+import { analyzeQuality } from "@/lib/quality";
+import { summarizeChanges } from "@/lib/animation-diff";
+import { validateStructure } from "@/lib/validation";
+import { compactHistory } from "@/lib/chat-utils";
+import { getAllPresets } from "@/lib/db";
+import { buildPresetPrompt } from "@/lib/prompts";
 import fs from "node:fs";
 import { handleMainChat } from "../stream";
 
@@ -591,5 +609,313 @@ describe("handleMainChat", () => {
 
     const text = await readSSEResponse(res);
     expect(text).toContain("missing width");
+  });
+
+  it("triggers repair on invalid_lottie parse error", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [] };
+    const stream = makeSSEStream("bad lottie");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    (parseResponse as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({ reply: "oops", lottieJson: null, parseError: "invalid_lottie", suggestions: null, command: null })
+      .mockReturnValueOnce({ reply: "fixed", lottieJson: lottie, parseError: null, suggestions: null, command: null });
+
+    const repairStream = makeSSEStream("repaired");
+    (chatCompletionRepairStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(repairStream));
+    setupOptimizer(lottie);
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "make something" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"repairing"');
+    expect(chatCompletionRepairStream).toHaveBeenCalled();
+    expect(text).toContain('"type":"done"');
+    expect(text).toContain('"lottieJson"');
+  });
+
+  it("triggers repair on no_json when accumulated text contains lottie-like content", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [] };
+    const sseContent = 'Here is the animation: {"v": "5", "layers": []}';
+    const stream = makeSSEStream(sseContent);
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    (parseResponse as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({ reply: "here", lottieJson: null, parseError: "no_json", suggestions: null, command: null })
+      .mockReturnValueOnce({ reply: "fixed", lottieJson: lottie, parseError: null, suggestions: null, command: null });
+
+    const repairStream = makeSSEStream("repaired");
+    (chatCompletionRepairStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(repairStream));
+    setupOptimizer(lottie);
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "make something" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"repairing"');
+    expect(chatCompletionRepairStream).toHaveBeenCalled();
+  });
+
+  it("repair failure still yields done event with warning", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const stream = makeSSEStream("broken");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    (parseResponse as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({ reply: "oops", lottieJson: null, parseError: "invalid_json", suggestions: null, command: null })
+      .mockReturnValueOnce({ reply: "still bad", lottieJson: null, parseError: "invalid_json", suggestions: null, command: null });
+
+    const repairStream = makeSSEStream("still broken");
+    (chatCompletionRepairStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(repairStream));
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "make something" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"repairing"');
+    expect(text).toContain("malformed");
+    expect(text).toContain('"type":"done"');
+  });
+
+  it("emits quality_hints SSE event when analyzeQuality returns actionable hints", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [] };
+    const stream = makeSSEStream("animation");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(lottie);
+    setupOptimizer(lottie);
+
+    (analyzeQuality as ReturnType<typeof vi.fn>).mockReturnValue({
+      checks: [
+        { id: "file-size", label: "File size", status: "warn", detail: "Too large", suggestion: "Reduce layers" },
+        { id: "frame-rate", label: "Frame rate", status: "pass", detail: "OK", suggestion: null },
+        { id: "duration", label: "Duration", status: "fail", detail: "Too long", suggestion: "Shorten to 5s" },
+      ],
+    });
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "make a circle" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"quality_hints"');
+    expect(text).toContain("file-size");
+    expect(text).toContain("Reduce layers");
+    expect(text).toContain("duration");
+    expect(text).toContain("Shorten to 5s");
+    expect(text).not.toContain('"id":"frame-rate"');
+  });
+
+  it("emits modification_summary SSE event when editing existing animation", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue('{"v":"5","layers":[{"nm":"old"}]}');
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [{ nm: "new" }] };
+    const stream = makeSSEStream("modified");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(lottie);
+    setupOptimizer(lottie);
+
+    (summarizeChanges as ReturnType<typeof vi.fn>).mockReturnValue({
+      layersAdded: 0,
+      layersRemoved: 0,
+      layersModified: 1,
+      description: "Modified 1 layer",
+    });
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "change the layer" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"modification_summary"');
+    expect(text).toContain("Modified 1 layer");
+    expect(summarizeChanges).toHaveBeenCalled();
+  });
+
+  it("does not emit modification_summary when summarizeChanges returns null", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue('{"v":"5","layers":[]}');
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [] };
+    const stream = makeSSEStream("same");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(lottie);
+    setupOptimizer(lottie);
+    (summarizeChanges as ReturnType<typeof vi.fn>).mockReturnValue(null);
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "keep it" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).not.toContain('"type":"modification_summary"');
+  });
+
+  it("includes STYLE_CUSTOM instruction in system prompt", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue('{"v":"5","layers":[]}');
+
+    const stream = makeSSEStream("styled");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(null, { parseError: "no_json" });
+
+    await handleMainChat(
+      makeRequest(),
+      { message: "[STYLE_CUSTOM: dark moody palette] restyle" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const callArgs = (chatCompletionStream as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArgs[0].content).toContain("STYLE INSTRUCTION");
+    expect(callArgs[0].content).toContain("custom visual style");
+  });
+
+  it("includes structural validation issues in done event warning", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const lottie = { v: "5", op: 60, fr: 30, layers: [] };
+    const stream = makeSSEStream("animation");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(lottie);
+    setupOptimizer(lottie);
+    (validateStructure as ReturnType<typeof vi.fn>).mockReturnValue({
+      issues: [
+        { message: "Layer 0 has no transform", severity: "warning" },
+        { message: "Missing width property", severity: "error" },
+      ],
+    });
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "make something" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain("structural issues");
+    expect(text).toContain("Layer 0 has no transform");
+    expect(text).toContain("Missing width property");
+  });
+
+  it("emits error SSE event when stream reading throws", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: "));
+        controller.error(new Error("network failure"));
+      },
+    });
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(errorStream));
+
+    const res = await handleMainChat(
+      makeRequest(),
+      { message: "hello" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const text = await readSSEResponse(res);
+    expect(text).toContain('"type":"error"');
+    expect(text).toContain("network failure");
+  });
+
+  it("formats image_url in history messages as multimodal content", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    (compactHistory as ReturnType<typeof vi.fn>).mockReturnValue([
+      { role: "user", content: "look at this", image_url: "data:image/png;base64,abc123" },
+      { role: "assistant", content: "I see a circle" },
+    ]);
+
+    const stream = makeSSEStream("response");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(null, { parseError: "no_json" });
+
+    await handleMainChat(
+      makeRequest(),
+      { message: "now modify it" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const callArgs = (chatCompletionStream as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const historyUserMsg = callArgs[1];
+    expect(Array.isArray(historyUserMsg.content)).toBe(true);
+    expect(historyUserMsg.content[0]).toEqual({ type: "image_url", image_url: { url: "data:image/png;base64,abc123" } });
+    expect(historyUserMsg.content[1]).toEqual({ type: "text", text: "look at this" });
+  });
+
+  it("calls buildPresetPrompt when message matches a preset name", async () => {
+    setupDbForExisting();
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+    (getAllPresets as ReturnType<typeof vi.fn>).mockReturnValue([
+      { name: "bouncy", instructions: "Use spring easing" },
+      { name: "minimal", instructions: "Keep it simple" },
+    ]);
+
+    const stream = makeSSEStream("preset");
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue(new Response(stream));
+    setupLottieResponse(null, { parseError: "no_json" });
+
+    await handleMainChat(
+      makeRequest(),
+      { message: "make it bouncy" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    expect(buildPresetPrompt).toHaveBeenCalledWith("Use spring easing");
+    const callArgs = (chatCompletionStream as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArgs[0].content).toContain("preset prompt");
   });
 });
