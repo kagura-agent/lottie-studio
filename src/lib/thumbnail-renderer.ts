@@ -83,6 +83,7 @@ export async function renderLottieThumbnail(
 
     await page.evaluate(lottieScript);
 
+    /* v8 ignore next 11 */
     await page.evaluate((jsonStr: string) => {
       const data = JSON.parse(jsonStr);
       const anim = (window as unknown as Record<string, unknown> & { lottie: { loadAnimation: (opts: Record<string, unknown>) => { totalFrames: number; goToAndStop: (frame: number, isFrame: boolean) => void } } }).lottie.loadAnimation({
