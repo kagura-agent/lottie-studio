@@ -123,6 +123,107 @@ describe("thumbnail-renderer - renderLottieThumbnail", () => {
 
     expect(result).toBe(true);
   });
+
+  it("skips page.close() when page is null (getBrowser fails)", async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+
+    const puppeteer = (await import("puppeteer-core")).default;
+    (puppeteer.launch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("no chrome")
+    );
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { renderLottieThumbnail } = await import("@/lib/thumbnail-renderer");
+    const result = await renderLottieThumbnail({ fr: 30 }, "/tmp/thumb.png");
+
+    expect(result).toBe(false);
+    expect(mockPage.close).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("thumbnail-renderer - getBrowser disconnected event", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("resets browserInstance when disconnected fires", async () => {
+    const puppeteer = (await import("puppeteer-core")).default;
+    const { getBrowser } = await import("@/lib/thumbnail-renderer");
+
+    await getBrowser();
+
+    // Capture the 'disconnected' callback
+    const onCall = mockBrowser.on.mock.calls.find(
+      (c: unknown[]) => c[0] === "disconnected"
+    );
+    expect(onCall).toBeDefined();
+    const disconnectedCb = onCall![1] as () => void;
+
+    // Fire disconnected - next getBrowser() should relaunch
+    disconnectedCb();
+    mockBrowser.connected = false;
+
+    (puppeteer.launch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      mockBrowser
+    );
+    await getBrowser();
+    expect(puppeteer.launch).toHaveBeenCalledTimes(2);
+
+    // Restore for other tests
+    mockBrowser.connected = true;
+  });
+});
+
+describe("thumbnail-renderer - getBrowser launch failure", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("rejects and allows retry when launch fails", async () => {
+    const puppeteer = (await import("puppeteer-core")).default;
+    (puppeteer.launch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("launch failed")
+    );
+
+    const { getBrowser } = await import("@/lib/thumbnail-renderer");
+
+    await expect(getBrowser()).rejects.toThrow("launch failed");
+
+    // Subsequent call should retry (browserLaunchPromise was reset to null)
+    (puppeteer.launch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      mockBrowser
+    );
+    const browser = await getBrowser();
+    expect(browser).toBe(mockBrowser);
+    expect(puppeteer.launch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("thumbnail-renderer - concurrent getBrowser calls", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("shares the same launch promise for concurrent calls", async () => {
+    const puppeteer = (await import("puppeteer-core")).default;
+    mockBrowser.connected = false;
+
+    const { getBrowser } = await import("@/lib/thumbnail-renderer");
+
+    const p1 = getBrowser();
+    const p2 = getBrowser();
+
+    const [b1, b2] = await Promise.all([p1, p2]);
+    expect(b1).toBe(b2);
+    expect(puppeteer.launch).toHaveBeenCalledTimes(1);
+
+    mockBrowser.connected = true;
+  });
 });
 
 describe("thumbnail-renderer - closeBrowser", () => {
