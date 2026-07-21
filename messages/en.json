@@ -88,7 +88,11 @@
     "count": "Count",
     "loopCount": "Loop count",
     "frame": "Frame",
-    "shortcuts": "Keyboard Shortcuts"
+    "shortcuts": "Keyboard Shortcuts",
+    "durationEdit": "Edit duration",
+    "durationInput": "Duration in seconds",
+    "durationIncrease": "Increase duration by 0.5s",
+    "durationDecrease": "Decrease duration by 0.5s"
   },
   "chat": {
     "placeholder": "Describe what you want to create...",

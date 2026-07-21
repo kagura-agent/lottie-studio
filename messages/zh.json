@@ -88,7 +88,11 @@
     "count": "计数",
     "loopCount": "循环次数",
     "frame": "帧",
-    "shortcuts": "键盘快捷键"
+    "shortcuts": "键盘快捷键",
+    "durationEdit": "编辑时长",
+    "durationInput": "时长（秒）",
+    "durationIncrease": "增加0.5秒",
+    "durationDecrease": "减少0.5秒"
   },
   "chat": {
     "placeholder": "描述你想创建的内容...",
