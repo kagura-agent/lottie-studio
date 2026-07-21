@@ -15,6 +15,7 @@ interface ControlsProps {
   totalFrames: number;
   onSeek: (frame: number) => void;
   frameRate?: number;
+  onDurationChange?: (newDurationSeconds: number) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -49,6 +50,7 @@ export default function Controls({
   totalFrames,
   onSeek,
   frameRate = 30,
+  onDurationChange,
 }: ControlsProps) {
   const t = useTranslations('controls');
   const speeds = [0.5, 1, 2];
@@ -56,6 +58,9 @@ export default function Controls({
   const totalDuration = totalFrames / frameRate;
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [editingDuration, setEditingDuration] = useState(false);
+  const [durationInput, setDurationInput] = useState("");
+  const durationInputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const shortcutsRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +85,41 @@ export default function Controls({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [shortcutsOpen]);
+
+  useEffect(() => {
+    if (editingDuration && durationInputRef.current) {
+      durationInputRef.current.focus();
+      durationInputRef.current.select();
+    }
+  }, [editingDuration]);
+
+  const MIN_DURATION = 0.5;
+  const MAX_DURATION = 30;
+
+  const clampDuration = (val: number) => Math.max(MIN_DURATION, Math.min(MAX_DURATION, val));
+
+  const startEditingDuration = () => {
+    setDurationInput(totalDuration.toFixed(1));
+    setEditingDuration(true);
+  };
+
+  const confirmDuration = () => {
+    const parsed = parseFloat(durationInput);
+    if (!isNaN(parsed) && onDurationChange) {
+      onDurationChange(clampDuration(parsed));
+    }
+    setEditingDuration(false);
+  };
+
+  const cancelDuration = () => {
+    setEditingDuration(false);
+  };
+
+  const adjustDuration = (delta: number) => {
+    if (onDurationChange) {
+      onDurationChange(clampDuration(totalDuration + delta));
+    }
+  };
 
   const selectMode = (mode: LoopMode) => {
     if (mode === "count") {
@@ -188,6 +228,52 @@ export default function Controls({
       >
         {formatTime(currentTime)} / {formatTime(totalDuration)}
       </span>
+
+      {onDurationChange && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => adjustDuration(-0.5)}
+            disabled={totalDuration <= MIN_DURATION}
+            aria-label={t('durationDecrease')}
+            className="min-w-[28px] min-h-[28px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            −
+          </button>
+          {editingDuration ? (
+            <input
+              ref={durationInputRef}
+              type="text"
+              inputMode="decimal"
+              value={durationInput}
+              onChange={(e) => setDurationInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmDuration();
+                if (e.key === "Escape") cancelDuration();
+              }}
+              onBlur={confirmDuration}
+              aria-label={t('durationInput')}
+              className="w-14 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-600 text-zinc-200 text-xs text-center font-mono focus:outline-none focus:border-zinc-400"
+            />
+          ) : (
+            <button
+              onClick={startEditingDuration}
+              aria-label={t('durationEdit')}
+              title={t('durationEdit')}
+              className="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-colors min-w-[44px] min-h-[28px] flex items-center justify-center"
+            >
+              {totalDuration.toFixed(1)}s
+            </button>
+          )}
+          <button
+            onClick={() => adjustDuration(0.5)}
+            disabled={totalDuration >= MAX_DURATION}
+            aria-label={t('durationIncrease')}
+            className="min-w-[28px] min-h-[28px] flex items-center justify-center rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            +
+          </button>
+        </div>
+      )}
 
       <div className="relative" ref={shortcutsRef}>
         <button

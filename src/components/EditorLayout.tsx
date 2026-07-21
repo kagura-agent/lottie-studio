@@ -597,6 +597,14 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               totalFrames={playback.totalFrames}
               onSeek={playback.handleSeek}
               frameRate={(anim.animationData as Record<string, unknown>)?.fr as number ?? 30}
+              onDurationChange={(newDurationSeconds) => {
+                if (anim.animationData) {
+                  const rescaled = rescaleDuration(anim.animationData, newDurationSeconds * 1000);
+                  anim.setAnimationData(rescaled as object);
+                  anim.setJsonText(JSON.stringify(rescaled, null, 2));
+                  anim.pushState(rescaled as object);
+                }
+              }}
             />
             <div className="hidden md:block px-2 py-2 bg-zinc-900">
               <ArtboardPicker width={anim.currentWidth} height={anim.currentHeight} onChange={anim.handleArtboardChange} />
