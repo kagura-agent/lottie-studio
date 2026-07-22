@@ -12,6 +12,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
+import crypto from "node:crypto";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "lottie-studio.db");
@@ -59,7 +60,7 @@ fs.writeFileSync(
 );
 
 // Remove some seeded animation JSON files to exercise fs.copyFileSync branch (line 291)
-const crypto = require("node:crypto");
+// crypto imported at top level
 const NAMESPACE = "lottie-studio:seed-gallery";
 for (const tf of templateFiles.slice(0, 3)) {
   const hash = crypto.createHash("sha256").update(`${NAMESPACE}:${tf}`).digest("hex");
