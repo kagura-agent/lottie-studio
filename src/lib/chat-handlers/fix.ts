@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-import { db } from "@/lib/db";
 import {
   encodeSSE,
   createStreamingSSEResponse,

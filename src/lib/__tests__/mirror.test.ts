@@ -1,6 +1,25 @@
 import { describe, it, expect } from "vitest";
 import { mirrorAnimation } from "@/lib/mirror";
 
+interface LottieResult {
+  w?: number;
+  h?: number;
+  ip: number;
+  op: number;
+  fr: number;
+  layers: Array<{
+    ip?: number;
+    op?: number;
+    ks?: {
+      p?: { a: number; k: number[] | Array<{ t: number; s?: number[]; e?: number[] }> };
+      s?: { a: number; k: number[] | Array<{ t: number; s?: number[]; e?: number[] }> };
+      r?: { a: number; k: number };
+      o?: { a: number; k: number };
+      a?: { a: number; k: number[] };
+    };
+  }>;
+}
+
 describe("mirrorAnimation", () => {
   const baseLottie = {
     w: 200,
@@ -25,21 +44,21 @@ describe("mirrorAnimation", () => {
 
   describe("horizontal mirror", () => {
     it("negates the x scale for static properties", () => {
-      const result = mirrorAnimation(baseLottie, "horizontal") as any;
+      const result = mirrorAnimation(baseLottie, "horizontal") as LottieResult;
       expect(result.layers[0].ks.s.k[0]).toBe(-100);
       expect(result.layers[0].ks.s.k[1]).toBe(100);
       expect(result.layers[0].ks.s.k[2]).toBe(100);
     });
 
     it("mirrors x position relative to composition center", () => {
-      const result = mirrorAnimation(baseLottie, "horizontal") as any;
+      const result = mirrorAnimation(baseLottie, "horizontal") as LottieResult;
       // center = 200/2 = 100; newX = 100*2 - 50 = 150
       expect(result.layers[0].ks.p.k[0]).toBe(150);
       expect(result.layers[0].ks.p.k[1]).toBe(25);
     });
 
     it("does not modify y scale or y position", () => {
-      const result = mirrorAnimation(baseLottie, "horizontal") as any;
+      const result = mirrorAnimation(baseLottie, "horizontal") as LottieResult;
       expect(result.layers[0].ks.s.k[1]).toBe(100);
       expect(result.layers[0].ks.p.k[1]).toBe(25);
     });
@@ -69,7 +88,7 @@ describe("mirrorAnimation", () => {
           },
         ],
       };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       const kf = result.layers[0].ks.s.k;
       expect(kf[0].s[0]).toBe(-100);
       expect(kf[0].e[0]).toBe(-50);
@@ -105,7 +124,7 @@ describe("mirrorAnimation", () => {
           },
         ],
       };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       const kf = result.layers[0].ks.p.k;
       // center = 200; newX = 200*2 - 100 = 300
       expect(kf[0].s[0]).toBe(300);
@@ -118,20 +137,20 @@ describe("mirrorAnimation", () => {
 
   describe("vertical mirror", () => {
     it("negates the y scale for static properties", () => {
-      const result = mirrorAnimation(baseLottie, "vertical") as any;
+      const result = mirrorAnimation(baseLottie, "vertical") as LottieResult;
       expect(result.layers[0].ks.s.k[0]).toBe(100);
       expect(result.layers[0].ks.s.k[1]).toBe(-100);
     });
 
     it("mirrors y position relative to composition center", () => {
-      const result = mirrorAnimation(baseLottie, "vertical") as any;
+      const result = mirrorAnimation(baseLottie, "vertical") as LottieResult;
       // center = 100/2 = 50; newY = 50*2 - 25 = 75
       expect(result.layers[0].ks.p.k[0]).toBe(50); // x unchanged
       expect(result.layers[0].ks.p.k[1]).toBe(75);
     });
 
     it("does not modify x scale or x position", () => {
-      const result = mirrorAnimation(baseLottie, "vertical") as any;
+      const result = mirrorAnimation(baseLottie, "vertical") as LottieResult;
       expect(result.layers[0].ks.s.k[0]).toBe(100);
       expect(result.layers[0].ks.p.k[0]).toBe(50);
     });
@@ -160,7 +179,7 @@ describe("mirrorAnimation", () => {
           },
         ],
       };
-      const result = mirrorAnimation(input, "vertical") as any;
+      const result = mirrorAnimation(input, "vertical") as LottieResult;
       const kf = result.layers[0].ks.s.k;
       expect(kf[0].s[1]).toBe(-80);
       expect(kf[1].s[1]).toBe(-120);
@@ -172,13 +191,13 @@ describe("mirrorAnimation", () => {
   describe("edge cases", () => {
     it("handles missing layers gracefully", () => {
       const input = { w: 200, h: 100, ip: 0, op: 60, fr: 30 };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       expect(result).toEqual(input);
     });
 
     it("handles empty layers array", () => {
       const input = { w: 200, h: 100, ip: 0, op: 60, fr: 30, layers: [] };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       expect(result.layers).toEqual([]);
     });
 
@@ -191,7 +210,7 @@ describe("mirrorAnimation", () => {
         fr: 30,
         layers: [{ ip: 0, op: 60 }],
       };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       expect(result.layers[0]).toEqual({ ip: 0, op: 60 });
     });
 
@@ -218,7 +237,7 @@ describe("mirrorAnimation", () => {
           },
         ],
       };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       // center = 512/2 = 256; newX = 256*2 - 100 = 412
       expect(result.layers[0].ks.p.k[0]).toBe(412);
     });
@@ -249,7 +268,7 @@ describe("mirrorAnimation", () => {
           },
         ],
       };
-      const result = mirrorAnimation(input, "horizontal") as any;
+      const result = mirrorAnimation(input, "horizontal") as LottieResult;
       // Layer 0: center=100, newX = 200 - 50 = 150
       expect(result.layers[0].ks.p.k[0]).toBe(150);
       expect(result.layers[0].ks.s.k[0]).toBe(-100);
