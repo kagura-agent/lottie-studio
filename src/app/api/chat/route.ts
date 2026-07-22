@@ -12,6 +12,7 @@ import {
   handleRetime,
   handleA11y,
   handleTrim,
+  handleMirror,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -112,6 +113,11 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "trim") {
     return handleTrim(animationId, parsedCmd.range, message);
+  }
+
+  if (parsedCmd && (parsedCmd.type === "mirror_h" || parsedCmd.type === "mirror_v")) {
+    const axis = parsedCmd.type === "mirror_h" ? "horizontal" : "vertical";
+    return handleMirror(animationId, axis, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

@@ -35,6 +35,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/presets", description: "Manage animation presets (list, save, delete, rename, info)", hasParams: true },
   { command: "/random", description: "Generate a surprise animation from a random prompt", hasParams: false },
   { command: "/trim", description: "Extract a frame range as the new animation (e.g. /trim 30-60, /trim 1s-2.5s)", hasParams: true },
+  { command: "/mirror", description: "Flip animation horizontally or vertically (e.g. /mirror h, /mirror v)", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];
 

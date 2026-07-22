@@ -825,4 +825,43 @@ describe("parseCommand", () => {
       expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
     });
   });
+
+  describe("/mirror", () => {
+    it("parses /mirror h as mirror_h", () => {
+      expect(parseCommand("/mirror h")).toEqual({ type: "mirror_h" });
+    });
+
+    it("parses /mirror horizontal as mirror_h", () => {
+      expect(parseCommand("/mirror horizontal")).toEqual({ type: "mirror_h" });
+    });
+
+    it("parses /mirror v as mirror_v", () => {
+      expect(parseCommand("/mirror v")).toEqual({ type: "mirror_v" });
+    });
+
+    it("parses /mirror vertical as mirror_v", () => {
+      expect(parseCommand("/mirror vertical")).toEqual({ type: "mirror_v" });
+    });
+
+    it("is case-insensitive for command and argument", () => {
+      expect(parseCommand("/MIRROR H")).toEqual({ type: "mirror_h" });
+      expect(parseCommand("/Mirror Horizontal")).toEqual({ type: "mirror_h" });
+      expect(parseCommand("/mirror V")).toEqual({ type: "mirror_v" });
+      expect(parseCommand("/MIRROR VERTICAL")).toEqual({ type: "mirror_v" });
+    });
+
+    it("returns error for missing argument", () => {
+      const result = parseCommand("/mirror");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for invalid argument", () => {
+      const result = parseCommand("/mirror diagonal");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Unknown mirror axis") });
+    });
+
+    it("handles leading/trailing whitespace", () => {
+      expect(parseCommand("  /mirror h  ")).toEqual({ type: "mirror_h" });
+    });
+  });
 });
