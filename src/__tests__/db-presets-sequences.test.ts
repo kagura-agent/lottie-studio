@@ -26,9 +26,10 @@ const createdSequenceIds: string[] = [];
 const createdAnimationIds: string[] = [];
 
 function seedAnimation(id: string) {
-  db.exec(
-    `INSERT OR IGNORE INTO animations (id, name) VALUES ('${id}', 'Test Anim ${id}')`
-  );
+  db.prepare("DELETE FROM animations WHERE id = ?").run(id);
+  db.prepare(
+    `INSERT INTO animations (id, name) VALUES (?, ?)`
+  ).run(id, `Test Anim ${id}`);
   createdAnimationIds.push(id);
 }
 

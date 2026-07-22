@@ -8,7 +8,7 @@
  *
  * @vitest-environment node
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
@@ -75,6 +75,38 @@ rawDb.close();
 // --- Now import db.ts which will execute init code ---
 
 describe("db.ts module initialization", () => {
+  afterAll(() => {
+    const cleanupDb = new Database(DB_PATH);
+    cleanupDb.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS animations_fts USING fts5(
+        name, description, tags,
+        content='animations',
+        content_rowid='rowid'
+      )
+    `);
+    cleanupDb.exec(`
+      CREATE TRIGGER IF NOT EXISTS animations_fts_ai AFTER INSERT ON animations BEGIN
+        INSERT INTO animations_fts(rowid, name, description, tags)
+        VALUES (new.rowid, new.name, COALESCE(new.description, ''), COALESCE(new.tags, ''));
+      END
+    `);
+    cleanupDb.exec(`
+      CREATE TRIGGER IF NOT EXISTS animations_fts_ad AFTER DELETE ON animations BEGIN
+        INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+        VALUES ('delete', old.rowid, old.name, COALESCE(old.description, ''), COALESCE(old.tags, ''));
+      END
+    `);
+    cleanupDb.exec(`
+      CREATE TRIGGER IF NOT EXISTS animations_fts_au AFTER UPDATE ON animations BEGIN
+        INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+        VALUES ('delete', old.rowid, old.name, COALESCE(old.description, ''), COALESCE(old.tags, ''));
+        INSERT INTO animations_fts(rowid, name, description, tags)
+        VALUES (new.rowid, new.name, COALESCE(new.description, ''), COALESCE(new.tags, ''));
+      END
+    `);
+    cleanupDb.close();
+  });
+
   it("seedGallery seeds templates and FTS is rebuilt", async () => {
     const { db, ANIMATIONS_DIR: animDir } = await import("@/lib/db");
 
