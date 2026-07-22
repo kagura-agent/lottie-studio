@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { parseCommand } from "@/lib/commands";
 import { diagnoseAndFix } from "@/lib/chat-handlers/fix";
 
-function makeAnimation(overrides: Record<string, unknown> = {}) {
+type LottieParam = Parameters<typeof diagnoseAndFix>[0];
+
+function makeAnimation(overrides: Record<string, unknown> = {}): LottieParam {
   return {
     fr: 30,
     ip: 0,
@@ -11,7 +13,7 @@ function makeAnimation(overrides: Record<string, unknown> = {}) {
     h: 512,
     layers: [],
     ...overrides,
-  };
+  } as LottieParam;
 }
 
 describe("parseCommand /fix", () => {
@@ -39,14 +41,14 @@ describe("diagnoseAndFix", () => {
         ],
       }],
     });
-    const { issues, fixed } = diagnoseAndFix(anim as unknown);
+    const { issues, fixed } = diagnoseAndFix(anim);
     expect(issues).toHaveLength(0);
     expect(fixed).toBe(false);
   });
 
   it("returns no issues for animation with no layers", () => {
     const anim = makeAnimation({ layers: undefined });
-    const { issues, fixed } = diagnoseAndFix(anim as unknown);
+    const { issues, fixed } = diagnoseAndFix(anim);
     expect(issues).toHaveLength(0);
     expect(fixed).toBe(false);
   });
@@ -60,13 +62,13 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "fl" }],
         }],
       });
-      const { issues, fixed } = diagnoseAndFix(anim as unknown);
+      const { issues, fixed } = diagnoseAndFix(anim);
       expect(fixed).toBe(true);
       const offscreen = issues.find(i => i.category === "Offscreen element");
       expect(offscreen).toBeDefined();
       expect(offscreen!.autoFixed).toBe(true);
-      expect((anim as unknown).layers[0].ks.p.k[0]).toBe(512);
-      expect((anim as unknown).layers[0].ks.p.k[1]).toBe(0);
+      expect((anim as Record<string, any>).layers[0].ks.p.k[0]).toBe(512);
+      expect((anim as Record<string, any>).layers[0].ks.p.k[1]).toBe(0);
     });
   });
 
@@ -79,7 +81,7 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "fl" }],
         }],
       });
-      const { issues } = diagnoseAndFix(anim as unknown);
+      const { issues } = diagnoseAndFix(anim);
       const zeroOp = issues.find(i => i.category === "Zero opacity");
       expect(zeroOp).toBeDefined();
       expect(zeroOp!.autoFixed).toBe(false);
@@ -100,7 +102,7 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "fl" }],
         }],
       });
-      const { issues } = diagnoseAndFix(anim as unknown);
+      const { issues } = diagnoseAndFix(anim);
       const zeroKf = issues.filter(i => i.category === "Zero-duration keyframe");
       expect(zeroKf.length).toBe(2);
       expect(zeroKf[0].autoFixed).toBe(false);
@@ -120,12 +122,12 @@ describe("diagnoseAndFix", () => {
           ],
         }],
       });
-      const { issues, fixed } = diagnoseAndFix(anim as unknown);
+      const { issues, fixed } = diagnoseAndFix(anim);
       expect(fixed).toBe(true);
       const emptyGroup = issues.find(i => i.category === "Empty group");
       expect(emptyGroup).toBeDefined();
       expect(emptyGroup!.autoFixed).toBe(true);
-      expect((anim as unknown).layers[0].shapes).toHaveLength(2);
+      expect((anim as Record<string, any>).layers[0].shapes).toHaveLength(2);
     });
   });
 
@@ -138,12 +140,12 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh", nm: "Path" }],
         }],
       });
-      const { issues, fixed } = diagnoseAndFix(anim as unknown);
+      const { issues, fixed } = diagnoseAndFix(anim);
       expect(fixed).toBe(true);
       const invisible = issues.find(i => i.category === "Invisible shape");
       expect(invisible).toBeDefined();
       expect(invisible!.autoFixed).toBe(true);
-      const shapes = (anim as unknown).layers[0].shapes;
+      const shapes = (anim as Record<string, any>).layers[0].shapes;
       expect(shapes.some((s: Record<string, unknown>) => s.ty === "fl")).toBe(true);
     });
 
@@ -155,7 +157,7 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "st" }],
         }],
       });
-      const { issues } = diagnoseAndFix(anim as unknown);
+      const { issues } = diagnoseAndFix(anim);
       expect(issues.find(i => i.category === "Invisible shape")).toBeUndefined();
     });
   });
@@ -169,12 +171,12 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "fl" }],
         }],
       });
-      const { issues, fixed } = diagnoseAndFix(anim as unknown);
+      const { issues, fixed } = diagnoseAndFix(anim);
       expect(fixed).toBe(true);
       const zeroDur = issues.find(i => i.category === "Zero-duration layer");
       expect(zeroDur).toBeDefined();
       expect(zeroDur!.autoFixed).toBe(true);
-      expect((anim as unknown).layers[0].op).toBe(60);
+      expect((anim as Record<string, any>).layers[0].op).toBe(60);
     });
   });
 
@@ -193,12 +195,12 @@ describe("diagnoseAndFix", () => {
           shapes: [{ ty: "sh" }, { ty: "fl" }],
         }],
       });
-      const { issues, fixed } = diagnoseAndFix(anim as unknown);
+      const { issues, fixed } = diagnoseAndFix(anim);
       expect(fixed).toBe(true);
       const dupes = issues.find(i => i.category === "Duplicate keyframes");
       expect(dupes).toBeDefined();
       expect(dupes!.autoFixed).toBe(true);
-      expect((anim as unknown).layers[0].ks.p.k).toHaveLength(2);
+      expect((anim as Record<string, any>).layers[0].ks.p.k).toHaveLength(2);
     });
   });
 
@@ -209,7 +211,7 @@ describe("diagnoseAndFix", () => {
         { ty: 4, nm: "Bad2", ip: 0, op: 60, ks: { p: { a: 0, k: [1000, 1000, 0] } }, shapes: [{ ty: "el" }] },
       ],
     });
-    const { issues, fixed } = diagnoseAndFix(anim as unknown);
+    const { issues, fixed } = diagnoseAndFix(anim);
     expect(fixed).toBe(true);
     expect(issues.length).toBeGreaterThanOrEqual(3);
   });

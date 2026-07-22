@@ -50,7 +50,7 @@ describe("removeHiddenLayers", () => {
     const data = { layers: [{ nm: "a", hd: true }, { nm: "b" }] };
     const result = removeHiddenLayers(data);
     expect(result.layers).toHaveLength(1);
-    expect((result.layers as Record<string, unknown>[])[0].nm).toBe("b");
+    expect((result.layers as Record<string, any>[])[0].nm).toBe("b");
   });
 
   it("returns data unchanged when no layers array", () => {
@@ -71,7 +71,7 @@ describe("removeEmptyGroups", () => {
       layers: [{ shapes: [{ ty: "gr", it: [{ ty: "tr" }] }] }],
     };
     const result = removeEmptyGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes).toHaveLength(0);
+    expect((result.layers as Record<string, any>[])[0].shapes).toHaveLength(0);
   });
 
   it("keeps groups with real items", () => {
@@ -79,19 +79,19 @@ describe("removeEmptyGroups", () => {
       layers: [{ shapes: [{ ty: "gr", it: [{ ty: "tr" }, { ty: "fl" }] }] }],
     };
     const result = removeEmptyGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes).toHaveLength(1);
+    expect((result.layers as Record<string, any>[])[0].shapes).toHaveLength(1);
   });
 
   it("keeps non-group shapes", () => {
     const data = { layers: [{ shapes: [{ ty: "fl" }] }] };
     const result = removeEmptyGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes).toHaveLength(1);
+    expect((result.layers as Record<string, any>[])[0].shapes).toHaveLength(1);
   });
 
   it("handles layers without shapes", () => {
     const data = { layers: [{ nm: "text" }] };
     const result = removeEmptyGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0]).toEqual({ nm: "text" });
+    expect((result.layers as Record<string, any>[])[0]).toEqual({ nm: "text" });
   });
 
   it("returns data unchanged when no layers array", () => {
@@ -101,7 +101,7 @@ describe("removeEmptyGroups", () => {
   it("keeps groups with no it array", () => {
     const data = { layers: [{ shapes: [{ ty: "gr" }] }] };
     const result = removeEmptyGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes).toHaveLength(1);
+    expect((result.layers as Record<string, any>[])[0].shapes).toHaveLength(1);
   });
 });
 
@@ -113,13 +113,13 @@ describe("removeRedundantKeyframes", () => {
   it("skips non-animated props (a!==1)", () => {
     const data = { layers: [{ ks: { p: { a: 0, k: [0, 0] } } }] };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toEqual([0, 0]);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toEqual([0, 0]);
   });
 
   it("keeps single keyframe unchanged", () => {
     const data = { layers: [{ ks: { p: { a: 1, k: [{ t: 0, s: [0], e: [100] }] } } }] };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toHaveLength(1);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toHaveLength(1);
   });
 
   it("keeps first keyframe when s !== e", () => {
@@ -137,7 +137,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toHaveLength(2);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toHaveLength(2);
   });
 
   it("keeps first keyframe when e is undefined", () => {
@@ -155,7 +155,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toHaveLength(2);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toHaveLength(2);
   });
 
   // Lines 92-96: first keyframe no-op (s===e), next starts at same value → skip
@@ -175,7 +175,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    const kfs = (result.layers as Record<string, unknown>[])[0].ks.p.k;
+    const kfs = (result.layers as Record<string, any>[])[0].ks.p.k;
     expect(kfs).toHaveLength(2);
     expect(kfs[0].t).toBe(15);
   });
@@ -197,7 +197,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    const kfs = (result.layers as Record<string, unknown>[])[0].ks.p.k;
+    const kfs = (result.layers as Record<string, any>[])[0].ks.p.k;
     expect(kfs).toHaveLength(3);
     expect(kfs[0].t).toBe(0);
   });
@@ -218,7 +218,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    const kfs = (result.layers as Record<string, unknown>[])[0].ks.p.k;
+    const kfs = (result.layers as Record<string, any>[])[0].ks.p.k;
     expect(kfs).toHaveLength(2);
   });
 
@@ -238,7 +238,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toHaveLength(3);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toHaveLength(3);
   });
 
   it("keeps middle keyframes where s !== e", () => {
@@ -257,7 +257,7 @@ describe("removeRedundantKeyframes", () => {
       }],
     };
     const result = removeRedundantKeyframes(data);
-    expect((result.layers as Record<string, unknown>[])[0].ks.p.k).toHaveLength(3);
+    expect((result.layers as Record<string, any>[])[0].ks.p.k).toHaveLength(3);
   });
 });
 
@@ -269,7 +269,7 @@ describe("collapseSingleItemGroups", () => {
       }],
     };
     const result = collapseSingleItemGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes[0].ty).toBe("fl");
+    expect((result.layers as Record<string, any>[])[0].shapes[0].ty).toBe("fl");
   });
 
   it("keeps groups with multiple non-transform items", () => {
@@ -279,13 +279,13 @@ describe("collapseSingleItemGroups", () => {
       }],
     };
     const result = collapseSingleItemGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes[0].ty).toBe("gr");
+    expect((result.layers as Record<string, any>[])[0].shapes[0].ty).toBe("gr");
   });
 
   it("keeps non-group shapes", () => {
     const data = { layers: [{ shapes: [{ ty: "fl" }] }] };
     const result = collapseSingleItemGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes[0].ty).toBe("fl");
+    expect((result.layers as Record<string, any>[])[0].shapes[0].ty).toBe("fl");
   });
 
   it("returns data unchanged when no layers", () => {
@@ -301,7 +301,7 @@ describe("collapseSingleItemGroups", () => {
   it("keeps groups with no it array", () => {
     const data = { layers: [{ shapes: [{ ty: "gr" }] }] };
     const result = collapseSingleItemGroups(data);
-    expect((result.layers as Record<string, unknown>[])[0].shapes[0].ty).toBe("gr");
+    expect((result.layers as Record<string, any>[])[0].shapes[0].ty).toBe("gr");
   });
 });
 
@@ -309,7 +309,7 @@ describe("validateAndFix", () => {
   it("auto-fixes missing ind/ip/op/ks", () => {
     const data = { ip: 0, op: 60, w: 512, h: 512, layers: [{ nm: "test" }] };
     const { fixed, fixesApplied } = validateAndFix(data);
-    const layer = (fixed.layers as Record<string, unknown>[])[0];
+    const layer = (fixed.layers as Record<string, any>[])[0];
     expect(layer.ind).toBe(0);
     expect(layer.ip).toBe(0);
     expect(layer.op).toBe(60);
@@ -337,7 +337,7 @@ describe("validateAndFix", () => {
       }],
     };
     const { fixed, fixesApplied } = validateAndFix(data);
-    const c = (fixed.layers as Record<string, unknown>[])[0].shapes[0].c.k;
+    const c = (fixed.layers as Record<string, any>[])[0].shapes[0].c.k;
     expect(c[0]).toBe(1);
     expect(c[1]).toBeCloseTo(128 / 255);
     expect(c[2]).toBe(0);
@@ -386,7 +386,7 @@ describe("validateAndFix", () => {
       }],
     };
     const { fixed, fixesApplied } = validateAndFix(data);
-    const fc = (fixed.layers as Record<string, unknown>[])[0].t.d.k[0].s.fc;
+    const fc = (fixed.layers as Record<string, any>[])[0].t.d.k[0].s.fc;
     expect(fc[0]).toBe(1);
     expect(fc[1]).toBe(0);
     expect(fc[2]).toBeCloseTo(128 / 255);
@@ -401,7 +401,7 @@ describe("validateAndFix", () => {
       }],
     };
     const { fixed, fixesApplied } = validateAndFix(data);
-    const sc = (fixed.layers as Record<string, unknown>[])[0].t.d.k[0].s.sc;
+    const sc = (fixed.layers as Record<string, any>[])[0].t.d.k[0].s.sc;
     expect(sc[0]).toBeCloseTo(200 / 255);
     expect(fixesApplied.some((f) => f.includes("text stroke color"))).toBe(true);
   });
@@ -461,7 +461,7 @@ describe("validateAndFix", () => {
   it("handles missing root ip/op/w/h with defaults", () => {
     const data = { layers: [{ nm: "test" }] };
     const { fixed } = validateAndFix(data);
-    const layer = (fixed.layers as Record<string, unknown>[])[0];
+    const layer = (fixed.layers as Record<string, any>[])[0];
     expect(layer.ip).toBe(0);
     expect(layer.op).toBe(60);
     expect(layer.ks.p.k).toEqual([256, 256]);
