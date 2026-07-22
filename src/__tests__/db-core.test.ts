@@ -27,8 +27,9 @@ const createdSequenceIds: string[] = [];
 const createdAnimationIds: string[] = [];
 
 function seedAnimation(id: string, opts?: { name?: string; description?: string; tags?: string }) {
+  db.prepare("DELETE FROM animations WHERE id = ?").run(id);
   db.prepare(
-    `INSERT OR IGNORE INTO animations (id, name, description, tags, share_chat) VALUES (?, ?, ?, ?, 0)`
+    `INSERT INTO animations (id, name, description, tags, share_chat) VALUES (?, ?, ?, ?, 0)`
   ).run(id, opts?.name ?? `Test ${id}`, opts?.description ?? null, opts?.tags ?? null);
   createdAnimationIds.push(id);
 }
@@ -296,6 +297,24 @@ describe("listSequences with results", () => {
     const results = findSequencesByName("FindableSeqName");
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].items.length).toBeGreaterThan(0);
+  });
+
+  it("getSequence returns undefined for nonexistent id", () => {
+    expect(getSequence("nonexistent-seq-id-xyz")).toBeUndefined();
+  });
+
+  it("updateSequence returns false when no fields provided", () => {
+    const seq = createSequence("no-field-seq", "", "creator-nf");
+    createdSequenceIds.push(seq.id);
+    expect(updateSequence(seq.id, {})).toBe(false);
+  });
+
+  it("updateSequenceItem returns false when no fields provided", () => {
+    seedAnimation("no-field-item-anim");
+    const seq = createSequence("no-field-item-seq", "", "creator-nfi");
+    createdSequenceIds.push(seq.id);
+    const item = addSequenceItem(seq.id, "no-field-item-anim", 0);
+    expect(updateSequenceItem(item.id, {})).toBe(false);
   });
 });
 

@@ -778,4 +778,51 @@ describe("parseCommand", () => {
       expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
     });
   });
+
+  describe("/trim", () => {
+    it("parses frame range", () => {
+      expect(parseCommand("/trim 30-60")).toEqual({
+        type: "trim",
+        range: { start: { value: 30, unit: "frame" }, end: { value: 60, unit: "frame" } },
+      });
+    });
+
+    it("parses seconds range", () => {
+      expect(parseCommand("/trim 1s-2.5s")).toEqual({
+        type: "trim",
+        range: { start: { value: 1, unit: "seconds" }, end: { value: 2.5, unit: "seconds" } },
+      });
+    });
+
+    it("parses ms range", () => {
+      expect(parseCommand("/trim 0-500ms")).toEqual({
+        type: "trim",
+        range: { start: { value: 0, unit: "frame" }, end: { value: 500, unit: "ms" } },
+      });
+    });
+
+    it("parses percentage range with start keyword", () => {
+      expect(parseCommand("/trim start-50%")).toEqual({
+        type: "trim",
+        range: { start: { value: 0, unit: "start" }, end: { value: 50, unit: "percent" } },
+      });
+    });
+
+    it("parses percentage range with end keyword", () => {
+      expect(parseCommand("/trim 50%-end")).toEqual({
+        type: "trim",
+        range: { start: { value: 50, unit: "percent" }, end: { value: 0, unit: "end" } },
+      });
+    });
+
+    it("returns error for missing args", () => {
+      const result = parseCommand("/trim");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for invalid range", () => {
+      const result = parseCommand("/trim abc");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid") });
+    });
+  });
 });

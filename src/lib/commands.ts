@@ -104,7 +104,10 @@ export type Command =
   | { type: "plugins_list" }
   | { type: "plugin_install"; slug: string }
   | { type: "plugin_remove"; slug: string }
+  | { type: "trim"; range: { start: TrimPoint; end: TrimPoint } }
   | { type: "error"; message: string };
+
+export type TrimPoint = { value: number; unit: "frame" | "seconds" | "ms" | "percent" } | { value: 0; unit: "start" } | { value: 0; unit: "end" };
 
 export function parseCommand(input: string): Command | null {
   const trimmed = input.trim();
@@ -508,6 +511,25 @@ export function parseCommand(input: string): Command | null {
     case "accessibility":
       return { type: "a11y" };
 
+    case "trim": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /trim <start>-<end> (e.g. /trim 30-60, /trim 1s-2.5s, /trim 0-500ms, /trim start-50%)" };
+      }
+      const raw = args[0];
+      const match = raw.match(/^(.+?)-([^-].*)$/);
+      if (!match) {
+        return { type: "error", message: `Invalid trim range: "${raw}". Use format: <start>-<end>` };
+      }
+      const startStr = match[1];
+      const endStr = match[2];
+      const start = parseTrimPoint(startStr);
+      const end = parseTrimPoint(endStr);
+      if (!start || !end) {
+        return { type: "error", message: `Invalid trim range: "${raw}". Use format: <start>-<end> (frames, seconds, ms, or %)` };
+      }
+      return { type: "trim", range: { start, end } };
+    }
+
     case "help":
     case "commands":
     case "?":
@@ -539,6 +561,29 @@ export function parseCommand(input: string): Command | null {
     default:
       return null;
   }
+}
+
+function parseTrimPoint(s: string): TrimPoint | null {
+  if (s === "start") return { value: 0, unit: "start" };
+  if (s === "end") return { value: 0, unit: "end" };
+  if (s.endsWith("%")) {
+    const v = parseFloat(s.slice(0, -1));
+    if (isNaN(v) || v < 0 || v > 100) return null;
+    return { value: v, unit: "percent" };
+  }
+  if (s.endsWith("ms")) {
+    const v = parseFloat(s.slice(0, -2));
+    if (isNaN(v) || v < 0) return null;
+    return { value: v, unit: "ms" };
+  }
+  if (s.endsWith("s")) {
+    const v = parseFloat(s.slice(0, -1));
+    if (isNaN(v) || v < 0) return null;
+    return { value: v, unit: "seconds" };
+  }
+  const v = parseFloat(s);
+  if (isNaN(v) || v < 0) return null;
+  return { value: v, unit: "frame" };
 }
 
 /**

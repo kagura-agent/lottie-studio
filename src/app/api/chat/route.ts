@@ -11,6 +11,7 @@ import {
   handlePresetCommand,
   handleRetime,
   handleA11y,
+  handleTrim,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -107,6 +108,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "duration") {
     return handleRetime(animationId, parsedCmd.durationMs, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "trim") {
+    return handleTrim(animationId, parsedCmd.range, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
