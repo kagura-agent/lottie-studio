@@ -40,6 +40,7 @@ import MobileTabBar from "./MobileTabBar";
 import BottomSheet from "./BottomSheet";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { optimizeLottie } from "@/lib/optimizer";
+import { reverseAnimation } from "@/lib/reverse";
 import { rescaleDuration } from "@/lib/rescaleDuration";
 
 import { useExportState } from "@/hooks/editor/useExportState";
@@ -189,6 +190,15 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
             ? `✨ Optimized! ${sizeStr} (${pct}% smaller)${parts.length ? ". " + parts.join(", ") : ""}`
             : `✨ Already optimized — no changes needed (${(stats.optimizedSize / 1024).toFixed(1)} KB)`;
           anim.setInsertText(summary);
+        }
+        break;
+      case "reverse":
+        if (anim.animationData) {
+          const reversed = reverseAnimation(anim.animationData);
+          anim.setAnimationData(reversed as object);
+          anim.setJsonText(JSON.stringify(reversed, null, 2));
+          anim.pushState(reversed as object);
+          anim.setInsertText("🔄 Reversed the animation playback direction.");
         }
         break;
       case "duration":
