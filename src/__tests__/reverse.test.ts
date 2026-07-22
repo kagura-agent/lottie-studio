@@ -45,7 +45,7 @@ describe("reverseAnimation", () => {
         },
       ],
     };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     const kf = result.layers[0].ks.p.k;
     expect(kf[0].t).toBe(0);
     expect(kf[0].s).toEqual([100, 100]);
@@ -76,7 +76,7 @@ describe("reverseAnimation", () => {
         },
       ],
     };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     const kf = result.layers[0].ks.p.k;
     // First keyframe (was last original, had no easing) — swaps its own i/o (both undefined)
     expect(kf[0].i).toBeUndefined();
@@ -106,7 +106,7 @@ describe("reverseAnimation", () => {
         },
       ],
     };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     expect(result.layers[0].ks.p.k[0].s).toEqual([100, 100]);
     expect(result.layers[1].ks.p.k[0].s).toEqual([300, 300]);
   });
@@ -145,7 +145,7 @@ describe("reverseAnimation", () => {
         },
       ],
     };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     const shapePath = result.layers[0].shapes[0].it[0].ks.k;
     expect(shapePath[0].s).toEqual([{ v: [[100, 100]] }]);
     expect(shapePath[1].s).toEqual([{ v: [[0, 0]] }]);
@@ -165,13 +165,13 @@ describe("reverseAnimation", () => {
         },
       ],
     };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     expect(result.layers[0].ks.p.k).toEqual([{ t: 0, s: [50, 50] }]);
   });
 
   it("handles empty layers array", () => {
     const input = { ip: 0, op: 60, layers: [] };
-    const result = reverseAnimation(input) as any;
+    const result = reverseAnimation(input) as Record<string, unknown>;
     expect(result.layers).toEqual([]);
   });
 
