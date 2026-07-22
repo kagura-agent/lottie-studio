@@ -5,7 +5,7 @@ describe("filterCommands", () => {
   it("returns all commands for '/'", () => {
     const result = filterCommands("/");
     expect(result).toEqual(COMMANDS);
-    expect(result.length).toBe(26);
+    expect(result.length).toBe(COMMANDS.length);
   });
 
   it("filters by prefix '/sp'", () => {
