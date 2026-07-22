@@ -583,6 +583,7 @@ export function useChatSend(options: UseChatSendOptions) {
         case "background": feedback = `🎨 Background set to ${command.color}`; break;
         case "fullscreen": feedback = "⛶ Fullscreen toggled"; break;
         case "optimize": feedback = "✨ Optimizing..."; break;
+        case "reverse": feedback = "🔄 Reversed the animation playback direction."; break;
         case "duration": feedback = `⏱️ ${t("durationSet", { duration: (command.durationMs / 1000).toFixed(1) })}`; break;
         case "goto": {
           const { value, unit } = command.target;
@@ -625,7 +626,8 @@ export function useChatSend(options: UseChatSendOptions) {
             + `**${t("helpEdit")}**\n`
             + `\`/undo\` — ${t("helpUndo")}\n`
             + `\`/redo\` — ${t("helpRedo")}\n`
-            + `\`/optimize\` — ${t("helpOptimize")}\n\n`
+            + `\`/optimize\` — ${t("helpOptimize")}\n`
+            + `\`/reverse\` — Reverse animation keyframes\n\n`
             + `**${t("helpStyle")}**\n`
             + `\`/style\` — ${t("helpStyleList")}\n`
             + `\`/style <name>\` — ${t("helpStyleCmd")}\n`

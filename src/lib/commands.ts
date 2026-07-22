@@ -69,6 +69,7 @@ export type Command =
   | { type: "background"; color: string }
   | { type: "fullscreen" }
   | { type: "optimize" }
+  | { type: "reverse" }
   | { type: "goto"; target: { value: number; unit: "frame" | "seconds" | "ms" | "percent" } }
   | { type: "style"; style: StyleName }
   | { type: "style_list" }
@@ -213,6 +214,9 @@ export function parseCommand(input: string): Command | null {
 
     case "optimize":
       return { type: "optimize" };
+
+    case "reverse":
+      return { type: "reverse" };
 
     case "goto": {
       if (args.length === 0) {
