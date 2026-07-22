@@ -33,17 +33,17 @@ const mockSendDoneEvent = vi.fn((data: Record<string, unknown>) => {
 });
 
 vi.mock("../helpers", () => ({
-  encodeSSE: (...args: unknown[]) => mockEncodeSSE(...args),
-  createStreamingSSEResponse: (...args: unknown[]) => mockCreateStreamingSSEResponse(...args),
-  animationExists: (...args: unknown[]) => mockAnimationExists(...args),
-  readAnimationFile: (...args: unknown[]) => mockReadAnimationFile(...args),
-  writeAnimationFile: (...args: unknown[]) => mockWriteAnimationFile(...args),
-  saveUserMessage: (...args: unknown[]) => mockSaveUserMessage(...args),
-  saveAssistantMessage: (...args: unknown[]) => mockSaveAssistantMessage(...args),
-  saveVersion: (...args: unknown[]) => mockSaveVersion(...args),
-  emitUpdated: (...args: unknown[]) => mockEmitUpdated(...args),
-  updateAnimationMetadata: (...args: unknown[]) => mockUpdateAnimationMetadata(...args),
-  sendDoneEvent: (...args: unknown[]) => mockSendDoneEvent(...args),
+  encodeSSE: (...args: any[]) => (mockEncodeSSE as any)(...args),
+  createStreamingSSEResponse: (...args: any[]) => (mockCreateStreamingSSEResponse as any)(...args),
+  animationExists: (...args: any[]) => mockAnimationExists(...args),
+  readAnimationFile: (...args: any[]) => mockReadAnimationFile(...args),
+  writeAnimationFile: (...args: any[]) => mockWriteAnimationFile(...args),
+  saveUserMessage: (...args: any[]) => mockSaveUserMessage(...args),
+  saveAssistantMessage: (...args: any[]) => mockSaveAssistantMessage(...args),
+  saveVersion: (...args: any[]) => mockSaveVersion(...args),
+  emitUpdated: (...args: any[]) => mockEmitUpdated(...args),
+  updateAnimationMetadata: (...args: any[]) => mockUpdateAnimationMetadata(...args),
+  sendDoneEvent: (...args: any[]) => (mockSendDoneEvent as any)(...args),
 }));
 
 import { diagnoseAndFix, handleFix } from "../fix";
