@@ -15,6 +15,7 @@ import {
   handleMirror,
   handleRotate,
   handleScale,
+  handleColor,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -128,6 +129,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "scale") {
     return handleScale(animationId, parsedCmd.factor, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "color") {
+    return handleColor(animationId, parsedCmd.subcommand, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
