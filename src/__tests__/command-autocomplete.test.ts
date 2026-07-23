@@ -22,11 +22,12 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/re'", () => {
     const result = filterCommands("/re");
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(4);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/redo");
     expect(commands).toContain("/resize");
     expect(commands).toContain("/rename-layer");
+    expect(commands).toContain("/reverse");
   });
 
   it("is case-insensitive", () => {
@@ -48,19 +49,22 @@ describe("filterCommands", () => {
     expect(play?.hasParams).toBe(false);
   });
 
-  it("filters '/f' to fullscreen", () => {
+  it("filters '/f' to fullscreen and fix", () => {
     const result = filterCommands("/f");
-    expect(result).toHaveLength(1);
-    expect(result[0].command).toBe("/fullscreen");
+    expect(result).toHaveLength(2);
+    const commands = result.map((c) => c.command);
+    expect(commands).toContain("/fullscreen");
+    expect(commands).toContain("/fix");
   });
 
-  it("filters '/p' to play, pause, and presets", () => {
+  it("filters '/p' to play, pause, presets, and polish", () => {
     const result = filterCommands("/p");
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(4);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/play");
     expect(commands).toContain("/pause");
     expect(commands).toContain("/presets");
+    expect(commands).toContain("/polish");
   });
 
   it("exact match '/loop' returns one result", () => {
