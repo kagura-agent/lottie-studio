@@ -40,8 +40,9 @@ jobs:
           # Copy static assets (not included in standalone)
           mkdir -p deploy/.next
           cp -r .next/static deploy/.next/static
-          # Copy public directory
-          cp -r public deploy/public 2>/dev/null || true
+          # Copy public directory contents (merge into deploy/public to avoid nesting)
+          mkdir -p deploy/public
+          cp -r public/* deploy/public/ 2>/dev/null || true
 
       - name: Setup SSH key
         run: |
