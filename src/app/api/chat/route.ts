@@ -17,6 +17,7 @@ import {
   handleScale,
   handleColor,
   handleEasing,
+  handleStagger,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -138,6 +139,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "easing") {
     return handleEasing(animationId, parsedCmd.preset, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "stagger") {
+    return handleStagger(animationId, parsedCmd.delayMs, parsedCmd.order, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

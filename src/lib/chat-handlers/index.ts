@@ -13,5 +13,6 @@ export { handleRotate } from "./rotate";
 export { handleScale } from "./scale";
 export { handleColor } from "./color";
 export { handleEasing } from "./easing";
+export { handleStagger } from "./stagger";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";
