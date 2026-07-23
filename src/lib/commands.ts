@@ -108,6 +108,7 @@ export type Command =
   | { type: "mirror_h" }
   | { type: "mirror_v" }
   | { type: "rotate"; degrees: number }
+  | { type: "scale"; factor: number }
   | { type: "error"; message: string };
 
 export type TrimPoint = { value: number; unit: "frame" | "seconds" | "ms" | "percent" } | { value: 0; unit: "start" } | { value: 0; unit: "end" };
@@ -524,6 +525,23 @@ export function parseCommand(input: string): Command | null {
       }
       const ccw = args.length > 1 && (args[1].toLowerCase() === "ccw" || args[1].toLowerCase() === "counterclockwise");
       return { type: "rotate", degrees: ccw ? -deg : deg };
+    }
+
+    case "scale": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /scale <factor> (e.g. /scale 2x, /scale 0.5x, /scale 150%)" };
+      }
+      const raw = args[0];
+      let factor: number;
+      if (raw.endsWith("%")) {
+        factor = parseFloat(raw.slice(0, -1)) / 100;
+      } else {
+        factor = parseFloat(raw.replace(/x$/i, ""));
+      }
+      if (isNaN(factor) || factor <= 0) {
+        return { type: "error", message: `Invalid scale value: "${args[0]}". Use a positive number like 2x or 150%.` };
+      }
+      return { type: "scale", factor };
     }
 
     case "mirror": {
