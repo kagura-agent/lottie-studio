@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { LottieTestObj } from "./test-types";
 import { parseCommand } from "@/lib/commands";
 import { diagnoseAndFix } from "@/lib/chat-handlers/fix";
 
@@ -67,8 +68,8 @@ describe("diagnoseAndFix", () => {
       const offscreen = issues.find(i => i.category === "Offscreen element");
       expect(offscreen).toBeDefined();
       expect(offscreen!.autoFixed).toBe(true);
-      expect((anim as any).layers[0].ks.p.k[0]).toBe(512);
-      expect((anim as any).layers[0].ks.p.k[1]).toBe(0);
+      expect((anim as LottieTestObj).layers[0].ks.p.k[0]).toBe(512);
+      expect((anim as LottieTestObj).layers[0].ks.p.k[1]).toBe(0);
     });
   });
 
@@ -127,7 +128,7 @@ describe("diagnoseAndFix", () => {
       const emptyGroup = issues.find(i => i.category === "Empty group");
       expect(emptyGroup).toBeDefined();
       expect(emptyGroup!.autoFixed).toBe(true);
-      expect((anim as any).layers[0].shapes).toHaveLength(2);
+      expect((anim as LottieTestObj).layers[0].shapes).toHaveLength(2);
     });
   });
 
@@ -145,7 +146,7 @@ describe("diagnoseAndFix", () => {
       const invisible = issues.find(i => i.category === "Invisible shape");
       expect(invisible).toBeDefined();
       expect(invisible!.autoFixed).toBe(true);
-      const shapes = (anim as any).layers[0].shapes;
+      const shapes = (anim as LottieTestObj).layers[0].shapes;
       expect(shapes.some((s: Record<string, unknown>) => s.ty === "fl")).toBe(true);
     });
 
@@ -176,7 +177,7 @@ describe("diagnoseAndFix", () => {
       const zeroDur = issues.find(i => i.category === "Zero-duration layer");
       expect(zeroDur).toBeDefined();
       expect(zeroDur!.autoFixed).toBe(true);
-      expect((anim as any).layers[0].op).toBe(60);
+      expect((anim as LottieTestObj).layers[0].op).toBe(60);
     });
   });
 
@@ -200,7 +201,7 @@ describe("diagnoseAndFix", () => {
       const dupes = issues.find(i => i.category === "Duplicate keyframes");
       expect(dupes).toBeDefined();
       expect(dupes!.autoFixed).toBe(true);
-      expect((anim as any).layers[0].ks.p.k).toHaveLength(2);
+      expect((anim as LottieTestObj).layers[0].ks.p.k).toHaveLength(2);
     });
   });
 
