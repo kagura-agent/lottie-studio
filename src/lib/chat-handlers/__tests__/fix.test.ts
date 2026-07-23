@@ -33,8 +33,8 @@ const mockSendDoneEvent = vi.fn((data: Record<string, unknown>) => {
 });
 
 vi.mock("../helpers", () => ({
-  encodeSSE: (...args: unknown[]) => mockEncodeSSE(...args),
-  createStreamingSSEResponse: (...args: unknown[]) => mockCreateStreamingSSEResponse(...args),
+  encodeSSE: (...args: unknown[]) => mockEncodeSSE(args[0] as string),
+  createStreamingSSEResponse: (...args: unknown[]) => mockCreateStreamingSSEResponse(args[0] as ReadableStream),
   animationExists: (...args: unknown[]) => mockAnimationExists(...args),
   readAnimationFile: (...args: unknown[]) => mockReadAnimationFile(...args),
   writeAnimationFile: (...args: unknown[]) => mockWriteAnimationFile(...args),
@@ -43,7 +43,7 @@ vi.mock("../helpers", () => ({
   saveVersion: (...args: unknown[]) => mockSaveVersion(...args),
   emitUpdated: (...args: unknown[]) => mockEmitUpdated(...args),
   updateAnimationMetadata: (...args: unknown[]) => mockUpdateAnimationMetadata(...args),
-  sendDoneEvent: (...args: unknown[]) => mockSendDoneEvent(...args),
+  sendDoneEvent: (...args: unknown[]) => mockSendDoneEvent(args[0] as Record<string, unknown>),
 }));
 
 import { diagnoseAndFix, handleFix } from "../fix";

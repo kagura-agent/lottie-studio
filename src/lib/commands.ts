@@ -105,6 +105,8 @@ export type Command =
   | { type: "plugin_install"; slug: string }
   | { type: "plugin_remove"; slug: string }
   | { type: "trim"; range: { start: TrimPoint; end: TrimPoint } }
+  | { type: "mirror_h" }
+  | { type: "mirror_v" }
   | { type: "error"; message: string };
 
 export type TrimPoint = { value: number; unit: "frame" | "seconds" | "ms" | "percent" } | { value: 0; unit: "start" } | { value: 0; unit: "end" };
@@ -510,6 +512,20 @@ export function parseCommand(input: string): Command | null {
     case "a11y":
     case "accessibility":
       return { type: "a11y" };
+
+    case "mirror": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /mirror h|horizontal|v|vertical" };
+      }
+      const axis = args[0].toLowerCase();
+      if (axis === "h" || axis === "horizontal") {
+        return { type: "mirror_h" };
+      }
+      if (axis === "v" || axis === "vertical") {
+        return { type: "mirror_v" };
+      }
+      return { type: "error", message: `Unknown mirror axis: "${args[0]}". Use h (horizontal) or v (vertical).` };
+    }
 
     case "trim": {
       if (args.length === 0) {
