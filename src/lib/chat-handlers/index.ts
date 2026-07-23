@@ -12,5 +12,6 @@ export { handleMirror } from "./mirror";
 export { handleRotate } from "./rotate";
 export { handleScale } from "./scale";
 export { handleColor } from "./color";
+export { handleEasing } from "./easing";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

@@ -16,8 +16,9 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/e'", () => {
     const result = filterCommands("/e");
-    expect(result).toHaveLength(1);
-    expect(result[0].command).toBe("/export");
+    expect(result).toHaveLength(2);
+    expect(result.map((r: { command: string }) => r.command)).toContain("/export");
+    expect(result.map((r: { command: string }) => r.command)).toContain("/easing");
   });
 
   it("filters by prefix '/re'", () => {
