@@ -146,7 +146,7 @@ describe("diagnoseAndFix", () => {
       const invisible = issues.find(i => i.category === "Invisible shape");
       expect(invisible).toBeDefined();
       expect(invisible!.autoFixed).toBe(true);
-      const shapes = (anim as LottieTestObj).layers[0].shapes;
+      const shapes = (anim as LottieTestObj).layers[0].shapes as unknown as Record<string, unknown>[];
       expect(shapes.some((s: Record<string, unknown>) => s.ty === "fl")).toBe(true);
     });
 
