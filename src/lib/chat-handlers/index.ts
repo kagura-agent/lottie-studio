@@ -9,5 +9,6 @@ export { handleRetime } from "./retime";
 export { handleA11y } from "./a11y";
 export { handleTrim } from "./trim";
 export { handleMirror } from "./mirror";
+export { handleRotate } from "./rotate";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

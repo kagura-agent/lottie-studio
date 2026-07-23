@@ -107,6 +107,7 @@ export type Command =
   | { type: "trim"; range: { start: TrimPoint; end: TrimPoint } }
   | { type: "mirror_h" }
   | { type: "mirror_v" }
+  | { type: "rotate"; degrees: number }
   | { type: "error"; message: string };
 
 export type TrimPoint = { value: number; unit: "frame" | "seconds" | "ms" | "percent" } | { value: 0; unit: "start" } | { value: 0; unit: "end" };
@@ -512,6 +513,18 @@ export function parseCommand(input: string): Command | null {
     case "a11y":
     case "accessibility":
       return { type: "a11y" };
+
+    case "rotate": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /rotate <degrees> [ccw|counterclockwise]" };
+      }
+      const deg = parseFloat(args[0]);
+      if (isNaN(deg)) {
+        return { type: "error", message: `Invalid angle: "${args[0]}". Provide a number in degrees.` };
+      }
+      const ccw = args.length > 1 && (args[1].toLowerCase() === "ccw" || args[1].toLowerCase() === "counterclockwise");
+      return { type: "rotate", degrees: ccw ? -deg : deg };
+    }
 
     case "mirror": {
       if (args.length === 0) {
