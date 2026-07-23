@@ -24,6 +24,19 @@ export const STYLE_DESCRIPTIONS: Record<StyleName, string> = {
   nature: "Earth tones (forest green, sky blue, terracotta, sand), organic curves",
 };
 
+export const VALID_EASINGS = [
+  "linear",
+  "ease-in",
+  "ease-out",
+  "ease-in-out",
+  "bounce",
+  "elastic",
+  "spring",
+  "sharp",
+] as const;
+
+export type EasingPresetName = (typeof VALID_EASINGS)[number];
+
 export const VALID_ANIMATIONS = [
   "bounce",
   "pulse",
@@ -110,6 +123,7 @@ export type Command =
   | { type: "rotate"; degrees: number }
   | { type: "scale"; factor: number }
   | { type: "color"; subcommand: ColorSubcommand }
+  | { type: "easing"; preset: EasingPresetName }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -636,6 +650,17 @@ export function parseCommand(input: string): Command | null {
         default:
           return { type: "error", message: `Unknown color subcommand "${sub}". Use palette, shift, warm, cool, mono, swap, invert, saturate, or brighten.` };
       }
+    }
+
+    case "easing": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /easing <preset>. Available presets: ${VALID_EASINGS.join(", ")}` };
+      }
+      const easingName = args[0].toLowerCase();
+      if (VALID_EASINGS.includes(easingName as EasingPresetName)) {
+        return { type: "easing", preset: easingName as EasingPresetName };
+      }
+      return { type: "error", message: `Unknown easing preset "${args[0]}". Available presets: ${VALID_EASINGS.join(", ")}` };
     }
 
     case "help":
