@@ -67,7 +67,7 @@ jobs:
             deploy/ $SSH_TARGET:$DEPLOY_DIR/
 
           # Install production dependencies on server (needed for better-sqlite3 native addon)
-          ssh $SSH_OPTS $SSH_TARGET "cd $DEPLOY_DIR && npm install --omit=dev better-sqlite3"
+          ssh $SSH_OPTS $SSH_TARGET "cd $DEPLOY_DIR && npm install --omit=dev better-sqlite3 sharp"
 
           # Ensure data directory exists for SQLite database
           ssh $SSH_OPTS $SSH_TARGET "mkdir -p $DEPLOY_DIR/data"
