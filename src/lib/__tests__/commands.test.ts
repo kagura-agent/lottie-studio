@@ -864,4 +864,41 @@ describe("parseCommand", () => {
       expect(parseCommand("  /mirror h  ")).toEqual({ type: "mirror_h" });
     });
   });
+
+  describe("/rotate", () => {
+    it("parses /rotate 90", () => {
+      expect(parseCommand("/rotate 90")).toEqual({ type: "rotate", degrees: 90 });
+    });
+
+    it("parses /rotate -45", () => {
+      expect(parseCommand("/rotate -45")).toEqual({ type: "rotate", degrees: -45 });
+    });
+
+    it("parses /rotate 90 ccw", () => {
+      expect(parseCommand("/rotate 90 ccw")).toEqual({ type: "rotate", degrees: -90 });
+    });
+
+    it("parses /rotate 90 counterclockwise", () => {
+      expect(parseCommand("/rotate 90 counterclockwise")).toEqual({ type: "rotate", degrees: -90 });
+    });
+
+    it("returns error with no args", () => {
+      const result = parseCommand("/rotate");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for non-numeric angle", () => {
+      const result = parseCommand("/rotate abc");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid angle") });
+    });
+
+    it("handles decimal degrees", () => {
+      expect(parseCommand("/rotate 45.5")).toEqual({ type: "rotate", degrees: 45.5 });
+    });
+
+    it("is case-insensitive for ccw modifier", () => {
+      expect(parseCommand("/rotate 90 CCW")).toEqual({ type: "rotate", degrees: -90 });
+      expect(parseCommand("/ROTATE 90 Counterclockwise")).toEqual({ type: "rotate", degrees: -90 });
+    });
+  });
 });

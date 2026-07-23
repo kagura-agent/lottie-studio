@@ -13,6 +13,7 @@ import {
   handleA11y,
   handleTrim,
   handleMirror,
+  handleRotate,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -118,6 +119,10 @@ export async function POST(request: Request) {
   if (parsedCmd && (parsedCmd.type === "mirror_h" || parsedCmd.type === "mirror_v")) {
     const axis = parsedCmd.type === "mirror_h" ? "horizontal" : "vertical";
     return handleMirror(animationId, axis, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "rotate") {
+    return handleRotate(animationId, parsedCmd.degrees, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
