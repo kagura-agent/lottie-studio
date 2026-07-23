@@ -37,6 +37,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/trim", description: "Extract a frame range as the new animation (e.g. /trim 30-60, /trim 1s-2.5s)", hasParams: true },
   { command: "/mirror", description: "Flip animation horizontally or vertically (e.g. /mirror h, /mirror v)", hasParams: true },
   { command: "/rotate", description: "Rotate animation by degrees (e.g. /rotate 90, /rotate 45 ccw)", hasParams: true },
+  { command: "/scale", description: "Scale animation elements (e.g. /scale 2x, /scale 0.5x, /scale 150%)", hasParams: true },
   { command: "/reverse", description: "Reverse animation playback direction", hasParams: false },
   { command: "/fix", description: "Auto-diagnose and repair common animation issues", hasParams: false },
   { command: "/a11y", description: "Run accessibility audit (flash detection, reduced motion)", hasParams: false },

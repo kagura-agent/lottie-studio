@@ -14,6 +14,7 @@ import {
   handleTrim,
   handleMirror,
   handleRotate,
+  handleScale,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -123,6 +124,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "rotate") {
     return handleRotate(animationId, parsedCmd.degrees, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "scale") {
+    return handleScale(animationId, parsedCmd.factor, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
