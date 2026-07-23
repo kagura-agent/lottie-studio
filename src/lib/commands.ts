@@ -124,6 +124,7 @@ export type Command =
   | { type: "scale"; factor: number }
   | { type: "color"; subcommand: ColorSubcommand }
   | { type: "easing"; preset: EasingPresetName }
+  | { type: "stagger"; delayMs: number; order: "normal" | "reverse" | "random" }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -661,6 +662,26 @@ export function parseCommand(input: string): Command | null {
         return { type: "easing", preset: easingName as EasingPresetName };
       }
       return { type: "error", message: `Unknown easing preset "${args[0]}". Available presets: ${VALID_EASINGS.join(", ")}` };
+    }
+
+    case "stagger": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /stagger <delayMs> [normal|reverse|random]" };
+      }
+      const delay = parseFloat(args[0]);
+      if (isNaN(delay) || delay < 0) {
+        return { type: "error", message: `Invalid delay: "${args[0]}". Provide a non-negative number in milliseconds.` };
+      }
+      const orderArg = args[1]?.toLowerCase();
+      let order: "normal" | "reverse" | "random" = "normal";
+      if (orderArg) {
+        if (orderArg === "reverse" || orderArg === "random" || orderArg === "normal") {
+          order = orderArg;
+        } else {
+          return { type: "error", message: `Unknown order: "${args[1]}". Use normal, reverse, or random.` };
+        }
+      }
+      return { type: "stagger", delayMs: delay, order };
     }
 
     case "help":
