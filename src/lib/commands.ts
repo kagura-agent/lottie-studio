@@ -109,7 +109,19 @@ export type Command =
   | { type: "mirror_v" }
   | { type: "rotate"; degrees: number }
   | { type: "scale"; factor: number }
+  | { type: "color"; subcommand: ColorSubcommand }
   | { type: "error"; message: string };
+
+export type ColorSubcommand =
+  | { action: "palette" }
+  | { action: "shift"; degrees: number }
+  | { action: "warm" }
+  | { action: "cool" }
+  | { action: "mono" }
+  | { action: "swap"; from: string; to: string }
+  | { action: "invert" }
+  | { action: "saturate"; amount: number }
+  | { action: "brighten"; amount: number };
 
 export type TrimPoint = { value: number; unit: "frame" | "seconds" | "ms" | "percent" } | { value: 0; unit: "start" } | { value: 0; unit: "end" };
 
@@ -575,6 +587,55 @@ export function parseCommand(input: string): Command | null {
         return { type: "error", message: `Invalid trim range: "${raw}". Use format: <start>-<end> (frames, seconds, ms, or %)` };
       }
       return { type: "trim", range: { start, end } };
+    }
+
+    case "color": {
+      if (args.length === 0) {
+        return { type: "error", message: "Usage: /color palette|shift|warm|cool|mono|swap|invert|saturate|brighten" };
+      }
+      const sub = args[0].toLowerCase();
+      switch (sub) {
+        case "palette":
+          return { type: "color", subcommand: { action: "palette" } };
+        case "shift": {
+          if (args.length < 2) return { type: "error", message: "Usage: /color shift <degrees>" };
+          const deg = parseFloat(args[1]);
+          if (isNaN(deg)) return { type: "error", message: `Invalid degrees: "${args[1]}"` };
+          return { type: "color", subcommand: { action: "shift", degrees: deg } };
+        }
+        case "warm":
+          return { type: "color", subcommand: { action: "warm" } };
+        case "cool":
+          return { type: "color", subcommand: { action: "cool" } };
+        case "mono":
+        case "monochrome":
+        case "grayscale":
+          return { type: "color", subcommand: { action: "mono" } };
+        case "swap": {
+          if (args.length < 3) return { type: "error", message: "Usage: /color swap <from-hex> <to-hex>" };
+          return { type: "color", subcommand: { action: "swap", from: args[1], to: args[2] } };
+        }
+        case "invert":
+          return { type: "color", subcommand: { action: "invert" } };
+        case "saturate":
+        case "saturation": {
+          if (args.length < 2) return { type: "error", message: "Usage: /color saturate <amount> (e.g. +20 or -30)" };
+          const raw = args[1].replace(/%$/, "");
+          const val = parseFloat(raw);
+          if (isNaN(val)) return { type: "error", message: `Invalid amount: "${args[1]}"` };
+          return { type: "color", subcommand: { action: "saturate", amount: val / 100 } };
+        }
+        case "brighten":
+        case "brightness": {
+          if (args.length < 2) return { type: "error", message: "Usage: /color brighten <amount> (e.g. +20 or -30)" };
+          const raw = args[1].replace(/%$/, "");
+          const val = parseFloat(raw);
+          if (isNaN(val)) return { type: "error", message: `Invalid amount: "${args[1]}"` };
+          return { type: "color", subcommand: { action: "brighten", amount: val / 100 } };
+        }
+        default:
+          return { type: "error", message: `Unknown color subcommand "${sub}". Use palette, shift, warm, cool, mono, swap, invert, saturate, or brighten.` };
+      }
     }
 
     case "help":
