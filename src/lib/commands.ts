@@ -14,6 +14,15 @@ import {
   VALID_COLOR_PALETTES,
 } from "@/lib/particle";
 
+export interface DrawCommandOptions {
+  duration?: number;
+  easing?: string;
+  reverse?: boolean;
+  stagger?: number;
+  from?: number;
+  to?: number;
+}
+
 export interface MorphCommandOptions {
   duration?: number;
   easing?: string;
@@ -147,6 +156,7 @@ export type Command =
   | { type: "stagger"; delayMs: number; order: "normal" | "reverse" | "random" }
   | { type: "morph"; shape: MorphShape; options: MorphCommandOptions }
   | { type: "particle"; particleType: ParticleType; options: ParticleOptions }
+  | { type: "draw"; options: DrawCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -798,6 +808,35 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "morph", shape: shapeName as MorphShape, options: morphOpts };
+    }
+
+    case "draw": {
+      const drawOpts: DrawCommandOptions = {};
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          drawOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          drawOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--reverse" || flag === "reverse") {
+          drawOpts.reverse = true;
+        } else if (flag === "--stagger" && args[i + 1]) {
+          const s = parseFloat(args[++i]);
+          if (isNaN(s) || s < 0) return { type: "error", message: `Invalid stagger: "${args[i]}"` };
+          drawOpts.stagger = s;
+        } else if (flag === "--from" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f < 0 || f > 100) return { type: "error", message: `Invalid from value: "${args[i]}"` };
+          drawOpts.from = f;
+        } else if (flag === "--to" && args[i + 1]) {
+          const t = parseFloat(args[++i]);
+          if (isNaN(t) || t < 0 || t > 100) return { type: "error", message: `Invalid to value: "${args[i]}"` };
+          drawOpts.to = t;
+        }
+      }
+      return { type: "draw", options: drawOpts };
     }
 
     default:

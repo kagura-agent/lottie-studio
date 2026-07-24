@@ -20,6 +20,7 @@ import {
   handleStagger,
   handleMorph,
   handleParticle,
+  handleDraw,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -153,6 +154,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "particle") {
     return handleParticle(animationId, parsedCmd.particleType, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "draw") {
+    return handleDraw(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
