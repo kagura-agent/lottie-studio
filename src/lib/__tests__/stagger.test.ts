@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { staggerAnimation } from "../stagger";
 
+interface LottieLayer {
+  nm: string;
+  ip: number;
+  op: number;
+  ty: number;
+}
+
+interface LottieResult {
+  v: string;
+  fr: number;
+  ip: number;
+  op: number;
+  w: number;
+  h: number;
+  layers: LottieLayer[];
+}
+
 function makeLottie(layerCount: number, fr = 30, op = 60) {
   const layers = Array.from({ length: layerCount }, (_, i) => ({
     nm: `Layer ${i}`,
@@ -13,7 +30,7 @@ function makeLottie(layerCount: number, fr = 30, op = 60) {
 
 describe("staggerAnimation", () => {
   it("applies incremental delay in normal order", () => {
-    const result = staggerAnimation(makeLottie(3), 200, "normal") as any;
+    const result = staggerAnimation(makeLottie(3), 200, "normal") as LottieResult;
     // delayFrames = 200 * 30 / 1000 = 6
     expect(result.layers[0].ip).toBe(0);
     expect(result.layers[0].op).toBe(60);
@@ -24,12 +41,12 @@ describe("staggerAnimation", () => {
   });
 
   it("extends animation op to accommodate shifted layers", () => {
-    const result = staggerAnimation(makeLottie(3), 200, "normal") as any;
+    const result = staggerAnimation(makeLottie(3), 200, "normal") as LottieResult;
     expect(result.op).toBe(72);
   });
 
   it("applies delay in reverse order", () => {
-    const result = staggerAnimation(makeLottie(3), 100, "reverse") as any;
+    const result = staggerAnimation(makeLottie(3), 100, "reverse") as LottieResult;
     // delayFrames = 100 * 30 / 1000 = 3
     // reverse indices: [2, 1, 0] → rank 0→layer2, rank 1→layer1, rank 2→layer0
     expect(result.layers[2].ip).toBe(0);
@@ -38,21 +55,21 @@ describe("staggerAnimation", () => {
   });
 
   it("applies random order with unique offsets for all layers", () => {
-    const result = staggerAnimation(makeLottie(5), 100, "random") as any;
-    const ips = result.layers.map((l: any) => l.ip);
+    const result = staggerAnimation(makeLottie(5), 100, "random") as LottieResult;
+    const ips = result.layers.map((l: LottieLayer) => l.ip);
     const unique = new Set(ips);
     expect(unique.size).toBe(5);
   });
 
   it("returns unchanged when only 1 layer", () => {
     const input = makeLottie(1);
-    const result = staggerAnimation(input, 200, "normal") as any;
+    const result = staggerAnimation(input, 200, "normal") as LottieResult;
     expect(result.layers[0].ip).toBe(0);
     expect(result.layers[0].op).toBe(60);
   });
 
   it("handles 0 delay (no-op offsets)", () => {
-    const result = staggerAnimation(makeLottie(3), 0, "normal") as any;
+    const result = staggerAnimation(makeLottie(3), 0, "normal") as LottieResult;
     expect(result.layers[0].ip).toBe(0);
     expect(result.layers[1].ip).toBe(0);
     expect(result.layers[2].ip).toBe(0);
@@ -60,13 +77,13 @@ describe("staggerAnimation", () => {
 
   it("does not mutate the original object", () => {
     const input = makeLottie(3);
-    const originalIp = (input.layers[1] as any).ip;
+    const originalIp = input.layers[1].ip;
     staggerAnimation(input, 200, "normal");
-    expect((input.layers[1] as any).ip).toBe(originalIp);
+    expect(input.layers[1].ip).toBe(originalIp);
   });
 
   it("works with non-30fps animations", () => {
-    const result = staggerAnimation(makeLottie(2, 60, 120), 500, "normal") as any;
+    const result = staggerAnimation(makeLottie(2, 60, 120), 500, "normal") as LottieResult;
     // delayFrames = 500 * 60 / 1000 = 30
     expect(result.layers[0].ip).toBe(0);
     expect(result.layers[1].ip).toBe(30);
