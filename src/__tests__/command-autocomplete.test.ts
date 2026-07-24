@@ -50,10 +50,11 @@ describe("filterCommands", () => {
     expect(play?.hasParams).toBe(false);
   });
 
-  it("filters '/f' to fullscreen and fix", () => {
+  it("filters '/f' to fade, fullscreen, and fix", () => {
     const result = filterCommands("/f");
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(3);
     const commands = result.map((c) => c.command);
+    expect(commands).toContain("/fade");
     expect(commands).toContain("/fullscreen");
     expect(commands).toContain("/fix");
   });
