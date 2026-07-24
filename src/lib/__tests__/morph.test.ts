@@ -1,5 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { morphAnimation, VALID_MORPH_SHAPES, MorphShape } from "../morph";
+import { morphAnimation, MorphShape } from "../morph";
+
+interface MorphKs extends Record<string, unknown> {
+  a: number;
+  k: Record<string, unknown>[];
+}
+
+interface MorphLayer extends Record<string, unknown> {
+  shapes: { ks: MorphKs }[];
+}
+
+interface MorphResult extends Record<string, unknown> {
+  layers: MorphLayer[];
+  op: number;
+}
+
+function getKs(result: object, layerIdx = 0): MorphKs {
+  return (result as MorphResult).layers[layerIdx].shapes[0].ks;
+}
 
 function makeLottie(shapeVertices?: number[][], opts?: { layerName?: string; multiLayer?: boolean }) {
   const vertices = shapeVertices || [
@@ -58,8 +76,8 @@ describe("morphAnimation", () => {
 
   for (const shape of shapes) {
     it(`morphs to ${shape}`, () => {
-      const result = morphAnimation(makeLottie(), shape) as any;
-      const ks = result.layers[0].shapes[0].ks;
+      const result = morphAnimation(makeLottie(), shape);
+      const ks = getKs(result);
       expect(ks.a).toBe(1);
       expect(ks.k).toHaveLength(2);
       expect(ks.k[0].s).toBeDefined();
@@ -69,51 +87,49 @@ describe("morphAnimation", () => {
   }
 
   it("handles rectangle as alias for rect", () => {
-    const result = morphAnimation(makeLottie(), "rectangle") as any;
-    const ks = result.layers[0].shapes[0].ks;
+    const result = morphAnimation(makeLottie(), "rectangle");
+    const ks = getKs(result);
     expect(ks.a).toBe(1);
-    expect(ks.k[0].e[0].v).toHaveLength(4);
+    expect((ks.k[0].e as Record<string, unknown>[])[0].v).toHaveLength(4);
   });
 
   it("matches vertex counts via subdivision", () => {
-    const result = morphAnimation(makeLottie(), "star") as any;
-    const ks = result.layers[0].shapes[0].ks;
-    const sourceCount = ks.k[0].s[0].v.length;
-    const targetCount = ks.k[0].e[0].v.length;
+    const result = morphAnimation(makeLottie(), "star");
+    const ks = getKs(result);
+    const sourceCount = ((ks.k[0].s as Record<string, unknown>[])[0].v as unknown[]).length;
+    const targetCount = ((ks.k[0].e as Record<string, unknown>[])[0].v as unknown[]).length;
     expect(sourceCount).toBe(targetCount);
   });
 
   it("respects --duration flag", () => {
-    const result = morphAnimation(makeLottie(), "circle", { duration: 2 }) as any;
-    const ks = result.layers[0].shapes[0].ks;
+    const result = morphAnimation(makeLottie(), "circle", { duration: 2 });
+    const ks = getKs(result);
     expect(ks.k[0].t).toBe(0);
-    expect(ks.k[1].t).toBe(60); // 2s * 30fps
+    expect(ks.k[1].t).toBe(60);
   });
 
   it("defaults duration to 1 second", () => {
-    const result = morphAnimation(makeLottie(), "circle") as any;
-    const ks = result.layers[0].shapes[0].ks;
-    expect(ks.k[1].t).toBe(30); // 1s * 30fps
+    const result = morphAnimation(makeLottie(), "circle");
+    const ks = getKs(result);
+    expect(ks.k[1].t).toBe(30);
   });
 
   it("respects --easing flag", () => {
-    const result = morphAnimation(makeLottie(), "circle", { easing: "ease-in" }) as any;
-    const ks = result.layers[0].shapes[0].ks;
-    expect(ks.k[0].i.x[0]).toBeCloseTo(0.42);
+    const result = morphAnimation(makeLottie(), "circle", { easing: "ease-in" });
+    const ks = getKs(result);
+    expect((ks.k[0].i as Record<string, number[]>).x[0]).toBeCloseTo(0.42);
   });
 
   it("targets specific layer by name", () => {
-    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "circle", { layer: "Other Layer" }) as any;
-    // First layer should be unchanged
-    expect(result.layers[0].shapes[0].ks.a).toBe(0);
-    // Second layer should be morphed
-    expect(result.layers[1].shapes[0].ks.a).toBe(1);
+    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "circle", { layer: "Other Layer" });
+    expect(getKs(result, 0).a).toBe(0);
+    expect(getKs(result, 1).a).toBe(1);
   });
 
   it("targets specific layer by index", () => {
-    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "circle", { layer: 1 }) as any;
-    expect(result.layers[0].shapes[0].ks.a).toBe(0);
-    expect(result.layers[1].shapes[0].ks.a).toBe(1);
+    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "circle", { layer: 1 });
+    expect(getKs(result, 0).a).toBe(0);
+    expect(getKs(result, 1).a).toBe(1);
   });
 
   it("throws when no path data found", () => {
@@ -144,16 +160,16 @@ describe("morphAnimation", () => {
   it("extends op if morph duration exceeds animation length", () => {
     const short = makeLottie();
     short.op = 10;
-    const result = morphAnimation(short, "circle", { duration: 2 }) as any;
-    expect(result.op).toBe(60); // 2s * 30fps
+    const result = morphAnimation(short, "circle", { duration: 2 }) as MorphResult;
+    expect(result.op).toBe(60);
   });
 
   it("handles single-vertex path gracefully", () => {
-    const result = morphAnimation(makeLottie([[50, 50]]), "circle") as any;
-    const ks = result.layers[0].shapes[0].ks;
+    const result = morphAnimation(makeLottie([[50, 50]]), "circle");
+    const ks = getKs(result);
     expect(ks.a).toBe(1);
-    const sourceCount = ks.k[0].s[0].v.length;
-    const targetCount = ks.k[0].e[0].v.length;
+    const sourceCount = ((ks.k[0].s as Record<string, unknown>[])[0].v as unknown[]).length;
+    const targetCount = ((ks.k[0].e as Record<string, unknown>[])[0].v as unknown[]).length;
     expect(sourceCount).toBe(targetCount);
   });
 
@@ -185,15 +201,17 @@ describe("morphAnimation", () => {
         ks: { p: { a: 0, k: [50, 50] } },
       }],
     };
-    const result = morphAnimation(lottie, "hexagon") as any;
-    const ks = result.layers[0].shapes[0].ks;
+    const result = morphAnimation(lottie, "hexagon");
+    const ks = getKs(result);
     expect(ks.a).toBe(1);
-    expect(ks.k[0].s[0].v.length).toBe(ks.k[0].e[0].v.length);
+    const s0v = ((ks.k[0].s as Record<string, unknown>[])[0].v as unknown[]).length;
+    const e0v = ((ks.k[0].e as Record<string, unknown>[])[0].v as unknown[]).length;
+    expect(s0v).toBe(e0v);
   });
 
   it("morphs multiple shape layers when no --layer specified", () => {
-    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "triangle") as any;
-    expect(result.layers[0].shapes[0].ks.a).toBe(1);
-    expect(result.layers[1].shapes[0].ks.a).toBe(1);
+    const result = morphAnimation(makeLottie(undefined, { multiLayer: true }), "triangle");
+    expect(getKs(result, 0).a).toBe(1);
+    expect(getKs(result, 1).a).toBe(1);
   });
 });

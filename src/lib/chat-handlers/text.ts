@@ -11,7 +11,7 @@ import {
   saveUserMessage,
   saveAssistantMessage,
 } from "./helpers";
-import { generateTextAnimation, TextOptions, TextPreset } from "@/lib/text";
+import { generateTextAnimation, TextOptions } from "@/lib/text";
 
 export async function handleText(
   animationId: string | undefined,

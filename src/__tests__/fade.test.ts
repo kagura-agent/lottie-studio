@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyFade, VALID_FADE_MODES, FadeOptions } from "@/lib/fade";
+import { applyFade, VALID_FADE_MODES } from "@/lib/fade";
 
 function makeAnim(layers?: Array<Record<string, unknown>>, fr = 30, ip = 0, op = 60): Record<string, unknown> {
   return {

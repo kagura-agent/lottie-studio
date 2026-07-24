@@ -41,7 +41,6 @@ describe("thumbnail-renderer - getBrowser", () => {
   });
 
   it("returns existing connected browser without relaunching", async () => {
-    const puppeteer = (await import("puppeteer-core")).default;
     const { getBrowser } = await import("@/lib/thumbnail-renderer");
 
     const b1 = await getBrowser();

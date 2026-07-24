@@ -12,7 +12,6 @@ import {
   ParticleSpeed,
   VALID_SIZES,
   ParticleSize,
-  VALID_COLOR_PALETTES,
 } from "@/lib/particle";
 import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/text";
 import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";

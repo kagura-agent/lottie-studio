@@ -18,9 +18,7 @@ import {
   updateSequenceItem,
   removeSequenceItem,
   reorderSequenceItems,
-  VALID_TRANSITIONS,
 } from "@/lib/db";
-import path from "node:path";
 import fs from "node:fs";
 
 const createdSequenceIds: string[] = [];

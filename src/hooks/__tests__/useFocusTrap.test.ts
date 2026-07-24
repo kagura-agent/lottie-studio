@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import React from "react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
@@ -21,11 +21,9 @@ function pressTab(shiftKey = false) {
 }
 
 describe("useFocusTrap", () => {
-  let rafSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
     document.body.innerHTML = "";
-    rafSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       cb(0);
       return 0;
     });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateParticleAnimation, VALID_PARTICLE_TYPES, ParticleType } from "../particle";
+import { generateParticleAnimation, VALID_PARTICLE_TYPES } from "../particle";
 
 describe("generateParticleAnimation", () => {
   it("generates valid Lottie structure for each particle type", () => {

@@ -14,7 +14,7 @@ vi.mock("@/components/MarkdownMessage", () => ({
 }));
 
 vi.mock("@/components/InlineLottiePreview", () => ({
-  default: ({ lottieJson, previousLottieJson }: { lottieJson: object; previousLottieJson?: object }) => (
+  default: ({ previousLottieJson }: { lottieJson: object; previousLottieJson?: object }) => (
     <div data-testid="lottie-preview" data-has-previous={previousLottieJson ? "true" : "false"} />
   ),
 }));
