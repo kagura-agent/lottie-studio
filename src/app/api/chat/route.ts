@@ -19,6 +19,7 @@ import {
   handleEasing,
   handleStagger,
   handleMorph,
+  handleParticle,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -148,6 +149,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "morph") {
     return handleMorph(animationId, parsedCmd.shape, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "particle") {
+    return handleParticle(animationId, parsedCmd.particleType, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

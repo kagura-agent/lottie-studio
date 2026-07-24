@@ -15,5 +15,6 @@ export { handleColor } from "./color";
 export { handleEasing } from "./easing";
 export { handleStagger } from "./stagger";
 export { handleMorph } from "./morph";
+export { handleParticle } from "./particle";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

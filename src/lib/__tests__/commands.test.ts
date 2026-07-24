@@ -901,4 +901,76 @@ describe("parseCommand", () => {
       expect(parseCommand("/ROTATE 90 Counterclockwise")).toEqual({ type: "rotate", degrees: -90 });
     });
   });
+
+  describe("/particle", () => {
+    it("parses basic /particle confetti", () => {
+      expect(parseCommand("/particle confetti")).toEqual({
+        type: "particle",
+        particleType: "confetti",
+        options: {},
+      });
+    });
+
+    it("parses all valid particle types", () => {
+      const types = ["confetti", "snow", "sparkle", "stars", "bubbles", "rain", "fireworks", "hearts"];
+      for (const t of types) {
+        const result = parseCommand(`/particle ${t}`);
+        expect(result).toEqual({ type: "particle", particleType: t, options: {} });
+      }
+    });
+
+    it("parses with all options", () => {
+      expect(parseCommand("/particle snow --count 50 --color cool --direction down --speed slow --size large")).toEqual({
+        type: "particle",
+        particleType: "snow",
+        options: { count: 50, color: "cool", direction: "down", speed: "slow", size: "large" },
+      });
+    });
+
+    it("parses hex color", () => {
+      expect(parseCommand("/particle stars --color #ff00aa")).toEqual({
+        type: "particle",
+        particleType: "stars",
+        options: { color: "#ff00aa" },
+      });
+    });
+
+    it("returns error with no args", () => {
+      const result = parseCommand("/particle");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for invalid type", () => {
+      const result = parseCommand("/particle plasma");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Unknown particle type") });
+    });
+
+    it("returns error for invalid direction", () => {
+      const result = parseCommand("/particle snow --direction diagonal");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid direction") });
+    });
+
+    it("returns error for invalid speed", () => {
+      const result = parseCommand("/particle snow --speed turbo");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid speed") });
+    });
+
+    it("returns error for invalid size", () => {
+      const result = parseCommand("/particle snow --size huge");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid size") });
+    });
+
+    it("returns error for invalid count", () => {
+      const result = parseCommand("/particle snow --count abc");
+      expect(result).toEqual({ type: "error", message: expect.stringContaining("Invalid count") });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/PARTICLE CONFETTI --SPEED FAST")).toEqual({
+        type: "particle",
+        particleType: "confetti",
+        options: { speed: "fast" },
+      });
+    });
+  });
 });

@@ -1,6 +1,18 @@
 // Slash command parser for chat panel
 
 import { VALID_MORPH_SHAPES, MorphShape } from "@/lib/morph";
+import {
+  VALID_PARTICLE_TYPES,
+  ParticleType,
+  ParticleOptions,
+  VALID_DIRECTIONS,
+  ParticleDirection,
+  VALID_SPEEDS,
+  ParticleSpeed,
+  VALID_SIZES,
+  ParticleSize,
+  VALID_COLOR_PALETTES,
+} from "@/lib/particle";
 
 export interface MorphCommandOptions {
   duration?: number;
@@ -134,6 +146,7 @@ export type Command =
   | { type: "easing"; preset: EasingPresetName }
   | { type: "stagger"; delayMs: number; order: "normal" | "reverse" | "random" }
   | { type: "morph"; shape: MorphShape; options: MorphCommandOptions }
+  | { type: "particle"; particleType: ParticleType; options: ParticleOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -719,6 +732,46 @@ export function parseCommand(input: string): Command | null {
         return { type: "plugin_remove", slug: args[1] };
       }
       return { type: "error", message: `Unknown plugin subcommand "${sub}". Use install or remove.` };
+    }
+
+    case "particle": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /particle <type> [--count N] [--color <hex|palette>] [--direction <dir>] [--speed <speed>] [--size <size>]. Types: ${VALID_PARTICLE_TYPES.join(", ")}` };
+      }
+      const pType = args[0].toLowerCase();
+      if (!VALID_PARTICLE_TYPES.includes(pType as ParticleType)) {
+        return { type: "error", message: `Unknown particle type "${args[0]}". Available: ${VALID_PARTICLE_TYPES.join(", ")}` };
+      }
+      const pOpts: ParticleOptions = {};
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--count" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid count: "${args[i]}"` };
+          pOpts.count = n;
+        } else if (flag === "--color" && args[i + 1]) {
+          pOpts.color = args[++i].toLowerCase();
+        } else if (flag === "--direction" && args[i + 1]) {
+          const d = args[++i].toLowerCase();
+          if (!VALID_DIRECTIONS.includes(d as ParticleDirection)) {
+            return { type: "error", message: `Invalid direction "${d}". Use: ${VALID_DIRECTIONS.join(", ")}` };
+          }
+          pOpts.direction = d as ParticleDirection;
+        } else if (flag === "--speed" && args[i + 1]) {
+          const s = args[++i].toLowerCase();
+          if (!VALID_SPEEDS.includes(s as ParticleSpeed)) {
+            return { type: "error", message: `Invalid speed "${s}". Use: ${VALID_SPEEDS.join(", ")}` };
+          }
+          pOpts.speed = s as ParticleSpeed;
+        } else if (flag === "--size" && args[i + 1]) {
+          const sz = args[++i].toLowerCase();
+          if (!VALID_SIZES.includes(sz as ParticleSize)) {
+            return { type: "error", message: `Invalid size "${sz}". Use: ${VALID_SIZES.join(", ")}` };
+          }
+          pOpts.size = sz as ParticleSize;
+        }
+      }
+      return { type: "particle", particleType: pType as ParticleType, options: pOpts };
     }
 
     case "morph": {
