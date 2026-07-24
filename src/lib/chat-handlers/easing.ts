@@ -35,7 +35,7 @@ export async function handleEasing(
     return sendDoneEvent({ reply: "No keyframes found to apply easing to. The animation needs animated properties with keyframes." });
   }
 
-  writeAnimationFile(animationId, result);
+  writeAnimationFile(animationId, result as Record<string, unknown>);
   updateAnimationMetadata(animationId, result as Record<string, unknown>);
 
   const lottieStr = JSON.stringify(result);
