@@ -21,6 +21,7 @@ import {
   handleMorph,
   handleParticle,
   handleDraw,
+  handleText,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -158,6 +159,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "draw") {
     return handleDraw(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "text") {
+    return handleText(animationId, parsedCmd.text, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

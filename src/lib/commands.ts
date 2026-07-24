@@ -13,6 +13,7 @@ import {
   ParticleSize,
   VALID_COLOR_PALETTES,
 } from "@/lib/particle";
+import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/text";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -27,6 +28,13 @@ export interface MorphCommandOptions {
   duration?: number;
   easing?: string;
   layer?: string | number;
+}
+
+export interface TextCommandOptions {
+  style?: TextPreset;
+  color?: string;
+  size?: number;
+  align?: TextAlign;
 }
 
 export const VALID_STYLES = [
@@ -157,6 +165,7 @@ export type Command =
   | { type: "morph"; shape: MorphShape; options: MorphCommandOptions }
   | { type: "particle"; particleType: ParticleType; options: ParticleOptions }
   | { type: "draw"; options: DrawCommandOptions }
+  | { type: "text"; text: string; options: TextCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -837,6 +846,57 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "draw", options: drawOpts };
+    }
+
+    case "text": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /text <content> [--style <preset>] [--color <hex>] [--size <n>] [--align <left|center|right>]. Styles: ${VALID_TEXT_PRESETS.join(", ")}` };
+      }
+      let textContent = "";
+      const textOpts: TextCommandOptions = {};
+      let i = 0;
+      // Parse quoted text content
+      if (args[0].startsWith('"')) {
+        const parts: string[] = [];
+        for (; i < args.length; i++) {
+          parts.push(args[i]);
+          if (args[i].endsWith('"') && (i > 0 || args[i].length > 1)) break;
+        }
+        textContent = parts.join(" ").replace(/^"|"$/g, "");
+        i++;
+      } else {
+        // Collect unquoted text until a flag is hit
+        for (; i < args.length; i++) {
+          if (args[i].startsWith("--")) break;
+          textContent += (textContent ? " " : "") + args[i];
+        }
+      }
+      if (!textContent.trim()) {
+        return { type: "error", message: "Text content is required." };
+      }
+      for (; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if ((flag === "--style" || flag === "--font") && args[i + 1]) {
+          const s = args[++i].toLowerCase();
+          if (!VALID_TEXT_PRESETS.includes(s as TextPreset)) {
+            return { type: "error", message: `Invalid style "${s}". Available: ${VALID_TEXT_PRESETS.join(", ")}` };
+          }
+          textOpts.style = s as TextPreset;
+        } else if (flag === "--color" && args[i + 1]) {
+          textOpts.color = args[++i];
+        } else if (flag === "--size" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid size: "${args[i]}"` };
+          textOpts.size = n;
+        } else if (flag === "--align" && args[i + 1]) {
+          const a = args[++i].toLowerCase();
+          if (!VALID_ALIGNS.includes(a as TextAlign)) {
+            return { type: "error", message: `Invalid align "${a}". Use: ${VALID_ALIGNS.join(", ")}` };
+          }
+          textOpts.align = a as TextAlign;
+        }
+      }
+      return { type: "text", text: textContent, options: textOpts };
     }
 
     default:
