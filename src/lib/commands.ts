@@ -15,6 +15,7 @@ import {
   VALID_COLOR_PALETTES,
 } from "@/lib/particle";
 import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/text";
+import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -47,6 +48,18 @@ export interface TextCommandOptions {
   color?: string;
   size?: number;
   align?: TextAlign;
+}
+
+export interface SlideCommandOptions {
+  direction: SlideDirection;
+  out?: boolean;
+  duration?: number;
+  easing?: string;
+  layer?: string;
+  stagger?: number;
+  distance?: number;
+  from?: number;
+  to?: number;
 }
 
 export const VALID_STYLES = [
@@ -179,6 +192,7 @@ export type Command =
   | { type: "draw"; options: DrawCommandOptions }
   | { type: "fade"; mode: FadeMode; options: FadeCommandOptions }
   | { type: "text"; text: string; options: TextCommandOptions }
+  | { type: "slide"; direction: SlideDirection; options: SlideCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -899,6 +913,48 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "fade", mode: fadeMode as FadeMode, options: fadeOpts };
+    }
+
+    case "slide": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /slide <direction> [--out] [--layer NAME] [--duration N] [--easing NAME] [--stagger N] [--distance N] [--from N] [--to N]. Directions: ${VALID_SLIDE_DIRECTIONS.join(", ")}` };
+      }
+      const slideDir = args[0].toLowerCase();
+      if (!(VALID_SLIDE_DIRECTIONS as readonly string[]).includes(slideDir)) {
+        return { type: "error", message: `Unknown slide direction "${args[0]}". Available: ${VALID_SLIDE_DIRECTIONS.join(", ")}` };
+      }
+      const slideOpts: SlideCommandOptions = { direction: slideDir as SlideDirection };
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--out") {
+          slideOpts.out = true;
+        } else if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          slideOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          slideOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--layer" && args[i + 1]) {
+          slideOpts.layer = args[++i];
+        } else if (flag === "--stagger" && args[i + 1]) {
+          const s = parseFloat(args[++i]);
+          if (isNaN(s) || s < 0) return { type: "error", message: `Invalid stagger: "${args[i]}"` };
+          slideOpts.stagger = s;
+        } else if (flag === "--distance" && args[i + 1]) {
+          const dist = parseFloat(args[++i]);
+          if (isNaN(dist) || dist <= 0) return { type: "error", message: `Invalid distance: "${args[i]}"` };
+          slideOpts.distance = dist;
+        } else if (flag === "--from" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f < 0) return { type: "error", message: `Invalid from value: "${args[i]}"` };
+          slideOpts.from = f;
+        } else if (flag === "--to" && args[i + 1]) {
+          const t = parseFloat(args[++i]);
+          if (isNaN(t) || t < 0) return { type: "error", message: `Invalid to value: "${args[i]}"` };
+          slideOpts.to = t;
+        }
+      }
+      return { type: "slide", direction: slideDir as SlideDirection, options: slideOpts };
     }
 
     case "text": {
