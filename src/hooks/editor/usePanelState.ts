@@ -56,7 +56,7 @@ export function usePanelState(menuRef: React.RefObject<HTMLDivElement | null>): 
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, menuRef]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

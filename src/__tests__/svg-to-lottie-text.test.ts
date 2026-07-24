@@ -4,7 +4,7 @@ import { convertSvgToLottie } from "../lib/svg-to-lottie";
 describe("SVG-to-Lottie text support", () => {
   it("converts simple <text> element", () => {
     const svg = `<svg viewBox="0 0 200 200"><text>Hello</text></svg>`;
-    const { data, warnings } = convertSvgToLottie(svg);
+    const { data } = convertSvgToLottie(svg);
     expect(data.layers).toHaveLength(1);
     const layer = data.layers[0];
     expect(layer.ty).toBe(5);

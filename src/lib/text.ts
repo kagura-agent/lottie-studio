@@ -39,10 +39,6 @@ function parseColor(color: string | undefined): [number, number, number] {
   return DEFAULT_COLOR;
 }
 
-interface PathPoint {
-  x: number;
-  y: number;
-}
 
 function charToPath(ch: string, size: number): { v: number[][]; i: number[][]; o: number[][]; c: boolean }[] {
   const s = size;

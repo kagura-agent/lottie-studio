@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { Command } from "@/lib/commands";
 import Link from "next/link";
@@ -281,7 +281,6 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
       case "compose":
         break;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anim, playback, exportState, panels]);
 
   return (

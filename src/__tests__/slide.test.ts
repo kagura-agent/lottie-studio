@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applySlide, VALID_SLIDE_DIRECTIONS, SlideOptions } from "@/lib/slide";
+import { applySlide, VALID_SLIDE_DIRECTIONS } from "@/lib/slide";
 
 function makeAnim(
   layers?: Array<Record<string, unknown>>,
