@@ -169,14 +169,16 @@ describe("reorderSequenceItems edge cases", () => {
   });
 
   it("handles itemIds that don't match the sequence (wrong sequence_id)", () => {
+    const animId1 = crypto.randomUUID();
+    const animId2 = crypto.randomUUID();
     const seq1 = createSequence("reorder-s1", "", "user-1");
     const seq2 = createSequence("reorder-s2", "", "user-1");
     createdSequenceIds.push(seq1.id, seq2.id);
-    seedAnimation("anim-rs-1");
-    seedAnimation("anim-rs-2");
+    seedAnimation(animId1);
+    seedAnimation(animId2);
 
-    const item1 = addSequenceItem(seq1.id, "anim-rs-1");
-    const item2 = addSequenceItem(seq2.id, "anim-rs-2");
+    const item1 = addSequenceItem(seq1.id, animId1);
+    const item2 = addSequenceItem(seq2.id, animId2);
 
     // item2 belongs to seq2, so reordering with seq1 should not update it
     reorderSequenceItems(seq1.id, [item2.id, item1.id]);
