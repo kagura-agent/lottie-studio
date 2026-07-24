@@ -98,6 +98,31 @@ export const promptSuggestionCategories: SuggestionCategory[] = [
     ],
   },
   {
+    title: "Particle Effects",
+    suggestions: [
+      {
+        emoji: "🎊",
+        label: "Confetti celebration",
+        prompt: "/particle confetti --direction burst --speed fast --color rainbow",
+      },
+      {
+        emoji: "❄️",
+        label: "Snowfall",
+        prompt: "/particle snow --count 40 --speed slow --size small",
+      },
+      {
+        emoji: "🎆",
+        label: "Fireworks display",
+        prompt: "/particle fireworks --color gold --count 50 --speed fast",
+      },
+      {
+        emoji: "💖",
+        label: "Rising hearts",
+        prompt: "/particle hearts --color pastel --direction up --speed slow",
+      },
+    ],
+  },
+  {
     title: "Branding",
     suggestions: [
       {
