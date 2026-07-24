@@ -165,6 +165,267 @@ describe("scaleAnimation", () => {
     expect((gr.it[1].a as { k: number[] }).k).toEqual([3, 6]);
   });
 
+  it("scales animated path keyframes (a=1 with shape objects)", () => {
+    const animPathLottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{
+          ty: "sh",
+          ks: {
+            a: 1,
+            k: [
+              {
+                t: 0,
+                s: [{ v: [[0, 0], [10, 20]], i: [[0, 0], [0, 0]], o: [[0, 0], [0, 0]], c: true }],
+                e: [{ v: [[5, 5], [15, 25]], i: [[1, 1], [2, 2]], o: [[3, 3], [4, 4]], c: true }],
+              },
+              {
+                t: 30,
+                s: [{ v: [[5, 5], [15, 25]], i: [[1, 1], [2, 2]], o: [[3, 3], [4, 4]], c: true }],
+              },
+            ],
+          },
+        }],
+      }],
+    };
+    const result = scaleAnimation(animPathLottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    const sh = shapes[0] as { ks: { k: Array<{ s?: Array<{ v: number[][] }>; e?: Array<{ v: number[][] }> }> } };
+    expect(sh.ks.k[0].s![0].v).toEqual([[0, 0], [20, 40]]);
+    expect(sh.ks.k[0].e![0].v).toEqual([[10, 10], [30, 50]]);
+    expect(sh.ks.k[1].s![0].v).toEqual([[10, 10], [30, 50]]);
+  });
+
+  it("handles animated path keyframes without shape objects (plain arrays)", () => {
+    const animPathPlain = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{
+          ty: "sh",
+          ks: {
+            a: 1,
+            k: [
+              { t: 0, s: [1, 2, 3], e: [4, 5, 6] },
+            ],
+          },
+        }],
+      }],
+    };
+    const result = scaleAnimation(animPathPlain, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    const sh = shapes[0] as { ks: { k: Array<{ s?: number[]; e?: number[] }> } };
+    // s[0] is a number not an object, so path scaling should leave them unchanged
+    expect(sh.ks.k[0].s).toEqual([1, 2, 3]);
+    expect(sh.ks.k[0].e).toEqual([4, 5, 6]);
+  });
+
+  it("scales gradient stroke width (gs type)", () => {
+    const gsLottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{ ty: "gs", w: { a: 0, k: 3 } }],
+      }],
+    };
+    const result = scaleAnimation(gsLottie, 4) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    expect((shapes[0].w as { k: number }).k).toBe(12);
+  });
+
+  it("scales animated stroke width (a=1)", () => {
+    const animStroke = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{
+          ty: "st",
+          w: { a: 1, k: [{ t: 0, s: [2], e: [4] }, { t: 30, s: [4] }] },
+        }],
+      }],
+    };
+    const result = scaleAnimation(animStroke, 3) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    const w = (shapes[0] as { w: { k: Array<{ s?: number[]; e?: number[] }> } }).w;
+    expect(w.k[0].s).toEqual([6]);
+    expect(w.k[0].e).toEqual([12]);
+  });
+
+  it("scaleProperty with indices parameter", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: {
+          p: { a: 0, k: [100, 200, 0] },
+        },
+        shapes: [],
+      }],
+    };
+    // This tests the default (all indices) path which is already covered,
+    // but let's test the animated property with indices via position
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const ks = layers[0].ks as Record<string, unknown>;
+    expect((ks.p as { k: number[] }).k).toEqual([200, 400, 0]);
+  });
+
+  it("scales tr shape without a field", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{ ty: "tr", p: { a: 0, k: [5, 10] } }],
+      }],
+    };
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    expect((shapes[0].p as { k: number[] }).k).toEqual([10, 20]);
+    expect(shapes[0].a).toBeUndefined();
+  });
+
+  it("scales tr shape without p field", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{ ty: "tr", a: { a: 0, k: [3, 6] } }],
+      }],
+    };
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    expect((shapes[0].a as { k: number[] }).k).toEqual([6, 12]);
+    expect(shapes[0].p).toBeUndefined();
+  });
+
+  it("handles layer without ks field", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{ ty: 4, shapes: [{ ty: "rc", s: { a: 0, k: [10, 10] } }] }],
+    };
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    expect((shapes[0].s as { k: number[] }).k).toEqual([20, 20]);
+  });
+
+  it("handles layer ks without p or a fields", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{ ty: 4, ks: { s: { a: 0, k: [100, 100] } }, shapes: [] }],
+    };
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const ks = layers[0].ks as Record<string, unknown>;
+    expect(ks.s).toEqual({ a: 0, k: [100, 100] });
+  });
+
+  it("scales text layer with multiple keyframes and missing s field", () => {
+    const textLottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 5,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        t: {
+          d: {
+            k: [
+              { s: { s: 12, f: "Helvetica" }, t: 0 },
+              { s: { s: 24, f: "Helvetica" }, t: 30 },
+              { t: 60 },
+            ],
+          },
+        },
+      }],
+    };
+    const result = scaleAnimation(textLottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const t = layers[0].t as { d: { k: Array<{ s?: { s: number }; t: number }> } };
+    expect(t.d.k[0].s!.s).toBe(24);
+    expect(t.d.k[1].s!.s).toBe(48);
+    expect(t.d.k[2].s).toBeUndefined();
+  });
+
+  it("handles text layer with d but no k array", () => {
+    const textLottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 5,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        t: { d: { x: 1 } },
+      }],
+    };
+    const result = scaleAnimation(textLottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const t = layers[0].t as { d: { x: number } };
+    expect(t.d.x).toBe(1);
+  });
+
+  it("handles text layer with t but no d field", () => {
+    const textLottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 5,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        t: { a: { a: 0, k: [] } },
+      }],
+    };
+    const result = scaleAnimation(textLottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    expect(layers[0].t).toBeDefined();
+  });
+
+  it("handles scaleShapeData with missing keys", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: { a: 0, k: [0, 0, 0] } },
+        shapes: [{
+          ty: "sh",
+          ks: {
+            a: 0,
+            k: { v: [[1, 2]], c: true },
+          },
+        }],
+      }],
+    };
+    const result = scaleAnimation(lottie, 3) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    const shapes = layers[0].shapes as Record<string, unknown>[];
+    const ks = (shapes[0] as { ks: { k: { v: number[][]; i?: unknown; o?: unknown } } }).ks;
+    expect(ks.k.v).toEqual([[3, 6]]);
+    expect(ks.k.i).toBeUndefined();
+    expect(ks.k.o).toBeUndefined();
+  });
+
+  it("handles non-animated-property value in ks field gracefully", () => {
+    const lottie = {
+      ...baseLottie,
+      layers: [{
+        ty: 4,
+        ks: { p: "not-a-property" },
+        shapes: [{ ty: "sh", ks: "invalid" }],
+      }],
+    };
+    const result = scaleAnimation(lottie, 2) as Record<string, unknown>;
+    const layers = result.layers as Record<string, unknown>[];
+    // Should not throw
+    expect(layers[0]).toBeDefined();
+  });
+
   it("returns input unchanged when no layers", () => {
     const noLayers = { w: 100, h: 100 };
     const result = scaleAnimation(noLayers, 2) as Record<string, unknown>;
