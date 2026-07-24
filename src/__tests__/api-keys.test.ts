@@ -144,6 +144,154 @@ describe("POST /api/v1/generate", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 for invalid JSON body", async () => {
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: "not json",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/Invalid JSON/i);
+  });
+
+  it("returns 400 for missing prompt", async () => {
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({}),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/prompt/i);
+  });
+
+  it("returns 400 for empty string prompt", async () => {
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: "" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for non-string prompt", async () => {
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: 123 }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 500 when LLM returns no lottieJson", async () => {
+    vi.doMock("@/lib/llm", () => ({
+      chatCompletion: vi.fn().mockResolvedValue({
+        lottieJson: null,
+        reply: "Sorry",
+      }),
+    }));
+
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: "A spinning gear" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toMatch(/Failed to generate/i);
+  });
+
+  it("returns 500 when LLM throws", async () => {
+    vi.doMock("@/lib/llm", () => ({
+      chatCompletion: vi.fn().mockRejectedValue(new Error("LLM timeout")),
+    }));
+
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: "A spinning gear" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toMatch(/generation failed/i);
+  });
+
+  it("returns 500 when LLM throws non-Error", async () => {
+    vi.doMock("@/lib/llm", () => ({
+      chatCompletion: vi.fn().mockRejectedValue("string error"),
+    }));
+
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: "A spinning gear" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toMatch(/generation failed/i);
+  });
+
+  it("respects custom width and height", async () => {
+    const fakeLottie = { v: "5.7.4", fr: 30, ip: 0, op: 60, w: 800, h: 600, layers: [] };
+    vi.doMock("@/lib/llm", () => ({
+      chatCompletion: vi.fn().mockResolvedValue({
+        lottieJson: fakeLottie,
+        reply: "Custom size animation",
+      }),
+    }));
+
+    const { POST } = await import("@/app/api/v1/generate/route");
+    const req = new Request("http://test/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${validKey}`,
+      },
+      body: JSON.stringify({ prompt: "A spinning gear", width: 800, height: 600 }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveProperty("id");
+    expect(data).toHaveProperty("lottieJson");
+  });
+
   it("returns 200 with valid key and correct shape", async () => {
     const fakeLottie = { v: "5.7.4", fr: 30, ip: 0, op: 60, w: 512, h: 512, layers: [] };
     vi.doMock("@/lib/llm", () => ({
@@ -197,6 +345,45 @@ describe("GET /api/v1/animations/[id]", () => {
     });
     const res = await GET(req);
     expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when animation ID not in DB", async () => {
+    const { GET } = await import("@/app/api/v1/animations/[id]/route");
+    const req = new Request("http://test/api/v1/animations/nonexistent-id", {
+      headers: { authorization: `Bearer ${validKey}` },
+    });
+    const res = await GET(req);
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error).toMatch(/not found/i);
+  });
+
+  it("returns 400 when animation ID is missing (trailing slash)", async () => {
+    const { GET } = await import("@/app/api/v1/animations/[id]/route");
+    const req = new Request("http://test/api/v1/animations/", {
+      headers: { authorization: `Bearer ${validKey}` },
+    });
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/ID required/i);
+  });
+
+  it("returns 404 when animation exists in DB but JSON file missing from disk", async () => {
+    const crypto = await import("node:crypto");
+    const { db } = await import("@/lib/db");
+
+    const id = crypto.randomUUID();
+    db.prepare("INSERT INTO animations (id, name, frame_count, duration_seconds) VALUES (?, ?, ?, ?)").run(id, "Ghost", 60, 2);
+
+    const { GET } = await import("@/app/api/v1/animations/[id]/route");
+    const req = new Request(`http://test/api/v1/animations/${id}`, {
+      headers: { authorization: `Bearer ${validKey}` },
+    });
+    const res = await GET(req);
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error).toMatch(/data not found/i);
   });
 
   it("returns 200 with valid key for existing animation", async () => {
