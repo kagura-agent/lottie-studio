@@ -1,5 +1,13 @@
 // Slash command parser for chat panel
 
+import { VALID_MORPH_SHAPES, MorphShape } from "@/lib/morph";
+
+export interface MorphCommandOptions {
+  duration?: number;
+  easing?: string;
+  layer?: string | number;
+}
+
 export const VALID_STYLES = [
   "neon",
   "pastel",
@@ -125,6 +133,7 @@ export type Command =
   | { type: "color"; subcommand: ColorSubcommand }
   | { type: "easing"; preset: EasingPresetName }
   | { type: "stagger"; delayMs: number; order: "normal" | "reverse" | "random" }
+  | { type: "morph"; shape: MorphShape; options: MorphCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -710,6 +719,32 @@ export function parseCommand(input: string): Command | null {
         return { type: "plugin_remove", slug: args[1] };
       }
       return { type: "error", message: `Unknown plugin subcommand "${sub}". Use install or remove.` };
+    }
+
+    case "morph": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /morph <shape> [--duration <s>] [--easing <preset>] [--layer <name|index>]. Shapes: ${VALID_MORPH_SHAPES.filter(s => s !== "rectangle").join(", ")}` };
+      }
+      const shapeName = args[0].toLowerCase();
+      if (!VALID_MORPH_SHAPES.includes(shapeName as MorphShape)) {
+        return { type: "error", message: `Unknown shape "${args[0]}". Available: ${VALID_MORPH_SHAPES.filter(s => s !== "rectangle").join(", ")}` };
+      }
+      const morphOpts: MorphCommandOptions = {};
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          morphOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          morphOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--layer" && args[i + 1]) {
+          const layerArg = args[++i];
+          const layerIdx = parseInt(layerArg, 10);
+          morphOpts.layer = isNaN(layerIdx) ? layerArg : layerIdx;
+        }
+      }
+      return { type: "morph", shape: shapeName as MorphShape, options: morphOpts };
     }
 
     default:

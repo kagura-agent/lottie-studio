@@ -18,6 +18,7 @@ import {
   handleColor,
   handleEasing,
   handleStagger,
+  handleMorph,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -143,6 +144,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "stagger") {
     return handleStagger(animationId, parsedCmd.delayMs, parsedCmd.order, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "morph") {
+    return handleMorph(animationId, parsedCmd.shape, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

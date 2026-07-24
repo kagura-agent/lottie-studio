@@ -41,6 +41,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/color", description: "Color tools: palette, shift, warm, cool, mono, swap, invert, saturate, brighten", hasParams: true },
   { command: "/easing", description: "Apply easing preset to keyframes (linear, ease-in, ease-out, ease-in-out, bounce, elastic, spring, sharp)", hasParams: true },
   { command: "/stagger", description: "Stagger layer timing (e.g. /stagger 200, /stagger 150 reverse, /stagger 100 random)", hasParams: true },
+  { command: "/morph", description: "Morph shapes to target (e.g. /morph circle, /morph star --duration 2 --easing ease-in-out)", hasParams: true },
   { command: "/reverse", description: "Reverse animation playback direction", hasParams: false },
   { command: "/fix", description: "Auto-diagnose and repair common animation issues", hasParams: false },
   { command: "/a11y", description: "Run accessibility audit (flash detection, reduced motion)", hasParams: false },
