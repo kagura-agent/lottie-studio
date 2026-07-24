@@ -1,5 +1,6 @@
 // Slash command parser for chat panel
 
+import { VALID_FADE_MODES, FadeMode } from "@/lib/fade";
 import { VALID_MORPH_SHAPES, MorphShape } from "@/lib/morph";
 import {
   VALID_PARTICLE_TYPES,
@@ -22,6 +23,17 @@ export interface DrawCommandOptions {
   stagger?: number;
   from?: number;
   to?: number;
+}
+
+export interface FadeCommandOptions {
+  mode: FadeMode;
+  duration?: number;
+  easing?: string;
+  layer?: string;
+  stagger?: number;
+  from?: number;
+  to?: number;
+  delay?: number;
 }
 
 export interface MorphCommandOptions {
@@ -165,6 +177,7 @@ export type Command =
   | { type: "morph"; shape: MorphShape; options: MorphCommandOptions }
   | { type: "particle"; particleType: ParticleType; options: ParticleOptions }
   | { type: "draw"; options: DrawCommandOptions }
+  | { type: "fade"; mode: FadeMode; options: FadeCommandOptions }
   | { type: "text"; text: string; options: TextCommandOptions }
   | { type: "error"; message: string };
 
@@ -846,6 +859,46 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "draw", options: drawOpts };
+    }
+
+    case "fade": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /fade <mode> [--duration N] [--easing NAME] [--layer NAME] [--stagger N] [--from N] [--to N] [--delay N]. Modes: ${VALID_FADE_MODES.join(", ")}` };
+      }
+      const fadeMode = args[0].toLowerCase();
+      if (!(VALID_FADE_MODES as readonly string[]).includes(fadeMode)) {
+        return { type: "error", message: `Unknown fade mode "${args[0]}". Available: ${VALID_FADE_MODES.join(", ")}` };
+      }
+      const fadeOpts: FadeCommandOptions = { mode: fadeMode as FadeMode };
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          fadeOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          fadeOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--layer" && args[i + 1]) {
+          fadeOpts.layer = args[++i];
+        } else if (flag === "--stagger" && args[i + 1]) {
+          const s = parseFloat(args[++i]);
+          if (isNaN(s) || s < 0) return { type: "error", message: `Invalid stagger: "${args[i]}"` };
+          fadeOpts.stagger = s;
+        } else if (flag === "--from" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f < 0 || f > 100) return { type: "error", message: `Invalid from value: "${args[i]}"` };
+          fadeOpts.from = f;
+        } else if (flag === "--to" && args[i + 1]) {
+          const t = parseFloat(args[++i]);
+          if (isNaN(t) || t < 0 || t > 100) return { type: "error", message: `Invalid to value: "${args[i]}"` };
+          fadeOpts.to = t;
+        } else if (flag === "--delay" && args[i + 1]) {
+          const dl = parseFloat(args[++i]);
+          if (isNaN(dl) || dl < 0) return { type: "error", message: `Invalid delay: "${args[i]}"` };
+          fadeOpts.delay = dl;
+        }
+      }
+      return { type: "fade", mode: fadeMode as FadeMode, options: fadeOpts };
     }
 
     case "text": {

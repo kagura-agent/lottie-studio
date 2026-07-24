@@ -17,6 +17,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/loop", description: "Loop mode", hasParams: false },
   { command: "/once", description: "Play once", hasParams: false },
   { command: "/export", description: "Export (gif, video, json, dotlottie)", hasParams: true },
+  { command: "/fade", description: "Fade in/out/pulse opacity transitions (e.g. /fade in --duration 2 --easing ease-in)", hasParams: true },
   { command: "/undo", description: "Undo last change", hasParams: false },
   { command: "/redo", description: "Redo", hasParams: false },
   { command: "/resize", description: "Resize canvas (e.g. /resize 800x600)", hasParams: true },
