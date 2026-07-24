@@ -18,6 +18,7 @@ export { handleMorph } from "./morph";
 export { handleParticle } from "./particle";
 export { handleDraw } from "./draw";
 export { handleFade } from "./fade";
+export { handleSlide } from "./slide";
 export { handleText } from "./text";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

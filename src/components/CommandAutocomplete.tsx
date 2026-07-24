@@ -45,6 +45,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/morph", description: "Morph shapes to target (e.g. /morph circle, /morph star --duration 2 --easing ease-in-out)", hasParams: true },
   { command: "/particle", description: "Generate particle effects (confetti, snow, sparkle, stars, bubbles, rain, fireworks, hearts)", hasParams: true },
   { command: "/draw", description: "Stroke reveal/path drawing animation (e.g. /draw --duration 2 --easing ease-in-out --reverse)", hasParams: true },
+  { command: "/slide", description: "Directional slide in/out (e.g. /slide left, /slide right --out --duration 2 --easing bounce)", hasParams: true },
   { command: "/text", description: "Animated text layers (e.g. /text \"Hello\" --style bounce --color #ff0000 --size 48)", hasParams: true },
   { command: "/reverse", description: "Reverse animation playback direction", hasParams: false },
   { command: "/fix", description: "Auto-diagnose and repair common animation issues", hasParams: false },
