@@ -239,6 +239,125 @@ describe("slide", () => {
       expect((kfs[1].s as number[])[1]).toBe(400);
     });
 
+    it("reads position from last keyframe 'e' when 's' is missing", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 1, k: [{ t: 0, e: [150, 250, 0] }] } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(150);
+      expect((kfs[1].s as number[])[1]).toBe(250);
+    });
+
+    it("falls back to previous keyframe 'e' when last has no s/e", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 1, k: [{ t: 0, e: [80, 90, 0] }, { t: 30 }] } },
+      }]);
+      const result = applySlide(anim, { direction: "right" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(80);
+      expect((kfs[1].s as number[])[1]).toBe(90);
+    });
+
+    it("falls back to previous keyframe 's' when prev has no 'e'", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 1, k: [{ t: 0, s: [60, 70, 0] }, { t: 30 }] } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(60);
+      expect((kfs[1].s as number[])[1]).toBe(70);
+    });
+
+    it("returns [0,0] when single keyframe has no s/e", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 1, k: [{ t: 0 }] } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(0);
+      expect((kfs[1].s as number[])[1]).toBe(0);
+    });
+
+    it("returns [0,0] when prev keyframe also has no position data", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 1, k: [{ t: 0 }, { t: 30 }] } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(0);
+    });
+
+    it("returns [0,0] when position is not animated and not a number array", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { p: { a: 0, k: {} } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[1].s as number[])[0]).toBe(0);
+    });
+
+    it("handles layer with ks but no p property", () => {
+      const anim = makeAnim([{
+        nm: "A", ty: 4, ip: 0, op: 60,
+        ks: { s: { a: 0, k: [100, 100, 100] } },
+      }]);
+      const result = applySlide(anim, { direction: "left" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const ks = layers[0].ks as Record<string, unknown>;
+      const p = ks.p as Record<string, unknown>;
+      expect(p.a).toBe(1);
+    });
+
+    it("uses custom distance for up direction", () => {
+      const result = applySlide(makeAnim(), { direction: "up", distance: 150 });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[0].s as number[])[1]).toBe(-150);
+    });
+
+    it("uses custom distance for down direction", () => {
+      const result = applySlide(makeAnim(), { direction: "down", distance: 150 });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      expect((kfs[0].s as number[])[1]).toBe(512 + 150);
+    });
+
+    it("applies stagger with out mode", () => {
+      const result = applySlide(makeAnim(), { direction: "left", out: true, stagger: 100 });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs0 = getKfs(layers[0]);
+      const kfs1 = getKfs(layers[1]);
+      expect(kfs0[0].t).toBe(0);
+      expect(kfs1[0].t).toBe(3);
+      expect((kfs0[1].s as number[])[0]).toBe(-512);
+      expect((kfs1[1].s as number[])[0]).toBe(-512);
+    });
+
+    it("falls back to ease-in-out for unknown easing", () => {
+      const result = applySlide(makeAnim(), { direction: "left", easing: "nonexistent" });
+      const layers = result.layers as Array<Record<string, unknown>>;
+      const kfs = getKfs(layers[0]);
+      const o = kfs[0].o as { x: number[]; y: number[] };
+      expect(o.x[0]).toBe(0.42);
+      expect(o.y[0]).toBe(0);
+      const i = kfs[0].i as { x: number[]; y: number[] };
+      expect(i.x[0]).toBe(0.58);
+      expect(i.y[0]).toBe(1);
+    });
+
     it("uses default canvas size when w/h missing", () => {
       const anim = {
         fr: 30, ip: 0, op: 60,
