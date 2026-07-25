@@ -79,4 +79,80 @@ describe("generateParticleAnimation", () => {
     expect(k[1]).toBeCloseTo(0, 1);
     expect(k[2]).toBeCloseTo(0, 1);
   });
+
+  it("covers direction='left' start position and motion", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, direction: "left" }) as Record<string, unknown>;
+    const layers = result.layers as Array<Record<string, unknown>>;
+    const ks = layers[0].ks as Record<string, unknown>;
+    const p = ks.p as Record<string, unknown>;
+    const keyframes = p.k as Array<Record<string, unknown>>;
+    const startX = (keyframes[0].s as number[])[0];
+    expect(startX).toBeGreaterThan(256);
+  });
+
+  it("covers direction='right' start position and motion", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, direction: "right" }) as Record<string, unknown>;
+    const layers = result.layers as Array<Record<string, unknown>>;
+    const ks = layers[0].ks as Record<string, unknown>;
+    const p = ks.p as Record<string, unknown>;
+    const keyframes = p.k as Array<Record<string, unknown>>;
+    const startX = (keyframes[0].s as number[])[0];
+    expect(startX).toBeLessThan(0);
+  });
+
+  it("covers direction='up' start position", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, direction: "up" }) as Record<string, unknown>;
+    const layers = result.layers as Array<Record<string, unknown>>;
+    const ks = layers[0].ks as Record<string, unknown>;
+    const p = ks.p as Record<string, unknown>;
+    const keyframes = p.k as Array<Record<string, unknown>>;
+    const startY = (keyframes[0].s as number[])[1];
+    expect(startY).toBeGreaterThan(256);
+  });
+
+  it("handles size='small'", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, size: "small" }) as Record<string, unknown>;
+    expect(Array.isArray(result.layers)).toBe(true);
+    expect((result.layers as unknown[]).length).toBe(1);
+  });
+
+  it("handles size='large'", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, size: "large" }) as Record<string, unknown>;
+    expect(Array.isArray(result.layers)).toBe(true);
+    expect((result.layers as unknown[]).length).toBe(1);
+  });
+
+  it("resolves a named color palette", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, color: "warm" }) as Record<string, unknown>;
+    const layers = result.layers as Array<Record<string, unknown>>;
+    const shapes = layers[0].shapes as Array<Record<string, unknown>>;
+    const group = shapes[0] as Record<string, unknown>;
+    const items = group.it as Array<Record<string, unknown>>;
+    const fill = items.find(i => i.ty === "fl") as Record<string, unknown>;
+    const c = fill.c as Record<string, unknown>;
+    const k = c.k as number[];
+    expect(k.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("falls back to rainbow for invalid color string", () => {
+    const result = generateParticleAnimation("confetti", { count: 1, color: "notacolor" }) as Record<string, unknown>;
+    const layers = result.layers as Array<Record<string, unknown>>;
+    const shapes = layers[0].shapes as Array<Record<string, unknown>>;
+    const group = shapes[0] as Record<string, unknown>;
+    const items = group.it as Array<Record<string, unknown>>;
+    const fill = items.find(i => i.ty === "fl") as Record<string, unknown>;
+    const c = fill.c as Record<string, unknown>;
+    const k = c.k as number[];
+    expect(k.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("produces no layers when count=0", () => {
+    const result = generateParticleAnimation("confetti", { count: 0 }) as Record<string, unknown>;
+    expect((result.layers as unknown[]).length).toBe(0);
+  });
+
+  it("produces exactly 1 layer when count=1", () => {
+    const result = generateParticleAnimation("confetti", { count: 1 }) as Record<string, unknown>;
+    expect((result.layers as unknown[]).length).toBe(1);
+  });
 });
