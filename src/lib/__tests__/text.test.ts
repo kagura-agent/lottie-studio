@@ -1,15 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { generateTextAnimation, VALID_TEXT_PRESETS, TextOptions } from "../text";
 
-type AnyLayer = Record<string, any>;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type LottieShape = Record<string, any>;
+type LottieLayer = Record<string, any> & { shapes: LottieShape[] };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
-function getLayers(result: Record<string, unknown>): AnyLayer[] {
-  return result.layers as AnyLayer[];
+function getLayers(result: Record<string, unknown>): LottieLayer[] {
+  return result.layers as LottieLayer[];
 }
 
 function getShapeCount(result: Record<string, unknown>, charIdx = 0): number {
   const layers = getLayers(result);
-  return layers[charIdx].shapes.filter((s: any) => s.ty === "sh").length;
+  return layers[charIdx].shapes.filter((s: LottieShape) => s.ty === "sh").length;
 }
 
 describe("text animation generator", () => {
@@ -39,7 +42,7 @@ describe("text animation generator", () => {
     it("applies custom color", () => {
       const result = generateTextAnimation("X", { color: "#ff0000" });
       const layers = getLayers(result);
-      const fill = layers[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = layers[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(0);
       expect(fill.c.k[2]).toBeCloseTo(0);
@@ -48,8 +51,8 @@ describe("text animation generator", () => {
     it("respects size option", () => {
       const small = generateTextAnimation("A", { size: 24 });
       const large = generateTextAnimation("A", { size: 96 });
-      const smallShape = getLayers(small)[0].shapes.find((s: any) => s.ty === "sh");
-      const largeShape = getLayers(large)[0].shapes.find((s: any) => s.ty === "sh");
+      const smallShape = getLayers(small)[0].shapes.find((s: LottieShape) => s.ty === "sh")!;
+      const largeShape = getLayers(large)[0].shapes.find((s: LottieShape) => s.ty === "sh")!;
       const smallMax = Math.max(...smallShape.ks.k.v.map((p: number[]) => Math.abs(p[0]) + Math.abs(p[1])));
       const largeMax = Math.max(...largeShape.ks.k.v.map((p: number[]) => Math.abs(p[0]) + Math.abs(p[1])));
       expect(largeMax).toBeGreaterThan(smallMax);
@@ -80,7 +83,7 @@ describe("text animation generator", () => {
       expect(result.fr).toBe(30);
       expect(result.w).toBe(512);
       const layers = getLayers(result);
-      const fill = layers[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = layers[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(1);
       expect(fill.c.k[2]).toBeCloseTo(1);
@@ -104,7 +107,7 @@ describe("text animation generator", () => {
   describe("parseColor (via generateTextAnimation)", () => {
     it("parses 6-char hex with #", () => {
       const result = generateTextAnimation("A", { color: "#00ff00" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(0);
       expect(fill.c.k[1]).toBeCloseTo(1);
       expect(fill.c.k[2]).toBeCloseTo(0);
@@ -112,7 +115,7 @@ describe("text animation generator", () => {
 
     it("parses 6-char hex without #", () => {
       const result = generateTextAnimation("A", { color: "0000ff" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(0);
       expect(fill.c.k[1]).toBeCloseTo(0);
       expect(fill.c.k[2]).toBeCloseTo(1);
@@ -120,7 +123,7 @@ describe("text animation generator", () => {
 
     it("returns white for invalid hex", () => {
       const result = generateTextAnimation("A", { color: "xyz" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(1);
       expect(fill.c.k[2]).toBeCloseTo(1);
@@ -128,7 +131,7 @@ describe("text animation generator", () => {
 
     it("returns white for undefined color", () => {
       const result = generateTextAnimation("A", {});
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(1);
       expect(fill.c.k[2]).toBeCloseTo(1);
@@ -136,13 +139,13 @@ describe("text animation generator", () => {
 
     it("returns white for empty string color", () => {
       const result = generateTextAnimation("A", { color: "" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
     });
 
     it("parses case-insensitive hex", () => {
       const result = generateTextAnimation("A", { color: "#FF8800" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(0x88 / 255);
       expect(fill.c.k[2]).toBeCloseTo(0);
@@ -150,7 +153,7 @@ describe("text animation generator", () => {
 
     it("returns white for 3-char hex (unsupported)", () => {
       const result = generateTextAnimation("A", { color: "#fff" });
-      const fill = getLayers(result)[0].shapes.find((s: any) => s.ty === "fl");
+      const fill = getLayers(result)[0].shapes.find((s: LottieShape) => s.ty === "fl")!;
       expect(fill.c.k[0]).toBeCloseTo(1);
       expect(fill.c.k[1]).toBeCloseTo(1);
       expect(fill.c.k[2]).toBeCloseTo(1);
@@ -187,8 +190,8 @@ describe("text animation generator", () => {
     it("lowercase maps to uppercase", () => {
       const upper = generateTextAnimation("A");
       const lower = generateTextAnimation("a");
-      const upperShapes = getLayers(upper)[0].shapes.filter((s: any) => s.ty === "sh");
-      const lowerShapes = getLayers(lower)[0].shapes.filter((s: any) => s.ty === "sh");
+      const upperShapes = getLayers(upper)[0].shapes.filter((s: LottieShape) => s.ty === "sh");
+      const lowerShapes = getLayers(lower)[0].shapes.filter((s: LottieShape) => s.ty === "sh");
       expect(lowerShapes.length).toBe(upperShapes.length);
       for (let i = 0; i < upperShapes.length; i++) {
         expect(lowerShapes[i].ks.k).toEqual(upperShapes[i].ks.k);
@@ -197,14 +200,14 @@ describe("text animation generator", () => {
 
     it("shapes have closed paths (c: true)", () => {
       const result = generateTextAnimation("A");
-      const shapes = getLayers(result)[0].shapes.filter((s: any) => s.ty === "sh");
-      shapes.forEach((s: any) => expect(s.ks.k.c).toBe(true));
+      const shapes = getLayers(result)[0].shapes.filter((s: LottieShape) => s.ty === "sh");
+      shapes.forEach((s: LottieShape) => expect(s.ks.k.c).toBe(true));
     });
 
     it("shapes have correct bezier handle structure", () => {
       const result = generateTextAnimation("B");
-      const shapes = getLayers(result)[0].shapes.filter((s: any) => s.ty === "sh");
-      shapes.forEach((s: any) => {
+      const shapes = getLayers(result)[0].shapes.filter((s: LottieShape) => s.ty === "sh");
+      shapes.forEach((s: LottieShape) => {
         const k = s.ks.k;
         expect(k.v.length).toBe(k.i.length);
         expect(k.v.length).toBe(k.o.length);
