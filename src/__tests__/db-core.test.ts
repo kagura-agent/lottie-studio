@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeAll } from "vitest";
 import {
   db,
   ANIMATIONS_DIR,
@@ -186,6 +186,25 @@ describe("reorderSequenceItems edge cases", () => {
 });
 
 describe("FTS index integration", () => {
+  beforeAll(() => {
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS animations_fts_ai AFTER INSERT ON animations BEGIN
+        INSERT INTO animations_fts(rowid, name, description, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.description, NEW.tags);
+      END;
+      CREATE TRIGGER IF NOT EXISTS animations_fts_ad AFTER DELETE ON animations BEGIN
+        INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.description, OLD.tags);
+      END;
+      CREATE TRIGGER IF NOT EXISTS animations_fts_au AFTER UPDATE ON animations BEGIN
+        INSERT INTO animations_fts(animations_fts, rowid, name, description, tags)
+        VALUES ('delete', OLD.rowid, OLD.name, OLD.description, OLD.tags);
+        INSERT INTO animations_fts(rowid, name, description, tags)
+        VALUES (NEW.rowid, NEW.name, NEW.description, NEW.tags);
+      END;
+    `);
+  });
+
   it("FTS triggers populate on insert", () => {
     seedAnimation("anim-fts-1", { name: "UniqueXyzName", description: "test fts", tags: "motion" });
 
