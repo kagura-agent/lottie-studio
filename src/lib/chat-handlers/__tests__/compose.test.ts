@@ -60,6 +60,95 @@ describe("handleCompose", () => {
     expect(text).toContain("Failed to parse");
   });
 
+  it("uses default target JSON when animation file does not exist", async () => {
+    const sourceJson = { v: "5", layers: [{ nm: "a" }] };
+    const mergedJson = { v: "5", layers: [{ nm: "a" }], op: 60, fr: 30 };
+
+    let prepareCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      prepareCount++;
+      if (prepareCount === 1) return { get: () => ({ id: "source1", name: "My Source" }) };
+      return { run: vi.fn(), get: () => ({ max_num: 1 }) };
+    });
+
+    (fs.existsSync as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce(true)   // source file exists
+      .mockReturnValueOnce(false); // target file does NOT exist
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(sourceJson));
+    (composeLayers as ReturnType<typeof vi.fn>).mockReturnValue(mergedJson);
+
+    const res = handleCompose("anim1", "source1", "compose source1");
+    const text = await res.text();
+    expect(text).toContain("Composed");
+    expect(composeLayers).toHaveBeenCalledWith(
+      expect.objectContaining({ v: "5.7.1", layers: [], assets: [] }),
+      sourceJson,
+    );
+  });
+
+  it("uses default target JSON when target file has invalid JSON", async () => {
+    const sourceJson = { v: "5", layers: [{ nm: "a" }] };
+    const mergedJson = { v: "5", layers: [{ nm: "a" }] };
+
+    let prepareCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      prepareCount++;
+      if (prepareCount === 1) return { get: () => ({ id: "source1", name: "My Source" }) };
+      return { run: vi.fn(), get: () => ({ max_num: 1 }) };
+    });
+
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce(JSON.stringify(sourceJson))
+      .mockReturnValueOnce("not valid json");
+    (composeLayers as ReturnType<typeof vi.fn>).mockReturnValue(mergedJson);
+
+    const res = handleCompose("anim1", "source1", "compose source1");
+    const text = await res.text();
+    expect(text).toContain("Composed");
+  });
+
+  it("uses singular 'layer' when source has exactly 1 layer", async () => {
+    const sourceJson = { v: "5", layers: [{ nm: "only" }] };
+    const mergedJson = { v: "5", layers: [{ nm: "only" }] };
+
+    let prepareCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      prepareCount++;
+      if (prepareCount === 1) return { get: () => ({ id: "s1", name: "Src" }) };
+      return { run: vi.fn(), get: () => ({ max_num: 1 }) };
+    });
+
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(sourceJson));
+    (composeLayers as ReturnType<typeof vi.fn>).mockReturnValue(mergedJson);
+
+    const res = handleCompose("anim1", "s1", "compose s1");
+    const text = await res.text();
+    expect(text).toContain("1 layer ");
+    expect(text).not.toContain("1 layers");
+  });
+
+  it("uses plural 'layers' when source has 0 layers", async () => {
+    const sourceJson = { v: "5" };
+    const mergedJson = { v: "5", layers: [] };
+
+    let prepareCount = 0;
+    (db.prepare as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      prepareCount++;
+      if (prepareCount === 1) return { get: () => ({ id: "s1", name: "Src" }) };
+      return { run: vi.fn(), get: () => ({ max_num: 1 }) };
+    });
+
+    (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(sourceJson));
+    (composeLayers as ReturnType<typeof vi.fn>).mockReturnValue(mergedJson);
+
+    const res = handleCompose("anim1", "s1", "compose s1");
+    const text = await res.text();
+    expect(text).toContain("0 layers");
+  });
+
   it("composes layers successfully", async () => {
     const sourceJson = { v: "5", layers: [{ nm: "layer1" }] };
     const targetJson = { v: "5", layers: [], op: 60, fr: 30 };

@@ -40,6 +40,28 @@ beforeEach(() => {
 
 describe("handleLayerCommand", () => {
   describe("layers list", () => {
+    it("lists layers without animationId", async () => {
+      const res = handleLayerCommand({ type: "layers" }, undefined, "/layers");
+      const text = await res.text();
+      expect(text).toContain("No layers found");
+    });
+
+    it("formats hidden and parented layers", async () => {
+      const animJson = { layers: [{ nm: "bg" }, { nm: "fg" }] };
+      (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ get: () => ({ id: "anim1" }), run: vi.fn() });
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(animJson));
+      (listLayers as ReturnType<typeof vi.fn>).mockReturnValue([
+        { name: "bg", typeName: "shape", index: 0, inPoint: 0, outPoint: 60, hidden: true, parent: null },
+        { name: "fg", typeName: "shape", index: 1, inPoint: 0, outPoint: 60, hidden: false, parent: 0 },
+      ]);
+
+      const res = handleLayerCommand({ type: "layers" }, "anim1", "/layers");
+      const text = await res.text();
+      expect(text).toContain("hidden");
+      expect(text).toContain("parent");
+    });
+
     it("returns no layers message when animation has no data", async () => {
       (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ get: () => ({ id: "anim1" }), run: vi.fn() });
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
@@ -118,6 +140,27 @@ describe("handleLayerCommand", () => {
     });
   });
 
+  describe("mutation without animation data", () => {
+    it("returns error when animation exists in DB but has no JSON file", async () => {
+      (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ get: () => ({ id: "anim1" }), run: vi.fn() });
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+      const res = handleLayerCommand({ type: "duplicate_layer", name: "bg" }, "anim1", "/dup bg");
+      const text = await res.text();
+      expect(text).toContain("no data yet");
+    });
+
+    it("returns error when animation file has invalid JSON", async () => {
+      (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ get: () => ({ id: "anim1" }), run: vi.fn() });
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("not json");
+
+      const res = handleLayerCommand({ type: "delete_layer", name: "bg" }, "anim1", "/del bg");
+      const text = await res.text();
+      expect(text).toContain("no data yet");
+    });
+  });
+
   describe("error handling", () => {
     it("returns error when layer op throws", async () => {
       const animJson = { layers: [{ nm: "bg" }], op: 60, fr: 30 };
@@ -129,6 +172,18 @@ describe("handleLayerCommand", () => {
       const res = handleLayerCommand({ type: "delete_layer", name: "missing" }, "anim1", "/del missing");
       const text = await res.text();
       expect(text).toContain("Layer not found");
+    });
+
+    it("returns generic message when layer op throws non-Error", async () => {
+      const animJson = { layers: [{ nm: "bg" }], op: 60, fr: 30 };
+      (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ get: () => ({ id: "anim1" }), run: vi.fn() });
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(animJson));
+      (deleteLayer as ReturnType<typeof vi.fn>).mockImplementation(() => { throw "string error"; });
+
+      const res = handleLayerCommand({ type: "delete_layer", name: "x" }, "anim1", "/del x");
+      const text = await res.text();
+      expect(text).toContain("Layer operation failed");
     });
 
     it("returns 404 when animation not in DB", async () => {
