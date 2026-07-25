@@ -553,6 +553,407 @@ describe("handleColor", () => {
       );
       expect(mockedWriteAnimationFile).toHaveBeenCalled();
     });
+
+    it("shows negative percentage for negative amount", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [0.5, 0.2, 0.2, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "brighten", amount: -0.3 }, "/color brighten -30");
+
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("-30%") })
+      );
+    });
+  });
+
+  describe("unknown subcommand", () => {
+    it("returns error for unknown action", async () => {
+      const lottie = makeLottie([makeShapeLayer([])]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await handleColor("test-id", { action: "nonexistent" } as any, "/color nonexistent");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("Unknown color subcommand") })
+      );
+    });
+  });
+
+  describe("gradient shapes", () => {
+    it("visits gradient fill shapes without crashing", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "gf", g: { k: { a: 0, k: [0, 1, 0, 0, 1, 0, 1, 0] } } },
+          { ty: "gs", g: { k: { a: 0, k: [0, 0, 0, 1, 1, 1, 1, 1] } } },
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("1 color value") })
+      );
+    });
+
+    it("handles gradient with non-object g.k", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "gf", g: { k: "not-an-object" } },
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles gradient with no g property", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "gf" },
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+  });
+
+  describe("extractColor edge cases", () => {
+    it("handles 3-element color arrays (no alpha)", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [1, 0, 0] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("skips non-numeric color values", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: ["a", "b", "c"] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+
+    it("skips arrays with fewer than 3 elements", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [1, 0] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+
+    it("skips non-array k values", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: "not-array" } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+
+    it("skips 4th element if not a number", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, "bad"] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+  });
+
+  describe("colorChanged edge cases", () => {
+    it("does not modify colors that are unchanged by transform", async () => {
+      // monochrome on an already gray color should not change it
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [0.5, 0.5, 0.5, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "mono" }, "/color mono");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+  });
+
+  describe("animated keyframe edge cases", () => {
+    it("handles keyframes with s but no e", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          {
+            ty: "fl",
+            c: {
+              a: 1,
+              k: [
+                { t: 0, s: [1, 0, 0, 1] },
+                { t: 30, s: [0, 1, 0, 1] },
+              ],
+            },
+          },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles keyframes with e but no s", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          {
+            ty: "fl",
+            c: {
+              a: 1,
+              k: [
+                { t: 0, e: [1, 0, 0, 1] },
+              ],
+            },
+          },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles keyframes with invalid s values", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          {
+            ty: "fl",
+            c: {
+              a: 1,
+              k: [
+                { t: 0, s: [1], e: [1, 0, 0, 1] },
+              ],
+            },
+          },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles keyframes with invalid e values", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          {
+            ty: "fl",
+            c: {
+              a: 1,
+              k: [
+                { t: 0, s: [1, 0, 0, 1], e: "not-array" },
+              ],
+            },
+          },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("collects colors from animated palette keyframes with s only", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          {
+            ty: "fl",
+            c: {
+              a: 1,
+              k: [
+                { t: 0, s: [1, 0, 0, 1] },
+              ],
+            },
+          },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "palette" }, "/color palette");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("1 unique color") })
+      );
+    });
+  });
+
+  describe("walkLayers edge cases", () => {
+    it("handles layers without nm property", async () => {
+      const lottie = {
+        w: 512, h: 512, fr: 30, ip: 0, op: 60,
+        layers: [
+          { ty: 4, ind: 5, shapes: [{ ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } }] },
+        ],
+      };
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles layers without nm or ind", async () => {
+      const lottie = {
+        w: 512, h: 512, fr: 30, ip: 0, op: 60,
+        layers: [
+          { ty: 4, shapes: [{ ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } }] },
+        ],
+      };
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles precomp with no matching asset", async () => {
+      const lottie = {
+        w: 512, h: 512, fr: 30, ip: 0, op: 60,
+        assets: [{ id: "other" }],
+        layers: [
+          { ty: 0, nm: "Precomp", refId: "missing_ref" },
+          makeShapeLayer([{ ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } }]),
+        ],
+      };
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles precomp with no assets array", async () => {
+      const lottie = {
+        w: 512, h: 512, fr: 30, ip: 0, op: 60,
+        layers: [
+          { ty: 0, nm: "Precomp", refId: "comp_1" },
+          makeShapeLayer([{ ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } }]),
+        ],
+      };
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles asset with no layers", async () => {
+      const lottie = {
+        w: 512, h: 512, fr: 30, ip: 0, op: 60,
+        assets: [{ id: "comp_1" }],
+        layers: [
+          { ty: 0, nm: "Precomp", refId: "comp_1" },
+          makeShapeLayer([{ ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } }]),
+        ],
+      };
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+  });
+
+  describe("transformColorProperty edge cases", () => {
+    it("handles property with a !== 0 and a !== 1", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 2, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+
+    it("handles animated prop with non-array k", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 1, k: "not-an-array" } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ reply: expect.stringContaining("No colors found to transform") })
+      );
+    });
+  });
+
+  describe("walkShapes edge cases", () => {
+    it("handles fill with non-object c", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: "not-object" },
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+
+    it("handles stroke with non-object c", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "st", c: null },
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedWriteAnimationFile).toHaveBeenCalled();
+    });
+  });
+
+  describe("singular/plural stats", () => {
+    it("uses singular for 1 color value and 1 layer", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ], "Only Layer"),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "invert" }, "/color invert");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reply: expect.stringMatching(/1 color value across 1 layer\./),
+        })
+      );
+    });
+
+    it("uses singular for 1 unique color in palette", async () => {
+      const lottie = makeLottie([
+        makeShapeLayer([
+          { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] } },
+        ]),
+      ]);
+      mockedReadAnimationFile.mockReturnValue(lottie);
+      await handleColor("test-id", { action: "palette" }, "/color palette");
+      expect(mockedSendDoneEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reply: expect.stringContaining("1 unique color"),
+        })
+      );
+    });
   });
 
   describe("precomp layers", () => {
