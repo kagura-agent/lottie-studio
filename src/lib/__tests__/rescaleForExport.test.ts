@@ -250,6 +250,124 @@ describe("rescaleForExport", () => {
       expect(result.animationData.w).toBe(256);
     });
 
+    it("should handle layer with ks but no p, a, or s", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{ ty: 4, nm: "Empty KS", ip: 0, op: 60, ks: { o: { a: 0, k: 100 }, r: { a: 0, k: 0 } } }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      expect(result.animationData.layers[0].ks.o.k).toBe(100);
+    });
+
+    it("should handle layer with only position (no scale)", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{ ty: 4, nm: "Pos Only", ip: 0, op: 60, ks: { p: { a: 0, k: [100, 200, 0] } } }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      const layer = result.animationData.layers[0];
+      expect(layer.ks.p.k[0]).toBeCloseTo(50);
+      expect(layer.ks.p.k[1]).toBeCloseTo(100);
+    });
+
+    it("should handle layer with only scale (no position)", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{ ty: 4, nm: "Scale Only", ip: 0, op: 60, ks: { s: { a: 0, k: [100, 100, 100] } } }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      const layer = result.animationData.layers[0];
+      expect(layer.ks.s.k[0]).toBeCloseTo(50);
+      expect(layer.ks.s.k[1]).toBeCloseTo(50);
+    });
+
+    it("should handle static position with single-element array", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{ ty: 4, nm: "1D Pos", ip: 0, op: 60, ks: { p: { a: 0, k: [200] } } }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      expect(result.animationData.layers[0].ks.p.k[0]).toBeCloseTo(100);
+      expect(result.animationData.layers[0].ks.p.k.length).toBe(1);
+    });
+
+    it("should handle static scale with single-element array", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{ ty: 4, nm: "1D Scale", ip: 0, op: 60, ks: { s: { a: 0, k: [100] } } }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      expect(result.animationData.layers[0].ks.s.k[0]).toBeCloseTo(50);
+      expect(result.animationData.layers[0].ks.s.k.length).toBe(1);
+    });
+
+    it("should handle animated keyframes without end values", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{
+          ty: 4, nm: "No End", ip: 0, op: 60,
+          ks: {
+            p: { a: 1, k: [{ t: 0, s: [100, 200] }, { t: 60, s: [300, 400] }] },
+            s: { a: 1, k: [{ t: 0, s: [100, 100] }, { t: 60, s: [50, 50] }] },
+          },
+        }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      const layer = result.animationData.layers[0];
+      expect(layer.ks.p.k[0].s[0]).toBeCloseTo(50);
+      expect(layer.ks.p.k[0].e).toBeUndefined();
+      expect(layer.ks.s.k[1].s[0]).toBeCloseTo(25);
+    });
+
+    it("should handle animated keyframes with single-element s/e arrays", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{
+          ty: 4, nm: "1D KF", ip: 0, op: 60,
+          ks: {
+            p: { a: 1, k: [{ t: 0, s: [100], e: [300] }] },
+            s: { a: 1, k: [{ t: 0, s: [100], e: [200] }] },
+          },
+        }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      const layer = result.animationData.layers[0];
+      expect(layer.ks.p.k[0].s[0]).toBeCloseTo(50);
+      expect(layer.ks.p.k[0].e[0]).toBeCloseTo(150);
+      expect(layer.ks.p.k[0].s.length).toBe(1);
+      expect(layer.ks.s.k[0].s[0]).toBeCloseTo(50);
+      expect(layer.ks.s.k[0].e[0]).toBeCloseTo(100);
+    });
+
+    it("should skip null/non-object entries in animated keyframe arrays", () => {
+      const lottie = {
+        ...baseLottie,
+        layers: [{
+          ty: 4, nm: "Nulls", ip: 0, op: 60,
+          ks: {
+            p: { a: 1, k: [null, 42, { t: 0, s: [100, 200], e: [300, 400] }, undefined] },
+            s: { a: 1, k: [null, { t: 0, s: [100, 100] }] },
+          },
+        }],
+      };
+      const result = rescaleForExport(lottie, { targetWidth: 256, targetHeight: 256 });
+      const layer = result.animationData.layers[0];
+      expect(layer.ks.p.k[2].s[0]).toBeCloseTo(50);
+      expect(layer.ks.p.k[2].e[1]).toBeCloseTo(200);
+    });
+
+    it("should handle animation with no w/h (defaults to 512)", () => {
+      const noSize = { v: "5.7.1", fr: 30, ip: 0, op: 60, layers: [] };
+      const result = rescaleForExport(noSize, { targetWidth: 1024, targetHeight: 1024 });
+      expect(result.scale).toBe(2);
+    });
+
+    it("should handle layers as non-array", () => {
+      const noArr = { ...baseLottie, layers: "not-an-array" };
+      const result = rescaleForExport(noArr, { targetWidth: 256, targetHeight: 256 });
+      expect(result.animationData.w).toBe(256);
+    });
+
     it("should preserve non-transform properties", () => {
       const result = rescaleForExport(baseLottie, {
         targetWidth: 128,
