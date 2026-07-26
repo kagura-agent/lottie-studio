@@ -18,6 +18,7 @@ import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";
 import { VALID_CAMERA_MOVEMENTS, CameraMovement } from "@/lib/camera";
 import { VALID_PATH_SHAPES, PathShape } from "@/lib/path-motion";
 import { SPRING_PRESETS, SpringPreset, VALID_SPRING_PROPERTIES, SpringProperty, SpringCommandOptions } from "@/lib/spring";
+import { VALID_WIGGLE_PROPERTIES, WiggleProperty, WiggleCommandOptions } from "@/lib/wiggle";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -225,6 +226,7 @@ export type Command =
   | { type: "camera"; movement: CameraMovement; options: CameraCommandOptions }
   | { type: "path"; shape: PathShape; options: PathCommandOptions }
   | { type: "spring"; options: SpringCommandOptions }
+  | { type: "wiggle"; options: WiggleCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1124,6 +1126,39 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "spring", options: springOpts };
+    }
+
+    case "wiggle": {
+      const wiggleOpts: WiggleCommandOptions = {};
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--freq" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid freq: "${args[i]}". Must be a positive number.` };
+          wiggleOpts.freq = n;
+        } else if (flag === "--amp" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid amp: "${args[i]}". Must be a positive number.` };
+          wiggleOpts.amp = n;
+        } else if (flag === "--smooth") {
+          wiggleOpts.smooth = true;
+        } else if (flag === "--no-smooth") {
+          wiggleOpts.smooth = false;
+        } else if (flag === "--layer" && args[i + 1]) {
+          wiggleOpts.layer = args[++i];
+        } else if (flag === "--property" && args[i + 1]) {
+          const p = args[++i].toLowerCase();
+          if (!(VALID_WIGGLE_PROPERTIES as readonly string[]).includes(p)) {
+            return { type: "error", message: `Invalid property "${p}". Available: ${VALID_WIGGLE_PROPERTIES.join(", ")}` };
+          }
+          wiggleOpts.property = p as WiggleProperty;
+        } else if (flag === "--seed" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n)) return { type: "error", message: `Invalid seed: "${args[i]}". Must be a number.` };
+          wiggleOpts.seed = n;
+        }
+      }
+      return { type: "wiggle", options: wiggleOpts };
     }
 
     case "text": {

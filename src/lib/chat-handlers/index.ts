@@ -23,5 +23,6 @@ export { handleCamera } from "./camera";
 export { handlePath } from "./path";
 export { handleText } from "./text";
 export { handleSpring } from "./spring";
+export { handleWiggle } from "./wiggle";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

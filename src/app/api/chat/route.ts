@@ -27,6 +27,7 @@ import {
   handlePath,
   handleText,
   handleSpring,
+  handleWiggle,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -188,6 +189,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "spring") {
     return handleSpring(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "wiggle") {
+    return handleWiggle(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
