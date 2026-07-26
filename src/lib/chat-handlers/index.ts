@@ -22,5 +22,6 @@ export { handleSlide } from "./slide";
 export { handleCamera } from "./camera";
 export { handlePath } from "./path";
 export { handleText } from "./text";
+export { handleSpring } from "./spring";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

@@ -17,6 +17,7 @@ import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/t
 import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";
 import { VALID_CAMERA_MOVEMENTS, CameraMovement } from "@/lib/camera";
 import { VALID_PATH_SHAPES, PathShape } from "@/lib/path-motion";
+import { SPRING_PRESETS, SpringPreset, VALID_SPRING_PROPERTIES, SpringProperty, SpringCommandOptions } from "@/lib/spring";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -223,6 +224,7 @@ export type Command =
   | { type: "slide"; direction: SlideDirection; options: SlideCommandOptions }
   | { type: "camera"; movement: CameraMovement; options: CameraCommandOptions }
   | { type: "path"; shape: PathShape; options: PathCommandOptions }
+  | { type: "spring"; options: SpringCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1087,6 +1089,41 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "path", shape: pathShape as PathShape, options: pathOpts };
+    }
+
+    case "spring": {
+      const springOpts: SpringCommandOptions = {};
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--stiffness" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid stiffness: "${args[i]}". Must be a positive number.` };
+          springOpts.stiffness = n;
+        } else if (flag === "--damping" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid damping: "${args[i]}". Must be a positive number.` };
+          springOpts.damping = n;
+        } else if (flag === "--mass" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid mass: "${args[i]}". Must be a positive number.` };
+          springOpts.mass = n;
+        } else if (flag === "--layer" && args[i + 1]) {
+          springOpts.layer = args[++i];
+        } else if (flag === "--property" && args[i + 1]) {
+          const p = args[++i].toLowerCase();
+          if (!(VALID_SPRING_PROPERTIES as readonly string[]).includes(p)) {
+            return { type: "error", message: `Invalid property "${p}". Available: ${VALID_SPRING_PROPERTIES.join(", ")}` };
+          }
+          springOpts.property = p as SpringProperty;
+        } else if (flag === "--preset" && args[i + 1]) {
+          const pr = args[++i].toLowerCase();
+          if (!(SPRING_PRESETS as readonly string[]).includes(pr)) {
+            return { type: "error", message: `Unknown preset "${pr}". Available: ${SPRING_PRESETS.join(", ")}` };
+          }
+          springOpts.preset = pr as SpringPreset;
+        }
+      }
+      return { type: "spring", options: springOpts };
     }
 
     case "text": {
