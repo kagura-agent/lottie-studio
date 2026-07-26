@@ -15,6 +15,7 @@ import {
 } from "@/lib/particle";
 import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/text";
 import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";
+import { VALID_CAMERA_MOVEMENTS, CameraMovement } from "@/lib/camera";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -59,6 +60,16 @@ export interface SlideCommandOptions {
   distance?: number;
   from?: number;
   to?: number;
+}
+
+export interface CameraCommandOptions {
+  movement: CameraMovement;
+  duration?: number;
+  easing?: string;
+  intensity?: number;
+  from?: number;
+  to?: number;
+  point?: [number, number];
 }
 
 export const VALID_STYLES = [
@@ -192,6 +203,7 @@ export type Command =
   | { type: "fade"; mode: FadeMode; options: FadeCommandOptions }
   | { type: "text"; text: string; options: TextCommandOptions }
   | { type: "slide"; direction: SlideDirection; options: SlideCommandOptions }
+  | { type: "camera"; movement: CameraMovement; options: CameraCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -954,6 +966,45 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "slide", direction: slideDir as SlideDirection, options: slideOpts };
+    }
+
+    case "camera": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /camera <movement> [--duration N] [--easing X] [--intensity N] [--from N] [--to N] [--point x,y]. Movements: ${VALID_CAMERA_MOVEMENTS.join(", ")}` };
+      }
+      const camMovement = args[0].toLowerCase();
+      if (!(VALID_CAMERA_MOVEMENTS as readonly string[]).includes(camMovement)) {
+        return { type: "error", message: `Unknown camera movement "${args[0]}". Available: ${VALID_CAMERA_MOVEMENTS.join(", ")}` };
+      }
+      const camOpts: CameraCommandOptions = { movement: camMovement as CameraMovement };
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          camOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          camOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--intensity" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0.1 || n > 2.0) return { type: "error", message: `Invalid intensity: "${args[i]}". Must be 0.1-2.0.` };
+          camOpts.intensity = n;
+        } else if (flag === "--from" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f < 0) return { type: "error", message: `Invalid from value: "${args[i]}"` };
+          camOpts.from = f;
+        } else if (flag === "--to" && args[i + 1]) {
+          const t = parseFloat(args[++i]);
+          if (isNaN(t) || t < 0) return { type: "error", message: `Invalid to value: "${args[i]}"` };
+          camOpts.to = t;
+        } else if (flag === "--point" && args[i + 1]) {
+          const pointStr = args[++i];
+          const pointMatch = pointStr.match(/^(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)$/);
+          if (!pointMatch) return { type: "error", message: `Invalid point: "${pointStr}". Use format: x,y (e.g. 256,256)` };
+          camOpts.point = [parseFloat(pointMatch[1]), parseFloat(pointMatch[2])];
+        }
+      }
+      return { type: "camera", movement: camMovement as CameraMovement, options: camOpts };
     }
 
     case "text": {
