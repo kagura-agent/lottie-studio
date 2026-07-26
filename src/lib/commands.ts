@@ -16,6 +16,7 @@ import {
 import { VALID_TEXT_PRESETS, TextPreset, VALID_ALIGNS, TextAlign } from "@/lib/text";
 import { VALID_SLIDE_DIRECTIONS, SlideDirection } from "@/lib/slide";
 import { VALID_CAMERA_MOVEMENTS, CameraMovement } from "@/lib/camera";
+import { VALID_PATH_SHAPES, PathShape } from "@/lib/path-motion";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -70,6 +71,23 @@ export interface CameraCommandOptions {
   from?: number;
   to?: number;
   point?: [number, number];
+}
+
+export interface PathCommandOptions {
+  shape: PathShape;
+  duration?: number;
+  easing?: string;
+  loops?: number;
+  radius?: number;
+  amplitude?: number;
+  frequency?: number;
+  clockwise?: boolean;
+  layer?: string | number;
+  from?: number;
+  to?: number;
+  center?: [number, number];
+  orient?: boolean;
+  svgPath?: string;
 }
 
 export const VALID_STYLES = [
@@ -204,6 +222,7 @@ export type Command =
   | { type: "text"; text: string; options: TextCommandOptions }
   | { type: "slide"; direction: SlideDirection; options: SlideCommandOptions }
   | { type: "camera"; movement: CameraMovement; options: CameraCommandOptions }
+  | { type: "path"; shape: PathShape; options: PathCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1005,6 +1024,69 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "camera", movement: camMovement as CameraMovement, options: camOpts };
+    }
+
+    case "path": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /path <shape> [options]. Shapes: ${VALID_PATH_SHAPES.join(", ")}. Options: --duration, --easing, --loops, --radius, --amplitude, --frequency, --clockwise, --counterclockwise, --layer, --from, --to, --center, --orient` };
+      }
+      const pathShape = args[0].toLowerCase();
+      if (!(VALID_PATH_SHAPES as readonly string[]).includes(pathShape)) {
+        return { type: "error", message: `Unknown path shape "${args[0]}". Available: ${VALID_PATH_SHAPES.join(", ")}` };
+      }
+      const pathOpts: PathCommandOptions = { shape: pathShape as PathShape };
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--duration" && args[i + 1]) {
+          const d = parseFloat(args[++i]);
+          if (isNaN(d) || d <= 0) return { type: "error", message: `Invalid duration: "${args[i]}"` };
+          pathOpts.duration = d;
+        } else if (flag === "--easing" && args[i + 1]) {
+          pathOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--loops" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid loops: "${args[i]}"` };
+          pathOpts.loops = n;
+        } else if (flag === "--radius" && args[i + 1]) {
+          const r = parseFloat(args[++i]);
+          if (isNaN(r) || r <= 0) return { type: "error", message: `Invalid radius: "${args[i]}"` };
+          pathOpts.radius = r;
+        } else if (flag === "--amplitude" && args[i + 1]) {
+          const a = parseFloat(args[++i]);
+          if (isNaN(a) || a <= 0) return { type: "error", message: `Invalid amplitude: "${args[i]}"` };
+          pathOpts.amplitude = a;
+        } else if (flag === "--frequency" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f <= 0) return { type: "error", message: `Invalid frequency: "${args[i]}"` };
+          pathOpts.frequency = f;
+        } else if (flag === "--clockwise") {
+          pathOpts.clockwise = true;
+        } else if (flag === "--counterclockwise") {
+          pathOpts.clockwise = false;
+        } else if (flag === "--layer" && args[i + 1]) {
+          const layerArg = args[++i];
+          const layerNum = parseInt(layerArg, 10);
+          pathOpts.layer = isNaN(layerNum) ? layerArg : layerNum;
+        } else if (flag === "--from" && args[i + 1]) {
+          const f = parseFloat(args[++i]);
+          if (isNaN(f) || f < 0) return { type: "error", message: `Invalid from value: "${args[i]}"` };
+          pathOpts.from = f;
+        } else if (flag === "--to" && args[i + 1]) {
+          const t = parseFloat(args[++i]);
+          if (isNaN(t) || t < 0) return { type: "error", message: `Invalid to value: "${args[i]}"` };
+          pathOpts.to = t;
+        } else if (flag === "--center" && args[i + 1]) {
+          const centerStr = args[++i];
+          const centerMatch = centerStr.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+          if (!centerMatch) return { type: "error", message: `Invalid center: "${centerStr}". Use format: x,y (e.g. 256,256)` };
+          pathOpts.center = [parseFloat(centerMatch[1]), parseFloat(centerMatch[2])];
+        } else if (flag === "--orient") {
+          pathOpts.orient = true;
+        } else if (flag === "--path" && args[i + 1]) {
+          pathOpts.svgPath = args[++i];
+        }
+      }
+      return { type: "path", shape: pathShape as PathShape, options: pathOpts };
     }
 
     case "text": {
