@@ -26,6 +26,7 @@ import {
   handleCamera,
   handlePath,
   handleText,
+  handleSpring,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -183,6 +184,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "text") {
     return handleText(animationId, parsedCmd.text, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "spring") {
+    return handleSpring(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
