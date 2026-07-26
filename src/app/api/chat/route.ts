@@ -23,6 +23,7 @@ import {
   handleDraw,
   handleFade,
   handleSlide,
+  handleCamera,
   handleText,
   handleMainChat,
   sendDoneEvent,
@@ -169,6 +170,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "slide") {
     return handleSlide(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "camera") {
+    return handleCamera(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "text") {
