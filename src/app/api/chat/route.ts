@@ -29,6 +29,7 @@ import {
   handleSpring,
   handleWiggle,
   handleLoop,
+  handleTrail,
   handleImport,
   handleMainChat,
   sendDoneEvent,
@@ -195,6 +196,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "wiggle") {
     return handleWiggle(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "trail") {
+    return handleTrail(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {

@@ -19,6 +19,7 @@ import { VALID_CAMERA_MOVEMENTS, CameraMovement } from "@/lib/camera";
 import { VALID_PATH_SHAPES, PathShape } from "@/lib/path-motion";
 import { SPRING_PRESETS, SpringPreset, VALID_SPRING_PROPERTIES, SpringProperty, SpringCommandOptions } from "@/lib/spring";
 import { VALID_WIGGLE_PROPERTIES, WiggleProperty, WiggleCommandOptions } from "@/lib/wiggle";
+import { VALID_FADE_MODES_TRAIL, TrailFadeMode, TrailOptions } from "@/lib/trail";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -227,6 +228,7 @@ export type Command =
   | { type: "path"; shape: PathShape; options: PathCommandOptions }
   | { type: "spring"; options: SpringCommandOptions }
   | { type: "wiggle"; options: WiggleCommandOptions }
+  | { type: "trail"; options: TrailOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1165,6 +1167,36 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "wiggle", options: wiggleOpts };
+    }
+
+    case "trail": {
+      const trailOpts: TrailOptions = { count: 5, fade: "exponential", scale: false };
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === "--fade" && args[i + 1]) {
+          const mode = args[++i].toLowerCase();
+          if (!VALID_FADE_MODES_TRAIL.includes(mode as TrailFadeMode)) {
+            return { type: "error", message: `Invalid fade mode: "${mode}". Valid: ${VALID_FADE_MODES_TRAIL.join(", ")}` };
+          }
+          trailOpts.fade = mode as TrailFadeMode;
+        } else if (arg === "--spacing" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid spacing: "${args[i]}". Must be a positive number.` };
+          trailOpts.spacing = n;
+        } else if (arg === "--layer" && args[i + 1]) {
+          trailOpts.layer = args[++i];
+        } else if (arg === "--color" && args[i + 1]) {
+          trailOpts.color = args[++i];
+        } else if (arg === "--scale") {
+          trailOpts.scale = true;
+        } else if (!arg.startsWith("--")) {
+          const n = parseInt(arg, 10);
+          if (!isNaN(n)) {
+            trailOpts.count = Math.max(1, Math.min(10, n));
+          }
+        }
+      }
+      return { type: "trail", options: trailOpts };
     }
 
     case "text": {
