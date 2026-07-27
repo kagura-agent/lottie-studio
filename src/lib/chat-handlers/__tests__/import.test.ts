@@ -53,7 +53,7 @@ describe("handleImport", () => {
       new Response(JSON.stringify(validLottie), { status: 200 })
     );
 
-    const res = await handleImport("https://example.com/anim.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/anim.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("anim");
@@ -71,7 +71,7 @@ describe("handleImport", () => {
       new Response(buf, { status: 200 })
     );
 
-    const res = await handleImport("https://example.com/cool.lottie", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/cool.lottie");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("cool");
@@ -83,7 +83,7 @@ describe("handleImport", () => {
     abortErr.name = "AbortError";
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(abortErr);
 
-    const res = await handleImport("https://example.com/slow.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/slow.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("timed out");
@@ -94,7 +94,7 @@ describe("handleImport", () => {
       new Response("x", { status: 200, headers: { "content-length": "10000000" } })
     );
 
-    const res = await handleImport("https://example.com/big.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/big.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("too large");
@@ -106,7 +106,7 @@ describe("handleImport", () => {
       new Response(big, { status: 200 })
     );
 
-    const res = await handleImport("https://example.com/big.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/big.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("too large");
@@ -117,7 +117,7 @@ describe("handleImport", () => {
       new Response("not json {{{", { status: 200 })
     );
 
-    const res = await handleImport("https://example.com/bad.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/bad.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("Invalid JSON");
@@ -128,7 +128,7 @@ describe("handleImport", () => {
       new Response(JSON.stringify({ hello: "world" }), { status: 200 })
     );
 
-    const res = await handleImport("https://example.com/notlottie.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/notlottie.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("Invalid Lottie");
@@ -139,7 +139,7 @@ describe("handleImport", () => {
       new Response("Not Found", { status: 404 })
     );
 
-    const res = await handleImport("https://example.com/missing.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/missing.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("404");
@@ -148,7 +148,7 @@ describe("handleImport", () => {
   it("handles generic network error", async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("ECONNREFUSED"));
 
-    const res = await handleImport("https://example.com/down.json", undefined, new Request("http://x"));
+    const res = await handleImport("https://example.com/down.json");
     const data = await parseDoneEvent(res);
 
     expect(data.reply).toContain("Network error");

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseCommand } from "@/lib/commands";
-import { generateTrail, TrailOptions } from "@/lib/trail";
+import { generateTrail } from "@/lib/trail";
 
 interface LottieLayer {
   nm: string;
@@ -135,9 +135,9 @@ describe("generateTrail", () => {
   it("applies exponential fade", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 3, fade: "exponential", scale: false }) as typeof lottie;
-    const o1 = (result.layers[1] as any).ks.o.k;
-    const o2 = (result.layers[2] as any).ks.o.k;
-    const o3 = (result.layers[3] as any).ks.o.k;
+    const o1 = (result.layers[1] as LottieLayer).ks.o.k;
+    const o2 = (result.layers[2] as LottieLayer).ks.o.k;
+    const o3 = (result.layers[3] as LottieLayer).ks.o.k;
     expect(o1).toBe(50); // 0.5^1 * 100
     expect(o2).toBe(25); // 0.5^2 * 100
     expect(o3).toBeCloseTo(12.5); // 0.5^3 * 100
@@ -146,15 +146,15 @@ describe("generateTrail", () => {
   it("applies linear fade", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 4, fade: "linear", scale: false }) as typeof lottie;
-    const o1 = (result.layers[1] as any).ks.o.k;
+    const o1 = (result.layers[1] as LottieLayer).ks.o.k;
     expect(o1).toBe(75); // (1 - 1/4) * 100
   });
 
   it("applies stepped fade", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 4, fade: "stepped", scale: false }) as typeof lottie;
-    const o1 = (result.layers[1] as any).ks.o.k;
-    const o3 = (result.layers[3] as any).ks.o.k;
+    const o1 = (result.layers[1] as LottieLayer).ks.o.k;
+    const o3 = (result.layers[3] as LottieLayer).ks.o.k;
     expect(o1).toBe(50); // i=1 < 4/2
     expect(o3).toBe(20); // i=3 >= 4/2
   });
@@ -162,8 +162,8 @@ describe("generateTrail", () => {
   it("applies progressive scale", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 5, fade: "exponential", scale: true }) as typeof lottie;
-    const s1 = (result.layers[1] as any).ks.s.k;
-    const s5 = (result.layers[5] as any).ks.s.k;
+    const s1 = (result.layers[1] as LottieLayer).ks.s.k;
+    const s5 = (result.layers[5] as LottieLayer).ks.s.k;
     expect(s1[0]).toBe(92); // 100 - 40*1/5
     expect(s5[0]).toBe(60); // 100 - 40*5/5
   });
@@ -185,10 +185,11 @@ describe("generateTrail", () => {
     const shapes = [{ ty: "gr", it: [{ ty: "fl", c: { a: 0, k: [1, 1, 1, 1] } }] }];
     const lottie = makeLottie([makeLayer("ball", { keyframes: true, shapes })]);
     const result = generateTrail(lottie, { count: 1, fade: "exponential", scale: false, color: "#ff0000" }) as typeof lottie;
-    const fill = (result.layers[1] as any).shapes[0].it[0].c.k;
-    expect(fill[0]).toBeCloseTo(1);
-    expect(fill[1]).toBeCloseTo(0);
-    expect(fill[2]).toBeCloseTo(0);
+    const fill = ((result.layers[1] as LottieLayer).shapes![0] as Record<string, unknown[]>).it[0];
+    const fillColor = (fill as Record<string, { k: number[] }>).c.k;
+    expect(fillColor[0]).toBeCloseTo(1);
+    expect(fillColor[1]).toBeCloseTo(0);
+    expect(fillColor[2]).toBeCloseTo(0);
   });
 
   it("works with single layer without keyframes (falls back to last layer)", () => {

@@ -4,7 +4,6 @@ import {
   generateWiggleKeyframes,
   resolveWiggleOptions,
   WiggleOptions,
-  VALID_WIGGLE_PROPERTIES,
 } from "@/lib/wiggle";
 
 describe("generateWiggleKeyframes", () => {
