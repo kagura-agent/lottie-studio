@@ -24,6 +24,7 @@ export { handlePath } from "./path";
 export { handleText } from "./text";
 export { handleSpring } from "./spring";
 export { handleWiggle } from "./wiggle";
+export { handleLoop } from "./loop";
 export { handleImport } from "./import";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";
