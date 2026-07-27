@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import JSZip from "jszip";
-import { db, ANIMATIONS_DIR } from "@/lib/db";
+import { db } from "@/lib/db";
 import {
   sendDoneEvent,
   saveVersion,
@@ -36,8 +36,6 @@ function extractName(url: string): string {
 
 export async function handleImport(
   url: string,
-  animationId: string | undefined,
-  _request: Request,
 ): Promise<Response> {
   let response: globalThis.Response;
   try {

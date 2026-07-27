@@ -16,13 +16,6 @@ import {
   SpringProperty,
 } from "@/lib/spring";
 
-/** Lottie property key to human-readable name */
-const PROPERTY_NAMES: Record<string, string> = {
-  p: "position",
-  s: "scale",
-  r: "rotation",
-  o: "opacity",
-};
 
 /** Map from spring property filter to Lottie ks key */
 const PROPERTY_TO_KEY: Record<SpringProperty, string> = {

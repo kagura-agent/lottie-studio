@@ -213,7 +213,7 @@ export async function POST(request: Request) {
   }
 
   if (parsedCmd && parsedCmd.type === "import") {
-    return handleImport(parsedCmd.url, animationId, request);
+    return handleImport(parsedCmd.url);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {

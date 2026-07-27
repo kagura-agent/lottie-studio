@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyCamera, CameraMovement, CameraOptions, VALID_CAMERA_MOVEMENTS } from "../camera";
+import { applyCamera, CameraMovement, VALID_CAMERA_MOVEMENTS } from "../camera";
 
 function makeAnimation(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

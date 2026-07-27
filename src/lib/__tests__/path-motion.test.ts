@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPathMotion, parseSvgPath, VALID_PATH_SHAPES, PathMotionOptions } from "../path-motion";
+import { applyPathMotion, parseSvgPath, VALID_PATH_SHAPES } from "../path-motion";
 
 function makeAnim(overrides: Record<string, unknown> = {}) {
   return {

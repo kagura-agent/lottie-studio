@@ -108,7 +108,7 @@ describe("GET /api/animations/[id]/thumbnail", () => {
       if (typeof p === "string" && p.endsWith(".rendered.png")) return renderedFileCreated;
       return false;
     });
-    mockFs.readFileSync.mockImplementation((p: string | unknown, enc?: string) => {
+    mockFs.readFileSync.mockImplementation((p: string | unknown) => {
       if (typeof p === "string" && p.endsWith(".json")) return animJson;
       return renderedBuf;
     });
