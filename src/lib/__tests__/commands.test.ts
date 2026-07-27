@@ -87,7 +87,7 @@ describe("parseCommand", () => {
 
   describe("/loop", () => {
     it("parses /loop", () => {
-      expect(parseCommand("/loop")).toEqual({ type: "loop" });
+      expect(parseCommand("/loop")).toEqual({ type: "loop", mode: "seamless" });
     });
   });
 
