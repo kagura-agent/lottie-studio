@@ -10,11 +10,13 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/sp'", () => {
     const result = filterCommands("/sp");
-    expect(result).toHaveLength(1);
-    expect(result[0].command).toBe("/speed");
+    expect(result).toHaveLength(2);
+    const commands = result.map((c) => c.command);
+    expect(commands).toContain("/speed");
+    expect(commands).toContain("/spring");
   });
 
-  it("filters by prefix '/e'", () => {
+  it("filters '/e' to export and easing", () => {
     const result = filterCommands("/e");
     expect(result).toHaveLength(2);
     expect(result.map((r: { command: string }) => r.command)).toContain("/export");
@@ -23,11 +25,12 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/re'", () => {
     const result = filterCommands("/re");
-    expect(result).toHaveLength(4);
+    expect(result).toHaveLength(5);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/redo");
     expect(commands).toContain("/resize");
     expect(commands).toContain("/rename-layer");
+    expect(commands).toContain("/retime");
     expect(commands).toContain("/reverse");
   });
 
@@ -59,12 +62,13 @@ describe("filterCommands", () => {
     expect(commands).toContain("/fix");
   });
 
-  it("filters '/p' to play, pause, presets, polish, and particle", () => {
+  it("filters '/p' to play, pause, path, presets, polish, and particle", () => {
     const result = filterCommands("/p");
-    expect(result).toHaveLength(5);
+    expect(result).toHaveLength(6);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/play");
     expect(commands).toContain("/pause");
+    expect(commands).toContain("/path");
     expect(commands).toContain("/presets");
     expect(commands).toContain("/polish");
     expect(commands).toContain("/particle");
