@@ -30,6 +30,7 @@ import {
   handleWiggle,
   handleLoop,
   handleTrail,
+  handleReverse,
   handleImport,
   handleMainChat,
   sendDoneEvent,
@@ -212,6 +213,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "presets") {
     return handlePresetCommand(parsedCmd, animationId, request);
+  }
+
+  if (parsedCmd && parsedCmd.type === "reverse") {
+    return handleReverse(animationId, message);
   }
 
   // --- Main LLM streaming flow ---
