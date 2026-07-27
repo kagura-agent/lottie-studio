@@ -160,7 +160,7 @@ export type Command =
   | { type: "play" }
   | { type: "pause" }
   | { type: "speed"; speed: number }
-  | { type: "loop" }
+  | { type: "loop"; mode: "seamless" | "pingpong" | "freeze" }
   | { type: "once" }
   | { type: "export_gif" }
   | { type: "export_apng" }
@@ -269,8 +269,14 @@ export function parseCommand(input: string): Command | null {
       return { type: "speed", speed: n };
     }
 
-    case "loop":
-      return { type: "loop" };
+    case "loop": {
+      const loopMode = args[0]?.toLowerCase() || "seamless";
+      const validModes = ["seamless", "pingpong", "freeze"] as const;
+      if (!validModes.includes(loopMode as typeof validModes[number])) {
+        return { type: "error", message: "Usage: /loop [seamless|pingpong|freeze]" };
+      }
+      return { type: "loop", mode: loopMode as "seamless" | "pingpong" | "freeze" };
+    }
 
     case "once":
       return { type: "once" };
