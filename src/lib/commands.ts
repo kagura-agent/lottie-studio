@@ -20,6 +20,7 @@ import { VALID_PATH_SHAPES, PathShape } from "@/lib/path-motion";
 import { SPRING_PRESETS, SpringPreset, VALID_SPRING_PROPERTIES, SpringProperty, SpringCommandOptions } from "@/lib/spring";
 import { VALID_WIGGLE_PROPERTIES, WiggleProperty, WiggleCommandOptions } from "@/lib/wiggle";
 import { VALID_FADE_MODES_TRAIL, TrailFadeMode, TrailOptions } from "@/lib/trail";
+import { VALID_SHAKE_AXES, ShakeAxis, ShakeCommandOptions } from "@/lib/shake";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -229,6 +230,7 @@ export type Command =
   | { type: "spring"; options: SpringCommandOptions }
   | { type: "wiggle"; options: WiggleCommandOptions }
   | { type: "trail"; options: TrailOptions }
+  | { type: "shake"; options: ShakeCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1197,6 +1199,39 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "trail", options: trailOpts };
+    }
+
+    case "shake": {
+      const shakeOpts: ShakeCommandOptions = {};
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--intensity" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid intensity: "${args[i]}". Must be a positive number.` };
+          shakeOpts.intensity = n;
+        } else if (flag === "--frequency" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid frequency: "${args[i]}". Must be a positive number.` };
+          shakeOpts.frequency = n;
+        } else if (flag === "--decay" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid decay: "${args[i]}". Must be a positive number.` };
+          shakeOpts.decay = n;
+        } else if (flag === "--axis" && args[i + 1]) {
+          const a = args[++i].toLowerCase();
+          if (!(VALID_SHAKE_AXES as readonly string[]).includes(a)) {
+            return { type: "error", message: `Invalid axis "${a}". Available: ${VALID_SHAKE_AXES.join(", ")}` };
+          }
+          shakeOpts.axis = a as ShakeAxis;
+        } else if (flag === "--layer" && args[i + 1]) {
+          shakeOpts.layer = args[++i];
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: "${args[i]}". Must be a positive number.` };
+          shakeOpts.duration = n;
+        }
+      }
+      return { type: "shake", options: shakeOpts };
     }
 
     case "text": {

@@ -60,6 +60,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/wiggle", description: "Continuous organic randomness (e.g. /wiggle --property position --freq 3 --amp 20)", hasParams: true },
   { command: "/theme", description: "Set editor theme colors (set, show, clear)", hasParams: true },
   { command: "/trail", description: "Motion trail/afterimage effect (e.g. /trail 5 --fade exponential --spacing 3)", hasParams: true },
+  { command: "/shake", description: "Add shake/vibration effect with decay (intensity, frequency, axis)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];

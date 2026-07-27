@@ -28,6 +28,7 @@ import {
   handleText,
   handleSpring,
   handleWiggle,
+  handleShake,
   handleLoop,
   handleTrail,
   handleReverse,
@@ -201,6 +202,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "trail") {
     return handleTrail(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "shake") {
+    return handleShake(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {
