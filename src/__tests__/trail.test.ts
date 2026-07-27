@@ -2,6 +2,15 @@ import { describe, it, expect } from "vitest";
 import { parseCommand } from "@/lib/commands";
 import { generateTrail, TrailOptions } from "@/lib/trail";
 
+interface LottieLayer {
+  nm: string;
+  ty: number;
+  ip: number;
+  op: number;
+  ks: { p: unknown; o: { a: number; k: number }; s: { a: number; k: number[] } };
+  shapes?: object[];
+}
+
 function makeLottie(layers: object[] = []) {
   return {
     fr: 30,
@@ -102,25 +111,25 @@ describe("generateTrail", () => {
   it("trail copies are named correctly", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 3, fade: "exponential", scale: false }) as typeof lottie;
-    expect(result.layers[1].nm).toBe("ball_trail_1");
-    expect(result.layers[2].nm).toBe("ball_trail_2");
-    expect(result.layers[3].nm).toBe("ball_trail_3");
+    expect((result.layers[1] as LottieLayer).nm).toBe("ball_trail_1");
+    expect((result.layers[2] as LottieLayer).nm).toBe("ball_trail_2");
+    expect((result.layers[3] as LottieLayer).nm).toBe("ball_trail_3");
   });
 
   it("offsets in-points by spacing", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 3, fade: "exponential", spacing: 5, scale: false }) as typeof lottie;
-    expect(result.layers[1].ip).toBe(5);
-    expect(result.layers[2].ip).toBe(10);
-    expect(result.layers[3].ip).toBe(15);
+    expect((result.layers[1] as LottieLayer).ip).toBe(5);
+    expect((result.layers[2] as LottieLayer).ip).toBe(10);
+    expect((result.layers[3] as LottieLayer).ip).toBe(15);
   });
 
   it("auto-calculates spacing from duration", () => {
     const lottie = makeLottie([makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 3, fade: "exponential", scale: false }) as typeof lottie;
     // totalDuration=60, spacing = 60/(3+1) = 15
-    expect(result.layers[1].ip).toBe(15);
-    expect(result.layers[2].ip).toBe(30);
+    expect((result.layers[1] as LottieLayer).ip).toBe(15);
+    expect((result.layers[2] as LottieLayer).ip).toBe(30);
   });
 
   it("applies exponential fade", () => {
@@ -163,7 +172,7 @@ describe("generateTrail", () => {
     const lottie = makeLottie([makeLayer("bg"), makeLayer("ball", { keyframes: true })]);
     const result = generateTrail(lottie, { count: 2, fade: "exponential", scale: false, layer: "ball" }) as typeof lottie;
     expect(result.layers).toHaveLength(4);
-    expect(result.layers[2].nm).toBe("ball_trail_1");
+    expect((result.layers[2] as LottieLayer).nm).toBe("ball_trail_1");
   });
 
   it("returns unmodified when target layer not found", () => {
