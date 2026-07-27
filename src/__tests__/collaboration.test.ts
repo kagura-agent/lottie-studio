@@ -45,7 +45,18 @@ function createMockPrepare() {
         const id = args[0] as string;
         return mockDbData.users.get(id);
       }
-      if (sqlLower.includes("from collaboration_members") || sqlLower.includes("select 1")) {
+      if (sqlLower.includes("select 1") && sqlLower.includes("collaboration_members")) {
+        const animId = args[0] as string;
+        const userId = args[1] as string;
+        for (const m of mockDbData.collaborationMembers.values()) {
+          const collab = [...mockDbData.collaborations.values()].find(
+            (c) => c.id === m.collaboration_id && c.animation_id === animId && c.expires_at > new Date().toISOString()
+          );
+          if (collab && m.user_id === userId) return { 1: 1 };
+        }
+        return undefined;
+      }
+      if (sqlLower.includes("from collaboration_members")) {
         return undefined;
       }
       return undefined;
@@ -333,6 +344,20 @@ describe("collaboration", () => {
     });
   });
 
+  describe("join authentication", () => {
+    it("should return 401 when unauthenticated", async () => {
+      __setMockUser(null);
+
+      const { POST } = await import("@/app/api/animations/[id]/collaborate/join/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate/join?token=any", {
+        method: "POST",
+      });
+
+      const response = await POST(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(401);
+    });
+  });
+
   describe("max collaborators limit", () => {
     it("should reject join when max collaborators reached", async () => {
       const collabId = "collab-full";
@@ -367,6 +392,302 @@ describe("collaboration", () => {
 
       const data = await response.json();
       expect(data.error).toContain("Maximum");
+    });
+  });
+
+  describe("DELETE [token] route", () => {
+    it("should return 404 when animation does not exist", async () => {
+      __setMockUser(ownerUser);
+
+      const { DELETE } = await import("@/app/api/animations/[id]/collaborate/[token]/route");
+      const request = new Request("http://localhost/api/animations/nonexistent/collaborate/some-token", {
+        method: "DELETE",
+      });
+
+      const response = await DELETE(request, { params: Promise.resolve({ id: "nonexistent", token: "some-token" }) });
+      expect(response.status).toBe(404);
+    });
+
+    it("should return 404 when token does not exist", async () => {
+      __setMockUser(ownerUser);
+
+      const { DELETE } = await import("@/app/api/animations/[id]/collaborate/[token]/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate/nonexistent-token", {
+        method: "DELETE",
+      });
+
+      const response = await DELETE(request, { params: Promise.resolve({ id: animationId, token: "nonexistent-token" }) });
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe("Collaboration not found");
+    });
+
+    it("should return 401 when unauthenticated", async () => {
+      __setMockUser(null);
+
+      const { DELETE } = await import("@/app/api/animations/[id]/collaborate/[token]/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate/some-token", {
+        method: "DELETE",
+      });
+
+      const response = await DELETE(request, { params: Promise.resolve({ id: animationId, token: "some-token" }) });
+      expect(response.status).toBe(401);
+    });
+
+    it("should successfully delete a valid collaboration token", async () => {
+      const collabId = "collab-to-delete";
+      const tokenVal = "delete-me-token";
+      mockDbData.collaborations.set(collabId, {
+        id: collabId,
+        animation_id: animationId,
+        token: tokenVal,
+        permission: "edit",
+        created_by: ownerId,
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      __setMockUser(ownerUser);
+
+      const { DELETE } = await import("@/app/api/animations/[id]/collaborate/[token]/route");
+      const request = new Request(`http://localhost/api/animations/anim-789/collaborate/${tokenVal}`, {
+        method: "DELETE",
+      });
+
+      const response = await DELETE(request, { params: Promise.resolve({ id: animationId, token: tokenVal }) });
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.success).toBe(true);
+    });
+  });
+
+  describe("POST collaborate route edge cases", () => {
+    it("should return 400 for invalid JSON body", async () => {
+      __setMockUser(ownerUser);
+
+      const { POST } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not valid json{{{",
+      });
+
+      const response = await POST(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe("Invalid JSON");
+    });
+
+    it("should return 404 for non-existent animation", async () => {
+      __setMockUser(ownerUser);
+
+      const { POST } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/nonexistent/collaborate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permission: "edit" }),
+      });
+
+      const response = await POST(request, { params: Promise.resolve({ id: "nonexistent" }) });
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe("GET collaborate route", () => {
+    it("should return 404 for non-existent animation", async () => {
+      __setMockUser(ownerUser);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/nonexistent/collaborate");
+
+      const response = await GET(request, { params: Promise.resolve({ id: "nonexistent" }) });
+      expect(response.status).toBe(404);
+    });
+
+    it("should return 401 when unauthenticated", async () => {
+      __setMockUser(null);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate");
+
+      const response = await GET(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(401);
+    });
+
+    it("should return 200 with collaborations for the owner", async () => {
+      const collabId = "collab-list";
+      mockDbData.collaborations.set(collabId, {
+        id: collabId,
+        animation_id: animationId,
+        token: "list-token",
+        permission: "edit",
+        created_by: ownerId,
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+      });
+
+      __setMockUser(ownerUser);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate");
+
+      const response = await GET(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.collaborations).toBeDefined();
+      expect(Array.isArray(data.collaborations)).toBe(true);
+      expect(data.maxCollaborators).toBe(5);
+    });
+  });
+
+  describe("collaborators route edge cases", () => {
+    it("should allow a collaboration member to list collaborators", async () => {
+      const collabId = "collab-member-access";
+      mockDbData.collaborations.set(collabId, {
+        id: collabId,
+        animation_id: animationId,
+        token: "member-token",
+        permission: "edit",
+        created_by: ownerId,
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+      });
+      mockDbData.collaborationMembers.set("member-entry", {
+        id: "member-entry",
+        collaboration_id: collabId,
+        user_id: otherUserId,
+      });
+
+      __setMockUser(otherUser);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborators/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborators");
+
+      const response = await GET(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.collaborators).toBeDefined();
+    });
+
+    it("should return 401 when unauthenticated", async () => {
+      __setMockUser(null);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborators/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborators");
+
+      const response = await GET(request, { params: Promise.resolve({ id: animationId }) });
+      expect(response.status).toBe(401);
+    });
+
+    it("should handle animation with null user_id", async () => {
+      const noOwnerAnimId = "anim-no-owner";
+      mockDbData.animations.set(noOwnerAnimId, { id: noOwnerAnimId, user_id: null, name: "No Owner" });
+
+      const collabId = "collab-no-owner";
+      mockDbData.collaborations.set(collabId, {
+        id: collabId,
+        animation_id: noOwnerAnimId,
+        token: "no-owner-token",
+        permission: "edit",
+        created_by: ownerId,
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+      });
+      mockDbData.collaborationMembers.set("member-no-owner", {
+        id: "member-no-owner",
+        collaboration_id: collabId,
+        user_id: otherUserId,
+      });
+
+      __setMockUser(otherUser);
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborators/route");
+      const request = new Request("http://localhost/api/animations/anim-no-owner/collaborators");
+
+      const response = await GET(request, { params: Promise.resolve({ id: noOwnerAnimId }) });
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.collaborators.find((c: { isOwner: boolean }) => c.isOwner)).toBeUndefined();
+    });
+  });
+
+  describe("non-auth error propagation", () => {
+    it("should re-throw non-AuthError in DELETE route", async () => {
+      __setMockUser(ownerUser);
+      mockDbData.animations.set("err-anim", { id: "err-anim", user_id: ownerId, name: "Err" });
+
+      const origPrepare = (await import("@/lib/db")).db.prepare;
+      const { db: mockDb } = await import("@/lib/db");
+      const callCount = { n: 0 };
+      mockDb.prepare = ((sql: string) => {
+        callCount.n++;
+        if (callCount.n > 1 && sql.toLowerCase().includes("from collaborations")) {
+          throw new Error("DB crashed");
+        }
+        return origPrepare(sql);
+      }) as typeof mockDb.prepare;
+
+      const { DELETE } = await import("@/app/api/animations/[id]/collaborate/[token]/route");
+      const request = new Request("http://localhost/api/animations/err-anim/collaborate/tk", { method: "DELETE" });
+
+      await expect(DELETE(request, { params: Promise.resolve({ id: "err-anim", token: "tk" }) })).rejects.toThrow("DB crashed");
+      mockDb.prepare = origPrepare;
+    });
+
+    it("should re-throw non-AuthError in POST collaborate route", async () => {
+      __setMockUser(ownerUser);
+
+      const origPrepare = (await import("@/lib/db")).db.prepare;
+      const { db: mockDb } = await import("@/lib/db");
+      mockDb.prepare = (() => { throw new Error("DB crashed"); }) as typeof mockDb.prepare;
+
+      const { POST } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permission: "edit" }),
+      });
+
+      await expect(POST(request, { params: Promise.resolve({ id: animationId }) })).rejects.toThrow("DB crashed");
+      mockDb.prepare = origPrepare;
+    });
+
+    it("should re-throw non-AuthError in GET collaborate route", async () => {
+      __setMockUser(ownerUser);
+
+      const origPrepare = (await import("@/lib/db")).db.prepare;
+      const { db: mockDb } = await import("@/lib/db");
+      mockDb.prepare = (() => { throw new Error("DB crashed"); }) as typeof mockDb.prepare;
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborate/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate");
+
+      await expect(GET(request, { params: Promise.resolve({ id: animationId }) })).rejects.toThrow("DB crashed");
+      mockDb.prepare = origPrepare;
+    });
+
+    it("should re-throw non-AuthError in GET collaborators route", async () => {
+      __setMockUser(ownerUser);
+
+      const origPrepare = (await import("@/lib/db")).db.prepare;
+      const { db: mockDb } = await import("@/lib/db");
+      mockDb.prepare = (() => { throw new Error("DB crashed"); }) as typeof mockDb.prepare;
+
+      const { GET } = await import("@/app/api/animations/[id]/collaborators/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborators");
+
+      await expect(GET(request, { params: Promise.resolve({ id: animationId }) })).rejects.toThrow("DB crashed");
+      mockDb.prepare = origPrepare;
+    });
+
+    it("should re-throw non-AuthError in POST join route", async () => {
+      __setMockUser(otherUser);
+
+      const origPrepare = (await import("@/lib/db")).db.prepare;
+      const { db: mockDb } = await import("@/lib/db");
+      mockDb.prepare = (() => { throw new Error("DB crashed"); }) as typeof mockDb.prepare;
+
+      const { POST } = await import("@/app/api/animations/[id]/collaborate/join/route");
+      const request = new Request("http://localhost/api/animations/anim-789/collaborate/join?token=x", { method: "POST" });
+
+      await expect(POST(request, { params: Promise.resolve({ id: animationId }) })).rejects.toThrow("DB crashed");
+      mockDb.prepare = origPrepare;
     });
   });
 
