@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from "vitest";
 import { convertLottieToCss, buildCssPreviewSrcdoc } from "../lib/lottie-to-css";
 
