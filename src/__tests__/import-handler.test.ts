@@ -26,7 +26,6 @@ vi.mock("jszip", () => ({
 import { handleImport } from "@/lib/chat-handlers/import";
 import JSZip from "jszip";
 import { writeAnimationFile } from "@/lib/chat-handlers/helpers";
-import { db } from "@/lib/db";
 
 const mockLoadAsync = vi.mocked(JSZip.loadAsync);
 const validLottie = { v: "5.0", layers: [{ nm: "L" }], w: 100, h: 100, fr: 30 };
