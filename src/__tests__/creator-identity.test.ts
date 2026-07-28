@@ -50,6 +50,29 @@ describe("creatorId", () => {
   });
 });
 
+describe("creatorId without localStorage", () => {
+  beforeEach(() => {
+    vi.stubGlobal("localStorage", undefined);
+    vi.resetModules();
+  });
+
+  it("getCreatorId returns empty string", async () => {
+    const { getCreatorId } = await import("@/lib/creatorId");
+    expect(getCreatorId()).toBe("");
+  });
+
+  it("getCreatorName returns null", async () => {
+    const { getCreatorName } = await import("@/lib/creatorId");
+    expect(getCreatorName()).toBeNull();
+  });
+
+  it("setCreatorName is a no-op", async () => {
+    const { setCreatorName, getCreatorName } = await import("@/lib/creatorId");
+    expect(() => setCreatorName("Alice")).not.toThrow();
+    expect(getCreatorName()).toBeNull();
+  });
+});
+
 describe("apiFetch", () => {
   beforeEach(() => {
     localStorageMock.setItem("lottie-studio-creator-id", "test-creator-id");

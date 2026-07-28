@@ -33,6 +33,12 @@ describe("webhooks", () => {
       expect(verifySignature(payload, badSig, secret)).toBe(false);
     });
 
+    it("returns false for signature with different length", () => {
+      const secret = "whsec_testSecretValue123";
+      const payload = JSON.stringify({ event: "animation.created", data: {} });
+      expect(verifySignature(payload, "bad", secret)).toBe(false);
+    });
+
     it("returns false for tampered payload", () => {
       const secret = "whsec_testSecretValue123";
       const original = JSON.stringify({ event: "animation.created" });

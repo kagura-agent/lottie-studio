@@ -27,7 +27,6 @@ vi.mock("@/lib/shake", () => ({
 
 import { handleShake } from "@/lib/chat-handlers/shake";
 import {
-  sendDoneEvent,
   animationExists,
   readAnimationFile,
   writeAnimationFile,
