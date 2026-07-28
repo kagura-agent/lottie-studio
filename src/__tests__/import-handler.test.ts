@@ -165,7 +165,7 @@ describe("handleImport", () => {
           return null;
         },
       };
-      mockLoadAsync.mockResolvedValue(mockZip);
+      mockLoadAsync.mockResolvedValue(mockZip as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
 
       const res = await handleImport("https://example.com/anim.lottie");
@@ -174,7 +174,7 @@ describe("handleImport", () => {
     });
 
     it("returns error when manifest.json is missing", async () => {
-      mockLoadAsync.mockResolvedValue({ file: () => null });
+      mockLoadAsync.mockResolvedValue({ file: () => null } as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
 
       const res = await handleImport("https://example.com/anim.lottie");
@@ -189,7 +189,7 @@ describe("handleImport", () => {
           return null;
         },
       };
-      mockLoadAsync.mockResolvedValue(mockZip);
+      mockLoadAsync.mockResolvedValue(mockZip as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
 
       const res = await handleImport("https://example.com/test.lottie");
@@ -204,7 +204,7 @@ describe("handleImport", () => {
           return null;
         },
       };
-      mockLoadAsync.mockResolvedValue(mockZip);
+      mockLoadAsync.mockResolvedValue(mockZip as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
 
       const res = await handleImport("https://example.com/test.lottie");
@@ -220,7 +220,7 @@ describe("handleImport", () => {
           return null;
         },
       };
-      mockLoadAsync.mockResolvedValue(mockZip);
+      mockLoadAsync.mockResolvedValue(mockZip as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
 
       const res = await handleImport("https://example.com/test.lottie");
@@ -253,7 +253,7 @@ describe("handleImport", () => {
           if (name === "animations/a.json") return { async: () => Promise.resolve(animJson) };
           return null;
         },
-      });
+      } as unknown as JSZip);
       vi.mocked(globalThis.fetch).mockResolvedValue(mockFetchResponse(""));
       const res = await handleImport("https://example.com/myfile.lottie");
       const data = await res.json();

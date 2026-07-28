@@ -460,8 +460,8 @@ describe("import-svg API route", () => {
       data: {
         v: "5.7.1", fr: 30, ip: 0, op: 60, w: 100, h: 100,
         layers: [
-          { ty: 4, nm: "A", ind: 0, ip: 0, op: 60, st: 0, ks: {} },
-          { ty: 4, nm: "B", ind: 1, ip: 0, op: 60, st: 0, ks: {} },
+          { ty: 4, nm: "A", ind: 0, ip: 0, op: 60, st: 0, ks: {} as any },
+          { ty: 4, nm: "B", ind: 1, ip: 0, op: 60, st: 0, ks: {} as any },
         ],
       },
       warnings: [],
@@ -487,8 +487,8 @@ describe("import-svg API route", () => {
       data: {
         v: "5.7.1", fr: 30, ip: 0, op: 60, w: 100, h: 100,
         layers: [
-          { ty: 4, nm: "A", ind: 0, ip: 0, op: 60, st: 0, ks: {} },
-          { ty: 4, nm: "B", ind: 1, ip: 0, op: 60, st: 0, ks: {} },
+          { ty: 4, nm: "A", ind: 0, ip: 0, op: 60, st: 0, ks: {} as any },
+          { ty: 4, nm: "B", ind: 1, ip: 0, op: 60, st: 0, ks: {} as any },
         ],
       },
       warnings: [],

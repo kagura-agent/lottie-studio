@@ -1,13 +1,14 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
 Element.prototype.scrollIntoView = vi.fn();
 import CommandAutocomplete, {
   filterCommands,
   COMMANDS,
+  type CommandDef,
 } from "../CommandAutocomplete";
 
 describe("filterCommands", () => {
@@ -41,8 +42,8 @@ describe("filterCommands", () => {
 });
 
 describe("CommandAutocomplete", () => {
-  let onSelect: ReturnType<typeof vi.fn>;
-  let onDismiss: ReturnType<typeof vi.fn>;
+  let onSelect: Mock<(command: CommandDef) => void>;
+  let onDismiss: Mock<() => void>;
 
   beforeEach(() => {
     onSelect = vi.fn();
