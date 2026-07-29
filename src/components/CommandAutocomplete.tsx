@@ -61,6 +61,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/theme", description: "Set editor theme colors (set, show, clear)", hasParams: true },
   { command: "/trail", description: "Motion trail/afterimage effect (e.g. /trail 5 --fade exponential --spacing 3)", hasParams: true },
   { command: "/shake", description: "Add shake/vibration effect with decay (intensity, frequency, axis)", hasParams: true },
+  { command: "/shadow", description: "Add drop shadow, inner shadow, or glow effect (e.g. /shadow glow --color #ff0 --blur 12)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];
