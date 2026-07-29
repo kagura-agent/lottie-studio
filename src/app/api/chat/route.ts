@@ -30,6 +30,7 @@ import {
   handleWiggle,
   handleShake,
   handleShadow,
+  handleGradient,
   handleLoop,
   handleTrail,
   handleReverse,
@@ -211,6 +212,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "shadow") {
     return handleShadow(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "gradient") {
+    return handleGradient(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {

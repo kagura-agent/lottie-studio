@@ -22,6 +22,7 @@ import { VALID_WIGGLE_PROPERTIES, WiggleProperty, WiggleCommandOptions } from "@
 import { VALID_FADE_MODES_TRAIL, TrailFadeMode, TrailOptions } from "@/lib/trail";
 import { VALID_SHAKE_AXES, ShakeAxis, ShakeCommandOptions } from "@/lib/shake";
 import { VALID_SHADOW_TYPES, ShadowType, ShadowCommandOptions } from "@/lib/shadow";
+import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPreset, VALID_GRADIENT_MODES, GradientMode, GradientCommandOptions } from "@/lib/gradient";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -233,6 +234,7 @@ export type Command =
   | { type: "trail"; options: TrailOptions }
   | { type: "shake"; options: ShakeCommandOptions }
   | { type: "shadow"; options: ShadowCommandOptions }
+  | { type: "gradient"; options: GradientCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1275,6 +1277,63 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "shadow", options: shadowOpts };
+    }
+
+    case "gradient": {
+      const gradOpts: GradientCommandOptions = {};
+      const firstArg = args[0]?.toLowerCase();
+      let startIdx = 0;
+      if (firstArg && (VALID_GRADIENT_TYPES as readonly string[]).includes(firstArg)) {
+        gradOpts.type = firstArg as GradientType;
+        startIdx = 1;
+      } else if (firstArg && (VALID_GRADIENT_PRESETS as readonly string[]).includes(firstArg)) {
+        gradOpts.preset = firstArg as GradientPreset;
+        startIdx = 1;
+      }
+      for (let i = startIdx; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--type" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_GRADIENT_TYPES as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid gradient type: "${val}". Valid: ${VALID_GRADIENT_TYPES.join(", ")}` };
+          }
+          gradOpts.type = val as GradientType;
+        } else if (flag === "--preset" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_GRADIENT_PRESETS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid preset: "${val}". Valid: ${VALID_GRADIENT_PRESETS.join(", ")}` };
+          }
+          gradOpts.preset = val as GradientPreset;
+        } else if (flag === "--colors" && args[i + 1]) {
+          const colorStr = args[++i];
+          gradOpts.colors = colorStr.split(",").map((c) => c.trim());
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: must be a positive number.` };
+          gradOpts.duration = n;
+        } else if (flag === "--angle" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: `Invalid angle.` };
+          gradOpts.angle = n;
+        } else if (flag === "--layer" && args[i + 1]) {
+          gradOpts.layer = args[++i];
+        } else if (flag === "--mode" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_GRADIENT_MODES as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid mode: "${val}". Valid: ${VALID_GRADIENT_MODES.join(", ")}` };
+          }
+          gradOpts.mode = val as GradientMode;
+        } else if (flag === "--speed" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid speed: must be >= 0.` };
+          gradOpts.speed = n;
+        } else if (flag === "--from" && args[i + 1]) {
+          gradOpts.from = args[++i];
+        } else if (flag === "--to" && args[i + 1]) {
+          gradOpts.to = args[++i];
+        }
+      }
+      return { type: "gradient", options: gradOpts };
     }
 
     case "text": {
