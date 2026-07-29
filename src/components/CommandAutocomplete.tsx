@@ -62,6 +62,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/trail", description: "Motion trail/afterimage effect (e.g. /trail 5 --fade exponential --spacing 3)", hasParams: true },
   { command: "/shake", description: "Add shake/vibration effect with decay (intensity, frequency, axis)", hasParams: true },
   { command: "/shadow", description: "Add drop shadow, inner shadow, or glow effect (e.g. /shadow glow --color #ff0 --blur 12)", hasParams: true },
+  { command: "/gradient", description: "Animated gradient fill or stroke (e.g. /gradient sunset, /gradient radial --preset aurora --mode stroke)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];
