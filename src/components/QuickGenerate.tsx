@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { AnimationItem } from "lottie-web";
+import { loadAnimation, type AnimationItem } from "@/lib/lottie";
 import { apiFetch } from "@/lib/apiFetch";
 import { useDesignTokens } from "@/contexts/DesignTokensContext";
 import VariationGrid, { type Variation } from "@/components/VariationGrid";
@@ -55,19 +55,20 @@ export default function QuickGenerate() {
       animRef.current = null;
     }
     let cancelled = false;
-    import("lottie-web").then(({ default: lottie }) => {
-      if (cancelled || !containerRef.current) return;
-      try {
-        animRef.current = lottie.loadAnimation({
-          container: containerRef.current,
-          renderer: "svg",
-          loop: !reducedMotion,
-          autoplay: !reducedMotion,
-          animationData,
-        });
-      } catch {
-        // invalid data
+    loadAnimation({
+      container: containerRef.current,
+      renderer: "svg",
+      loop: !reducedMotion,
+      autoplay: !reducedMotion,
+      animationData,
+    }).then((anim) => {
+      if (cancelled) {
+        anim.destroy();
+        return;
       }
+      animRef.current = anim;
+    }).catch((err) => {
+      console.error("[QuickGenerate] Failed to render animation:", err);
     });
     return () => {
       cancelled = true;
