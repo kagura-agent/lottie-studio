@@ -25,6 +25,7 @@ export { handleText } from "./text";
 export { handleSpring } from "./spring";
 export { handleWiggle } from "./wiggle";
 export { handleShake } from "./shake";
+export { handleShadow } from "./shadow";
 export { handleLoop } from "./loop";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";

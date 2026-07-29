@@ -21,6 +21,7 @@ import { SPRING_PRESETS, SpringPreset, VALID_SPRING_PROPERTIES, SpringProperty, 
 import { VALID_WIGGLE_PROPERTIES, WiggleProperty, WiggleCommandOptions } from "@/lib/wiggle";
 import { VALID_FADE_MODES_TRAIL, TrailFadeMode, TrailOptions } from "@/lib/trail";
 import { VALID_SHAKE_AXES, ShakeAxis, ShakeCommandOptions } from "@/lib/shake";
+import { VALID_SHADOW_TYPES, ShadowType, ShadowCommandOptions } from "@/lib/shadow";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -231,6 +232,7 @@ export type Command =
   | { type: "wiggle"; options: WiggleCommandOptions }
   | { type: "trail"; options: TrailOptions }
   | { type: "shake"; options: ShakeCommandOptions }
+  | { type: "shadow"; options: ShadowCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1232,6 +1234,47 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "shake", options: shakeOpts };
+    }
+
+    case "shadow": {
+      const shadowOpts: ShadowCommandOptions = {};
+      const firstArg = args[0]?.toLowerCase();
+      let startIdx = 0;
+      if (firstArg && (VALID_SHADOW_TYPES as readonly string[]).includes(firstArg)) {
+        shadowOpts.type = firstArg as ShadowType;
+        startIdx = 1;
+      }
+      for (let i = startIdx; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--color" && args[i + 1]) {
+          shadowOpts.color = args[++i];
+        } else if (flag === "--opacity" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0 || n > 100) return { type: "error", message: `Invalid opacity: must be 0-100.` };
+          shadowOpts.opacity = n;
+        } else if (flag === "--blur" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid blur: must be >= 0.` };
+          shadowOpts.blur = n;
+        } else if (flag === "--distance" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid distance: must be >= 0.` };
+          shadowOpts.distance = n;
+        } else if (flag === "--angle" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: `Invalid angle.` };
+          shadowOpts.angle = n;
+        } else if (flag === "--layer" && args[i + 1]) {
+          shadowOpts.layer = args[++i];
+        } else if (flag === "--spread" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid spread: must be >= 0.` };
+          shadowOpts.spread = n;
+        } else if (flag === "--animated") {
+          shadowOpts.animated = true;
+        }
+      }
+      return { type: "shadow", options: shadowOpts };
     }
 
     case "text": {
