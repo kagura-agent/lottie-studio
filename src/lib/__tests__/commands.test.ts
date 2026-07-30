@@ -2063,5 +2063,699 @@ describe("parseCommand", () => {
         options: {},
       });
     });
+
+    it("returns error for whitespace-only quoted text", () => {
+      const result = parseCommand('/text "   "');
+      expect(result).toEqual({ type: "error", message: "Text content is required." });
+    });
+
+    it("parses single-word quoted text", () => {
+      expect(parseCommand('/text "Hello"')).toEqual({
+        type: "text",
+        text: "Hello",
+        options: {},
+      });
+    });
+  });
+
+  describe("/shadow", () => {
+    it("parses /shadow with no args", () => {
+      expect(parseCommand("/shadow")).toEqual({ type: "shadow", options: {} });
+    });
+
+    it("parses /shadow with type", () => {
+      expect(parseCommand("/shadow drop")).toEqual({ type: "shadow", options: { type: "drop" } });
+      expect(parseCommand("/shadow inner")).toEqual({ type: "shadow", options: { type: "inner" } });
+      expect(parseCommand("/shadow glow")).toEqual({ type: "shadow", options: { type: "glow" } });
+    });
+
+    it("parses with --color", () => {
+      expect(parseCommand("/shadow --color #000")).toEqual({ type: "shadow", options: { color: "#000" } });
+    });
+
+    it("parses with --opacity valid", () => {
+      expect(parseCommand("/shadow --opacity 50")).toEqual({ type: "shadow", options: { opacity: 50 } });
+    });
+
+    it("returns error for --opacity out of range", () => {
+      expect(parseCommand("/shadow --opacity 101")).toEqual({ type: "error", message: expect.stringContaining("opacity") });
+      expect(parseCommand("/shadow --opacity -1")).toEqual({ type: "error", message: expect.stringContaining("opacity") });
+      expect(parseCommand("/shadow --opacity abc")).toEqual({ type: "error", message: expect.stringContaining("opacity") });
+    });
+
+    it("parses with --blur valid", () => {
+      expect(parseCommand("/shadow --blur 10")).toEqual({ type: "shadow", options: { blur: 10 } });
+    });
+
+    it("returns error for --blur invalid", () => {
+      expect(parseCommand("/shadow --blur -1")).toEqual({ type: "error", message: expect.stringContaining("blur") });
+      expect(parseCommand("/shadow --blur abc")).toEqual({ type: "error", message: expect.stringContaining("blur") });
+    });
+
+    it("parses with --distance valid", () => {
+      expect(parseCommand("/shadow --distance 5")).toEqual({ type: "shadow", options: { distance: 5 } });
+    });
+
+    it("returns error for --distance invalid", () => {
+      expect(parseCommand("/shadow --distance -1")).toEqual({ type: "error", message: expect.stringContaining("distance") });
+      expect(parseCommand("/shadow --distance abc")).toEqual({ type: "error", message: expect.stringContaining("distance") });
+    });
+
+    it("parses with --angle valid", () => {
+      expect(parseCommand("/shadow --angle 45")).toEqual({ type: "shadow", options: { angle: 45 } });
+    });
+
+    it("returns error for --angle NaN", () => {
+      expect(parseCommand("/shadow --angle abc")).toEqual({ type: "error", message: expect.stringContaining("angle") });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/shadow --layer BG")).toEqual({ type: "shadow", options: { layer: "BG" } });
+    });
+
+    it("parses with --spread valid", () => {
+      expect(parseCommand("/shadow --spread 3")).toEqual({ type: "shadow", options: { spread: 3 } });
+    });
+
+    it("returns error for --spread invalid", () => {
+      expect(parseCommand("/shadow --spread -1")).toEqual({ type: "error", message: expect.stringContaining("spread") });
+      expect(parseCommand("/shadow --spread abc")).toEqual({ type: "error", message: expect.stringContaining("spread") });
+    });
+
+    it("parses with --animated", () => {
+      expect(parseCommand("/shadow --animated")).toEqual({ type: "shadow", options: { animated: true } });
+    });
+
+    it("parses type with all flags", () => {
+      expect(parseCommand("/shadow drop --color red --opacity 80 --blur 5 --distance 10 --angle 90 --layer BG --spread 2 --animated")).toEqual({
+        type: "shadow",
+        options: { type: "drop", color: "red", opacity: 80, blur: 5, distance: 10, angle: 90, layer: "BG", spread: 2, animated: true },
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/SHADOW DROP")).toEqual({ type: "shadow", options: { type: "drop" } });
+    });
+  });
+
+  describe("/mask", () => {
+    it("returns error for no args", () => {
+      expect(parseCommand("/mask")).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for unknown type", () => {
+      expect(parseCommand("/mask unknown")).toEqual({ type: "error", message: expect.stringContaining("Unknown mask type") });
+    });
+
+    it("parses valid mask types", () => {
+      const types = ["reveal", "wipe-right", "wipe-left", "wipe-down", "wipe-up", "circle", "circle-out", "iris", "star", "invert"];
+      for (const t of types) {
+        const result = parseCommand(`/mask ${t}`);
+        expect(result).toEqual({ type: "mask", maskType: t, options: { type: t } });
+      }
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/mask reveal --layer BG")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", layer: "BG" },
+      });
+    });
+
+    it("parses with --duration valid", () => {
+      expect(parseCommand("/mask reveal --duration 2")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", duration: 2 },
+      });
+    });
+
+    it("returns error for --duration invalid", () => {
+      expect(parseCommand("/mask reveal --duration 0")).toEqual({ type: "error", message: expect.stringContaining("duration") });
+      expect(parseCommand("/mask reveal --duration -1")).toEqual({ type: "error", message: expect.stringContaining("duration") });
+      expect(parseCommand("/mask reveal --duration abc")).toEqual({ type: "error", message: expect.stringContaining("duration") });
+    });
+
+    it("parses with --easing", () => {
+      expect(parseCommand("/mask reveal --easing ease-in")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", easing: "ease-in" },
+      });
+    });
+
+    it("parses with --from valid", () => {
+      expect(parseCommand("/mask reveal --from 10")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", from: 10 },
+      });
+    });
+
+    it("returns error for --from invalid", () => {
+      expect(parseCommand("/mask reveal --from -1")).toEqual({ type: "error", message: expect.stringContaining("from value") });
+      expect(parseCommand("/mask reveal --from abc")).toEqual({ type: "error", message: expect.stringContaining("from value") });
+    });
+
+    it("parses with --to valid", () => {
+      expect(parseCommand("/mask reveal --to 90")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", to: 90 },
+      });
+    });
+
+    it("returns error for --to invalid", () => {
+      expect(parseCommand("/mask reveal --to -5")).toEqual({ type: "error", message: expect.stringContaining("to value") });
+      expect(parseCommand("/mask reveal --to abc")).toEqual({ type: "error", message: expect.stringContaining("to value") });
+    });
+
+    it("parses with --expand valid", () => {
+      expect(parseCommand("/mask reveal --expand 5")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", expand: 5 },
+      });
+    });
+
+    it("returns error for --expand NaN", () => {
+      expect(parseCommand("/mask reveal --expand abc")).toEqual({ type: "error", message: expect.stringContaining("expand") });
+    });
+
+    it("parses with --invert", () => {
+      expect(parseCommand("/mask reveal --invert")).toEqual({
+        type: "mask", maskType: "reveal", options: { type: "reveal", invert: true },
+      });
+    });
+
+    it("parses with all options", () => {
+      expect(parseCommand("/mask circle --layer BG --duration 1.5 --easing bounce --from 0 --to 100 --expand 3 --invert")).toEqual({
+        type: "mask", maskType: "circle",
+        options: { type: "circle", layer: "BG", duration: 1.5, easing: "bounce", from: 0, to: 100, expand: 3, invert: true },
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/MASK REVEAL")).toEqual({ type: "mask", maskType: "reveal", options: { type: "reveal" } });
+    });
+  });
+
+  describe("/gradient", () => {
+    it("parses /gradient with no args", () => {
+      expect(parseCommand("/gradient")).toEqual({ type: "gradient", options: {} });
+    });
+
+    it("parses with type as first arg", () => {
+      expect(parseCommand("/gradient linear")).toEqual({ type: "gradient", options: { type: "linear" } });
+      expect(parseCommand("/gradient radial")).toEqual({ type: "gradient", options: { type: "radial" } });
+    });
+
+    it("parses with preset as first arg", () => {
+      expect(parseCommand("/gradient shimmer")).toEqual({ type: "gradient", options: { preset: "shimmer" } });
+      expect(parseCommand("/gradient sunset")).toEqual({ type: "gradient", options: { preset: "sunset" } });
+      expect(parseCommand("/gradient rainbow")).toEqual({ type: "gradient", options: { preset: "rainbow" } });
+      expect(parseCommand("/gradient aurora")).toEqual({ type: "gradient", options: { preset: "aurora" } });
+      expect(parseCommand("/gradient pulse")).toEqual({ type: "gradient", options: { preset: "pulse" } });
+    });
+
+    it("parses with --type flag", () => {
+      expect(parseCommand("/gradient --type linear")).toEqual({ type: "gradient", options: { type: "linear" } });
+    });
+
+    it("returns error for invalid --type", () => {
+      expect(parseCommand("/gradient --type cone")).toEqual({ type: "error", message: expect.stringContaining("Invalid gradient type") });
+    });
+
+    it("parses with --preset flag", () => {
+      expect(parseCommand("/gradient --preset sunset")).toEqual({ type: "gradient", options: { preset: "sunset" } });
+    });
+
+    it("returns error for invalid --preset", () => {
+      expect(parseCommand("/gradient --preset neon")).toEqual({ type: "error", message: expect.stringContaining("Invalid preset") });
+    });
+
+    it("parses with --colors", () => {
+      expect(parseCommand("/gradient --colors red,blue,green")).toEqual({
+        type: "gradient", options: { colors: ["red", "blue", "green"] },
+      });
+    });
+
+    it("parses with --duration valid", () => {
+      expect(parseCommand("/gradient --duration 2")).toEqual({ type: "gradient", options: { duration: 2 } });
+    });
+
+    it("returns error for --duration invalid", () => {
+      expect(parseCommand("/gradient --duration 0")).toEqual({ type: "error", message: expect.stringContaining("duration") });
+      expect(parseCommand("/gradient --duration abc")).toEqual({ type: "error", message: expect.stringContaining("duration") });
+    });
+
+    it("parses with --angle valid", () => {
+      expect(parseCommand("/gradient --angle 90")).toEqual({ type: "gradient", options: { angle: 90 } });
+    });
+
+    it("returns error for --angle NaN", () => {
+      expect(parseCommand("/gradient --angle abc")).toEqual({ type: "error", message: expect.stringContaining("angle") });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/gradient --layer BG")).toEqual({ type: "gradient", options: { layer: "BG" } });
+    });
+
+    it("parses with --mode valid", () => {
+      expect(parseCommand("/gradient --mode fill")).toEqual({ type: "gradient", options: { mode: "fill" } });
+      expect(parseCommand("/gradient --mode stroke")).toEqual({ type: "gradient", options: { mode: "stroke" } });
+    });
+
+    it("returns error for invalid --mode", () => {
+      expect(parseCommand("/gradient --mode both")).toEqual({ type: "error", message: expect.stringContaining("Invalid mode") });
+    });
+
+    it("parses with --speed valid", () => {
+      expect(parseCommand("/gradient --speed 1.5")).toEqual({ type: "gradient", options: { speed: 1.5 } });
+    });
+
+    it("returns error for --speed invalid", () => {
+      expect(parseCommand("/gradient --speed -1")).toEqual({ type: "error", message: expect.stringContaining("speed") });
+      expect(parseCommand("/gradient --speed abc")).toEqual({ type: "error", message: expect.stringContaining("speed") });
+    });
+
+    it("parses with --from and --to", () => {
+      expect(parseCommand("/gradient --from top --to bottom")).toEqual({
+        type: "gradient", options: { from: "top", to: "bottom" },
+      });
+    });
+
+    it("parses with all options", () => {
+      expect(parseCommand("/gradient linear --colors red,blue --duration 3 --angle 45 --layer BG --mode fill --speed 2 --from top --to bottom")).toEqual({
+        type: "gradient",
+        options: { type: "linear", colors: ["red", "blue"], duration: 3, angle: 45, layer: "BG", mode: "fill", speed: 2, from: "top", to: "bottom" },
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/GRADIENT LINEAR")).toEqual({ type: "gradient", options: { type: "linear" } });
+    });
+  });
+
+  describe("/camera", () => {
+    it("returns error for no args", () => {
+      expect(parseCommand("/camera")).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for unknown movement", () => {
+      expect(parseCommand("/camera spin")).toEqual({ type: "error", message: expect.stringContaining("Unknown camera movement") });
+    });
+
+    it("parses valid movements", () => {
+      for (const m of ["zoom-in", "zoom-out", "pan-left", "pan-right", "pan-up", "pan-down", "shake", "ken-burns"]) {
+        expect(parseCommand(`/camera ${m}`)).toEqual({ type: "camera", movement: m, options: { movement: m } });
+      }
+    });
+
+    it("parses with --duration", () => {
+      expect(parseCommand("/camera zoom-in --duration 2")).toEqual({
+        type: "camera", movement: "zoom-in", options: { movement: "zoom-in", duration: 2 },
+      });
+    });
+
+    it("returns error for invalid duration", () => {
+      expect(parseCommand("/camera zoom-in --duration 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+      expect(parseCommand("/camera zoom-in --duration abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+
+    it("parses with --easing", () => {
+      expect(parseCommand("/camera zoom-in --easing ease-out")).toEqual({
+        type: "camera", movement: "zoom-in", options: { movement: "zoom-in", easing: "ease-out" },
+      });
+    });
+
+    it("parses with --intensity valid", () => {
+      expect(parseCommand("/camera zoom-in --intensity 1.5")).toEqual({
+        type: "camera", movement: "zoom-in", options: { movement: "zoom-in", intensity: 1.5 },
+      });
+    });
+
+    it("returns error for --intensity out of range", () => {
+      expect(parseCommand("/camera zoom-in --intensity 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid intensity") });
+      expect(parseCommand("/camera zoom-in --intensity 3")).toEqual({ type: "error", message: expect.stringContaining("Invalid intensity") });
+      expect(parseCommand("/camera zoom-in --intensity abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid intensity") });
+    });
+
+    it("parses with --from and --to", () => {
+      expect(parseCommand("/camera zoom-in --from 0 --to 30")).toEqual({
+        type: "camera", movement: "zoom-in", options: { movement: "zoom-in", from: 0, to: 30 },
+      });
+    });
+
+    it("returns error for invalid --from", () => {
+      expect(parseCommand("/camera zoom-in --from -1")).toEqual({ type: "error", message: expect.stringContaining("Invalid from") });
+      expect(parseCommand("/camera zoom-in --from abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid from") });
+    });
+
+    it("returns error for invalid --to", () => {
+      expect(parseCommand("/camera zoom-in --to -1")).toEqual({ type: "error", message: expect.stringContaining("Invalid to") });
+      expect(parseCommand("/camera zoom-in --to abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid to") });
+    });
+
+    it("parses with --point valid", () => {
+      expect(parseCommand("/camera zoom-in --point 256,256")).toEqual({
+        type: "camera", movement: "zoom-in", options: { movement: "zoom-in", point: [256, 256] },
+      });
+    });
+
+    it("returns error for invalid --point", () => {
+      expect(parseCommand("/camera zoom-in --point abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid point") });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/CAMERA ZOOM-IN")).toEqual({ type: "camera", movement: "zoom-in", options: { movement: "zoom-in" } });
+    });
+  });
+
+  describe("/path", () => {
+    it("returns error for no args", () => {
+      expect(parseCommand("/path")).toEqual({ type: "error", message: expect.stringContaining("Usage") });
+    });
+
+    it("returns error for unknown shape", () => {
+      expect(parseCommand("/path blob")).toEqual({ type: "error", message: expect.stringContaining("Unknown path shape") });
+    });
+
+    it("parses valid shapes", () => {
+      for (const s of ["circle", "wave", "spiral", "figure-8", "arc", "zigzag", "pendulum", "custom"]) {
+        expect(parseCommand(`/path ${s}`)).toEqual({ type: "path", shape: s, options: { shape: s } });
+      }
+    });
+
+    it("parses with --duration", () => {
+      expect(parseCommand("/path circle --duration 2")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", duration: 2 },
+      });
+    });
+
+    it("returns error for invalid duration", () => {
+      expect(parseCommand("/path circle --duration 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+      expect(parseCommand("/path circle --duration abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+
+    it("parses with --easing", () => {
+      expect(parseCommand("/path circle --easing linear")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", easing: "linear" },
+      });
+    });
+
+    it("parses with --loops", () => {
+      expect(parseCommand("/path circle --loops 3")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", loops: 3 },
+      });
+    });
+
+    it("returns error for invalid loops", () => {
+      expect(parseCommand("/path circle --loops -1")).toEqual({ type: "error", message: expect.stringContaining("Invalid loops") });
+      expect(parseCommand("/path circle --loops abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid loops") });
+    });
+
+    it("parses with --radius", () => {
+      expect(parseCommand("/path circle --radius 50")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", radius: 50 },
+      });
+    });
+
+    it("returns error for invalid radius", () => {
+      expect(parseCommand("/path circle --radius 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid radius") });
+      expect(parseCommand("/path circle --radius abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid radius") });
+    });
+
+    it("parses with --amplitude", () => {
+      expect(parseCommand("/path wave --amplitude 20")).toEqual({
+        type: "path", shape: "wave", options: { shape: "wave", amplitude: 20 },
+      });
+    });
+
+    it("returns error for invalid amplitude", () => {
+      expect(parseCommand("/path wave --amplitude 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid amplitude") });
+    });
+
+    it("parses with --frequency", () => {
+      expect(parseCommand("/path wave --frequency 5")).toEqual({
+        type: "path", shape: "wave", options: { shape: "wave", frequency: 5 },
+      });
+    });
+
+    it("returns error for invalid frequency", () => {
+      expect(parseCommand("/path wave --frequency 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid frequency") });
+    });
+
+    it("parses with --clockwise and --counterclockwise", () => {
+      expect(parseCommand("/path circle --clockwise")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", clockwise: true },
+      });
+      expect(parseCommand("/path circle --counterclockwise")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", clockwise: false },
+      });
+    });
+
+    it("parses with --layer string and numeric", () => {
+      expect(parseCommand("/path circle --layer BG")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", layer: "BG" },
+      });
+      expect(parseCommand("/path circle --layer 2")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", layer: 2 },
+      });
+    });
+
+    it("parses with --from and --to", () => {
+      expect(parseCommand("/path circle --from 0 --to 100")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", from: 0, to: 100 },
+      });
+    });
+
+    it("returns error for invalid --from and --to", () => {
+      expect(parseCommand("/path circle --from -1")).toEqual({ type: "error", message: expect.stringContaining("Invalid from") });
+      expect(parseCommand("/path circle --to -1")).toEqual({ type: "error", message: expect.stringContaining("Invalid to") });
+    });
+
+    it("parses with --center valid", () => {
+      expect(parseCommand("/path circle --center 256,256")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", center: [256, 256] },
+      });
+    });
+
+    it("returns error for invalid --center", () => {
+      expect(parseCommand("/path circle --center abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid center") });
+    });
+
+    it("parses with --orient", () => {
+      expect(parseCommand("/path circle --orient")).toEqual({
+        type: "path", shape: "circle", options: { shape: "circle", orient: true },
+      });
+    });
+
+    it("parses with --path", () => {
+      expect(parseCommand("/path custom --path M0,0L100,100")).toEqual({
+        type: "path", shape: "custom", options: { shape: "custom", svgPath: "M0,0L100,100" },
+      });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/PATH CIRCLE")).toEqual({ type: "path", shape: "circle", options: { shape: "circle" } });
+    });
+  });
+
+  describe("/spring", () => {
+    it("parses /spring with no args", () => {
+      expect(parseCommand("/spring")).toEqual({ type: "spring", options: {} });
+    });
+
+    it("parses with --stiffness", () => {
+      expect(parseCommand("/spring --stiffness 100")).toEqual({ type: "spring", options: { stiffness: 100 } });
+    });
+
+    it("returns error for invalid stiffness", () => {
+      expect(parseCommand("/spring --stiffness 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid stiffness") });
+      expect(parseCommand("/spring --stiffness abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid stiffness") });
+    });
+
+    it("parses with --damping", () => {
+      expect(parseCommand("/spring --damping 10")).toEqual({ type: "spring", options: { damping: 10 } });
+    });
+
+    it("returns error for invalid damping", () => {
+      expect(parseCommand("/spring --damping 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid damping") });
+    });
+
+    it("parses with --mass", () => {
+      expect(parseCommand("/spring --mass 2")).toEqual({ type: "spring", options: { mass: 2 } });
+    });
+
+    it("returns error for invalid mass", () => {
+      expect(parseCommand("/spring --mass 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid mass") });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/spring --layer Ball")).toEqual({ type: "spring", options: { layer: "Ball" } });
+    });
+
+    it("parses with --property valid", () => {
+      expect(parseCommand("/spring --property position")).toEqual({ type: "spring", options: { property: "position" } });
+    });
+
+    it("returns error for invalid property", () => {
+      expect(parseCommand("/spring --property color")).toEqual({ type: "error", message: expect.stringContaining("Invalid property") });
+    });
+
+    it("parses with --preset valid", () => {
+      expect(parseCommand("/spring --preset bouncy")).toEqual({ type: "spring", options: { preset: "bouncy" } });
+    });
+
+    it("returns error for invalid preset", () => {
+      expect(parseCommand("/spring --preset stiff")).toEqual({ type: "error", message: expect.stringContaining("Unknown preset") });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/SPRING --STIFFNESS 100")).toEqual({ type: "spring", options: { stiffness: 100 } });
+    });
+  });
+
+  describe("/wiggle", () => {
+    it("parses /wiggle with no args", () => {
+      expect(parseCommand("/wiggle")).toEqual({ type: "wiggle", options: {} });
+    });
+
+    it("parses with --freq", () => {
+      expect(parseCommand("/wiggle --freq 5")).toEqual({ type: "wiggle", options: { freq: 5 } });
+    });
+
+    it("returns error for invalid freq", () => {
+      expect(parseCommand("/wiggle --freq 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid freq") });
+    });
+
+    it("parses with --amp", () => {
+      expect(parseCommand("/wiggle --amp 10")).toEqual({ type: "wiggle", options: { amp: 10 } });
+    });
+
+    it("returns error for invalid amp", () => {
+      expect(parseCommand("/wiggle --amp 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid amp") });
+    });
+
+    it("parses with --smooth and --no-smooth", () => {
+      expect(parseCommand("/wiggle --smooth")).toEqual({ type: "wiggle", options: { smooth: true } });
+      expect(parseCommand("/wiggle --no-smooth")).toEqual({ type: "wiggle", options: { smooth: false } });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/wiggle --layer Ball")).toEqual({ type: "wiggle", options: { layer: "Ball" } });
+    });
+
+    it("parses with --property valid", () => {
+      expect(parseCommand("/wiggle --property rotation")).toEqual({ type: "wiggle", options: { property: "rotation" } });
+    });
+
+    it("returns error for invalid property", () => {
+      expect(parseCommand("/wiggle --property color")).toEqual({ type: "error", message: expect.stringContaining("Invalid property") });
+    });
+
+    it("parses with --seed", () => {
+      expect(parseCommand("/wiggle --seed 42")).toEqual({ type: "wiggle", options: { seed: 42 } });
+    });
+
+    it("returns error for invalid seed", () => {
+      expect(parseCommand("/wiggle --seed abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid seed") });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/WIGGLE --SMOOTH")).toEqual({ type: "wiggle", options: { smooth: true } });
+    });
+  });
+
+  describe("/trail", () => {
+    it("parses /trail with no args", () => {
+      expect(parseCommand("/trail")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: false } });
+    });
+
+    it("parses with count as bare number", () => {
+      expect(parseCommand("/trail 3")).toEqual({ type: "trail", options: { count: 3, fade: "exponential", scale: false } });
+    });
+
+    it("clamps count to 1-10", () => {
+      expect(parseCommand("/trail 0")).toEqual({ type: "trail", options: { count: 1, fade: "exponential", scale: false } });
+    });
+
+    it("parses with --fade valid", () => {
+      expect(parseCommand("/trail --fade linear")).toEqual({ type: "trail", options: { count: 5, fade: "linear", scale: false } });
+    });
+
+    it("returns error for invalid fade", () => {
+      expect(parseCommand("/trail --fade invalid")).toEqual({ type: "error", message: expect.stringContaining("Invalid fade mode") });
+    });
+
+    it("parses with --spacing", () => {
+      expect(parseCommand("/trail --spacing 10")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: false, spacing: 10 } });
+    });
+
+    it("returns error for invalid spacing", () => {
+      expect(parseCommand("/trail --spacing 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid spacing") });
+      expect(parseCommand("/trail --spacing abc")).toEqual({ type: "error", message: expect.stringContaining("Invalid spacing") });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/trail --layer Ball")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: false, layer: "Ball" } });
+    });
+
+    it("parses with --color", () => {
+      expect(parseCommand("/trail --color #ff0000")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: false, color: "#ff0000" } });
+    });
+
+    it("parses with --scale", () => {
+      expect(parseCommand("/trail --scale")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: true } });
+    });
+
+    it("is case-insensitive for command", () => {
+      expect(parseCommand("/TRAIL --scale")).toEqual({ type: "trail", options: { count: 5, fade: "exponential", scale: true } });
+    });
+  });
+
+  describe("/shake", () => {
+    it("parses /shake with no args", () => {
+      expect(parseCommand("/shake")).toEqual({ type: "shake", options: {} });
+    });
+
+    it("parses with --intensity", () => {
+      expect(parseCommand("/shake --intensity 5")).toEqual({ type: "shake", options: { intensity: 5 } });
+    });
+
+    it("returns error for invalid intensity", () => {
+      expect(parseCommand("/shake --intensity 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid intensity") });
+    });
+
+    it("parses with --frequency", () => {
+      expect(parseCommand("/shake --frequency 10")).toEqual({ type: "shake", options: { frequency: 10 } });
+    });
+
+    it("returns error for invalid frequency", () => {
+      expect(parseCommand("/shake --frequency 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid frequency") });
+    });
+
+    it("parses with --decay", () => {
+      expect(parseCommand("/shake --decay 0.5")).toEqual({ type: "shake", options: { decay: 0.5 } });
+    });
+
+    it("returns error for invalid decay", () => {
+      expect(parseCommand("/shake --decay 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid decay") });
+    });
+
+    it("parses with --axis valid", () => {
+      expect(parseCommand("/shake --axis x")).toEqual({ type: "shake", options: { axis: "x" } });
+      expect(parseCommand("/shake --axis both")).toEqual({ type: "shake", options: { axis: "both" } });
+    });
+
+    it("returns error for invalid axis", () => {
+      expect(parseCommand("/shake --axis z")).toEqual({ type: "error", message: expect.stringContaining("Invalid axis") });
+    });
+
+    it("parses with --layer", () => {
+      expect(parseCommand("/shake --layer BG")).toEqual({ type: "shake", options: { layer: "BG" } });
+    });
+
+    it("parses with --duration", () => {
+      expect(parseCommand("/shake --duration 2")).toEqual({ type: "shake", options: { duration: 2 } });
+    });
+
+    it("returns error for invalid duration", () => {
+      expect(parseCommand("/shake --duration 0")).toEqual({ type: "error", message: expect.stringContaining("Invalid duration") });
+    });
+
+    it("is case-insensitive", () => {
+      expect(parseCommand("/SHAKE --AXIS X")).toEqual({ type: "shake", options: { axis: "x" } });
+    });
   });
 });
