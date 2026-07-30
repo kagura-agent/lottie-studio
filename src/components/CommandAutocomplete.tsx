@@ -65,6 +65,8 @@ export const COMMANDS: CommandDef[] = [
   { command: "/gradient", description: "Animated gradient fill or stroke (e.g. /gradient sunset, /gradient radial --preset aurora --mode stroke)", hasParams: true },
   { command: "/mask", description: "Animated mask reveal/wipe effects (e.g. /mask circle, /mask wipe-right --duration 2 --easing ease-out)", hasParams: true },
   { command: "/blur", description: "Add blur/focus effects (e.g. /blur in --intensity 15, /blur pulse --layer bg)", hasParams: true },
+  { command: "/repeat", description: "Array/grid/circle patterns with staggered animation (e.g. /repeat grid --cols 3 --rows 3 --gap 40)", hasParams: true },
+  { command: "/3d", description: "3D perspective effects — card flip, rotation, parallax depth (e.g. /3d flip, /3d rotate --axis y)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];

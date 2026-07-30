@@ -39,6 +39,7 @@ import {
   handleTrail,
   handleReverse,
   handleImport,
+  handleHelp,
   handleMainChat,
   sendDoneEvent,
   animationExists,
@@ -102,6 +103,10 @@ export async function POST(request: Request) {
 
   // --- Command dispatch ---
   const parsedCmd = parseCommand(message);
+
+  if (parsedCmd && parsedCmd.type === "help") {
+    return handleHelp();
+  }
 
   if (parsedCmd && parsedCmd.type === "compose") {
     if (!animationId) {
