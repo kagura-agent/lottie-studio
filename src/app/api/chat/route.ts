@@ -34,6 +34,7 @@ import {
   handleMask,
   handleBlur,
   handleRepeat,
+  handleThreeD,
   handleLoop,
   handleTrail,
   handleReverse,
@@ -231,6 +232,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "repeat") {
     return handleRepeat(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "threed") {
+    return handleThreeD(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {
