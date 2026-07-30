@@ -63,6 +63,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/shake", description: "Add shake/vibration effect with decay (intensity, frequency, axis)", hasParams: true },
   { command: "/shadow", description: "Add drop shadow, inner shadow, or glow effect (e.g. /shadow glow --color #ff0 --blur 12)", hasParams: true },
   { command: "/gradient", description: "Animated gradient fill or stroke (e.g. /gradient sunset, /gradient radial --preset aurora --mode stroke)", hasParams: true },
+  { command: "/mask", description: "Animated mask reveal/wipe effects (e.g. /mask circle, /mask wipe-right --duration 2 --easing ease-out)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];

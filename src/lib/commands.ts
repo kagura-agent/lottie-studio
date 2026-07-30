@@ -23,6 +23,7 @@ import { VALID_FADE_MODES_TRAIL, TrailFadeMode, TrailOptions } from "@/lib/trail
 import { VALID_SHAKE_AXES, ShakeAxis, ShakeCommandOptions } from "@/lib/shake";
 import { VALID_SHADOW_TYPES, ShadowType, ShadowCommandOptions } from "@/lib/shadow";
 import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPreset, VALID_GRADIENT_MODES, GradientMode, GradientCommandOptions } from "@/lib/gradient";
+import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -235,6 +236,7 @@ export type Command =
   | { type: "shake"; options: ShakeCommandOptions }
   | { type: "shadow"; options: ShadowCommandOptions }
   | { type: "gradient"; options: GradientCommandOptions }
+  | { type: "mask"; maskType: MaskType; options: MaskCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1277,6 +1279,44 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "shadow", options: shadowOpts };
+    }
+
+    case "mask": {
+      if (args.length === 0) {
+        return { type: "error", message: `Usage: /mask <type> [--layer NAME] [--duration N] [--easing NAME] [--from N] [--to N] [--expand N] [--invert]. Types: ${VALID_MASK_TYPES.join(", ")}` };
+      }
+      const maskType = args[0].toLowerCase();
+      if (!(VALID_MASK_TYPES as readonly string[]).includes(maskType)) {
+        return { type: "error", message: `Unknown mask type "${args[0]}". Available: ${VALID_MASK_TYPES.join(", ")}` };
+      }
+      const maskOpts: MaskCommandOptions = { type: maskType as MaskType };
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--layer" && args[i + 1]) {
+          maskOpts.layer = args[++i];
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: must be a positive number.` };
+          maskOpts.duration = n;
+        } else if (flag === "--easing" && args[i + 1]) {
+          maskOpts.easing = args[++i].toLowerCase();
+        } else if (flag === "--from" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid from value: must be >= 0.` };
+          maskOpts.from = n;
+        } else if (flag === "--to" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid to value: must be >= 0.` };
+          maskOpts.to = n;
+        } else if (flag === "--expand" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: `Invalid expand value.` };
+          maskOpts.expand = n;
+        } else if (flag === "--invert") {
+          maskOpts.invert = true;
+        }
+      }
+      return { type: "mask", maskType: maskType as MaskType, options: maskOpts };
     }
 
     case "gradient": {
