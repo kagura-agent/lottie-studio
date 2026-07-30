@@ -28,6 +28,7 @@ export { handleShake } from "./shake";
 export { handleShadow } from "./shadow";
 export { handleGradient } from "./gradient";
 export { handleMask } from "./mask";
+export { handleBlur } from "./blur";
 export { handleLoop } from "./loop";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";
