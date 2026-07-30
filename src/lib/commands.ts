@@ -26,6 +26,7 @@ import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPre
 import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
 import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
 import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/lib/repeat";
+import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_AXES, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -241,6 +242,7 @@ export type Command =
   | { type: "mask"; maskType: MaskType; options: MaskCommandOptions }
   | { type: "blur"; options: BlurCommandOptions }
   | { type: "repeat"; options: RepeatCommandOptions }
+  | { type: "threed"; options: ThreeDCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1530,6 +1532,61 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "repeat", options: repeatOpts };
+    }
+
+    case "3d": {
+      const threeDOpts: ThreeDCommandOptions = { effect: "flip" };
+      const firstArg = args[0]?.toLowerCase();
+      if (!firstArg || !(VALID_3D_EFFECTS as readonly string[]).includes(firstArg)) {
+        return { type: "error", message: `3D effect required. Valid: ${VALID_3D_EFFECTS.join(", ")}` };
+      }
+      threeDOpts.effect = firstArg as ThreeDEffect;
+
+      for (let i = 1; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--axis" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (val !== "x" && val !== "y" && val !== "z" && val !== "both") {
+            return { type: "error", message: `Invalid axis: "${val}". Valid: x, y, z, both` };
+          }
+          threeDOpts.axis = val;
+        } else if (flag === "--angle" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: "Invalid angle: must be a number." };
+          threeDOpts.angle = n;
+        } else if (flag === "--duration" && args[i + 1]) {
+          const raw = args[++i];
+          const sMatch = raw.match(/^(\d+(?:\.\d+)?)s$/);
+          const n = sMatch ? parseFloat(sMatch[1]) : parseFloat(raw);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid duration: must be a positive number." };
+          threeDOpts.duration = n;
+        } else if (flag === "--easing" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_3D_EASINGS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid easing: "${val}". Valid: ${VALID_3D_EASINGS.join(", ")}` };
+          }
+          threeDOpts.easing = val;
+        } else if (flag === "--speed" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid speed: must be a positive number." };
+          threeDOpts.speed = n;
+        } else if (flag === "--direction" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_3D_DIRECTIONS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid direction: "${val}". Valid: ${VALID_3D_DIRECTIONS.join(", ")}` };
+          }
+          threeDOpts.direction = val;
+        } else if (flag === "--depth" && args[i + 1]) {
+          const n = parseInt(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid depth: must be a positive integer." };
+          threeDOpts.depth = n;
+        } else if (flag === "--damping" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0 || n >= 1) return { type: "error", message: "Invalid damping: must be between 0 and 1 (exclusive)." };
+          threeDOpts.damping = n;
+        }
+      }
+      return { type: "threed", options: threeDOpts };
     }
 
     default:

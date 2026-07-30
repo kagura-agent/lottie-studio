@@ -523,6 +523,21 @@ Marker management commands:
 - /marker clear — remove all markers
 `;
 
+const SPEC_3D = `
+## 3D Transforms in Lottie
+Enable 3D on a layer by setting "ddd": 1.
+3D rotation uses rx (X-axis), ry (Y-axis), rz (Z-axis) animated properties.
+Keyframe format: {t: frame, s: [value], e: [endValue], i: {x:[0.42],y:[1]}, o: {x:[0.58],y:[0]}}
+Final keyframe: {t: frame, s: [value]} (no 'e' property).
+
+Common 3D effects:
+- Flip: rotate 180° on an axis with opacity swap at midpoint
+- Tilt: subtle oscillating rotation for depth feel
+- Rotate: continuous spin on one axis (loop-friendly)
+- Parallax: multiple layers with offset positions/scales for depth
+- Swing: damped pendulum oscillation on an axis
+`;
+
 const SPEC_SECTIONS: Record<string, string> = {
   CORE: SPEC_CORE,
   SHAPES: SPEC_SHAPES,
@@ -537,6 +552,7 @@ const SPEC_SECTIONS: Record<string, string> = {
   PARENTING: SPEC_PARENTING,
   MORPHING: SPEC_MORPHING,
   MARKERS: SPEC_MARKERS,
+  THREE_D: SPEC_3D,
 };
 
 const EXAMPLE_CIRCLE = JSON.stringify({
@@ -1947,6 +1963,7 @@ const INTENT_KEYWORDS: Record<string, string[]> = {
   SHAPES: ['shape', 'circle', 'square', 'rectangle', 'ellipse', 'rect', 'ball', 'dot', 'box'],
   MORPHING: ['morph', 'morphing', 'transform into', 'change shape', 'become', 'transition from', 'icon transition', 'shape shift', 'evolve into'],
   MARKERS: ['marker', 'segment', 'state', 'hover', 'active', 'idle', 'toggle', 'interactive', 'playSegment', 'multi-state'],
+  THREE_D: ['3d', 'flip', 'tilt', 'parallax', 'perspective', 'rotate 3d', 'swing', 'depth', 'isometric'],
 };
 
 // Sections that indicate a non-shape-focused task

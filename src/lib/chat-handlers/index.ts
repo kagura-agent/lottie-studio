@@ -30,6 +30,7 @@ export { handleGradient } from "./gradient";
 export { handleMask } from "./mask";
 export { handleBlur } from "./blur";
 export { handleRepeat } from "./repeat";
+export { handleThreeD } from "./threed";
 export { handleLoop } from "./loop";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";
