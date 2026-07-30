@@ -27,6 +27,7 @@ export { handleWiggle } from "./wiggle";
 export { handleShake } from "./shake";
 export { handleShadow } from "./shadow";
 export { handleGradient } from "./gradient";
+export { handleMask } from "./mask";
 export { handleLoop } from "./loop";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";
