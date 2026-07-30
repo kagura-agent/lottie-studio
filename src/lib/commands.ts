@@ -25,6 +25,7 @@ import { VALID_SHADOW_TYPES, ShadowType, ShadowCommandOptions } from "@/lib/shad
 import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPreset, VALID_GRADIENT_MODES, GradientMode, GradientCommandOptions } from "@/lib/gradient";
 import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
 import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
+import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/lib/repeat";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -239,6 +240,7 @@ export type Command =
   | { type: "gradient"; options: GradientCommandOptions }
   | { type: "mask"; maskType: MaskType; options: MaskCommandOptions }
   | { type: "blur"; options: BlurCommandOptions }
+  | { type: "repeat"; options: RepeatCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1460,6 +1462,74 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "text", text: textContent, options: textOpts };
+    }
+
+    case "repeat": {
+      const repeatOpts: RepeatCommandOptions = { pattern: "grid" };
+      const firstArg = args[0]?.toLowerCase();
+      if (!firstArg || !(VALID_REPEAT_PATTERNS as readonly string[]).includes(firstArg)) {
+        return { type: "error", message: `Repeat pattern required. Valid: ${VALID_REPEAT_PATTERNS.join(", ")}` };
+      }
+      repeatOpts.pattern = firstArg as RepeatPattern;
+      let startIdx = 1;
+
+      const secondArg = args[1];
+      if (secondArg && !secondArg.startsWith("--")) {
+        const gridMatch = secondArg.match(/^(\d+)x(\d+)$/);
+        if (gridMatch) {
+          repeatOpts.cols = parseInt(gridMatch[1]);
+          repeatOpts.rows = parseInt(gridMatch[2]);
+          startIdx = 2;
+        } else {
+          const n = parseInt(secondArg);
+          if (!isNaN(n) && n > 0) {
+            repeatOpts.count = n;
+            startIdx = 2;
+          }
+        }
+      }
+
+      for (let i = startIdx; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--gap" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid gap: must be a positive number." };
+          repeatOpts.gap = n;
+        } else if (flag === "--radius" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid radius: must be a positive number." };
+          repeatOpts.radius = n;
+        } else if (flag === "--spacing" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid spacing: must be a positive number." };
+          repeatOpts.spacing = n;
+        } else if (flag === "--direction" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (val !== "horizontal" && val !== "vertical") {
+            return { type: "error", message: `Invalid direction: "${val}". Use: horizontal, vertical` };
+          }
+          repeatOpts.direction = val;
+        } else if (flag === "--stagger" && args[i + 1]) {
+          const raw = args[++i];
+          const msMatch = raw.match(/^(\d+(?:\.\d+)?)ms$/);
+          const n = msMatch ? parseFloat(msMatch[1]) : parseFloat(raw);
+          if (isNaN(n) || n < 0) return { type: "error", message: "Invalid stagger: must be a non-negative number." };
+          repeatOpts.stagger = n;
+        } else if (flag === "--cols" && args[i + 1]) {
+          const n = parseInt(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid cols: must be a positive integer." };
+          repeatOpts.cols = n;
+        } else if (flag === "--rows" && args[i + 1]) {
+          const n = parseInt(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid rows: must be a positive integer." };
+          repeatOpts.rows = n;
+        } else if (flag === "--count" && args[i + 1]) {
+          const n = parseInt(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: "Invalid count: must be a positive integer." };
+          repeatOpts.count = n;
+        }
+      }
+      return { type: "repeat", options: repeatOpts };
     }
 
     default:
