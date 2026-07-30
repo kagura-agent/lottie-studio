@@ -83,13 +83,6 @@ function getEasing(name?: string): { i: { x: number[]; y: number[] }; o: { x: nu
   }
 }
 
-function makeRotationKeyframes(frames: number, fromDeg: number, toDeg: number, easing?: string): Keyframe[] {
-  const ease = getEasing(easing);
-  return [
-    { t: 0, s: [fromDeg], e: [toDeg], ...ease },
-    { t: frames, s: [toDeg] },
-  ];
-}
 
 export function applyFlip(animation: LottieAnimation3D, options: ThreeDCommandOptions): string[] {
   const fr = animation.fr ?? 30;
@@ -175,7 +168,6 @@ export function applyTilt(animation: LottieAnimation3D, options: ThreeDCommandOp
 }
 
 export function applyRotate(animation: LottieAnimation3D, options: ThreeDCommandOptions): string[] {
-  const fr = animation.fr ?? 30;
   const speed = options.speed ?? 1;
   const totalFrames = Math.round((60 / speed));
   const axis = options.axis ?? 'y';
@@ -212,7 +204,6 @@ export function applyParallax(animation: LottieAnimation3D, options: ThreeDComma
 
   animation.op = totalFrames;
 
-  const layerCount = Math.max(depth, animation.layers.length);
   const layers: LottieLayer3D[] = [];
 
   for (let i = 0; i < depth; i++) {
