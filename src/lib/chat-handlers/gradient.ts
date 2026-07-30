@@ -25,8 +25,6 @@ export async function handleGradient(
 ): Promise<Response> {
   if (!animationId) {
     const animation = generateGradientAnimation(options);
-    const lottieStr = JSON.stringify(animation);
-
     const preset = options.preset ?? "shimmer";
     const gradType = options.type ?? "linear";
     const reply = `Created a new ${gradType} gradient animation using the "${preset}" preset.`;

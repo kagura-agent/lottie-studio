@@ -3,7 +3,6 @@ import {
   createGradientShape,
   applyGradientToLayer,
   generateGradientAnimation,
-  GradientCommandOptions,
   LottieLayer,
   VALID_GRADIENT_TYPES,
   VALID_GRADIENT_PRESETS,

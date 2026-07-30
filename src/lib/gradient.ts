@@ -64,7 +64,6 @@ function buildColorStops(colors: string[]): number[] {
 }
 
 function buildAnimatedColorStops(colors: string[], totalFrames: number, speed: number): unknown[] {
-  const baseStops = buildColorStops(colors);
   const numStops = colors.length;
   const shiftFrames = Math.round(totalFrames / speed);
 
