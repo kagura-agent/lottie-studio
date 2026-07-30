@@ -25,13 +25,14 @@ describe("filterCommands", () => {
 
   it("filters by prefix '/re'", () => {
     const result = filterCommands("/re");
-    expect(result).toHaveLength(5);
+    expect(result).toHaveLength(6);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/redo");
     expect(commands).toContain("/resize");
     expect(commands).toContain("/rename-layer");
     expect(commands).toContain("/retime");
     expect(commands).toContain("/reverse");
+    expect(commands).toContain("/repeat");
   });
 
   it("is case-insensitive", () => {
