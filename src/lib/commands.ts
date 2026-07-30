@@ -26,7 +26,7 @@ import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPre
 import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
 import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
 import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/lib/repeat";
-import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_AXES, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
+import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
 
 export interface DrawCommandOptions {
   duration?: number;
