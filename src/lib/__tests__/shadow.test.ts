@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createShadowStyle, applyShadowToLayers, LottieLayerWithStyles } from "../shadow";
+import { createShadowStyle, applyShadowToLayers, LottieLayerWithStyles, ShadowStyle } from "../shadow";
 
 describe("createShadowStyle", () => {
   it("creates a drop shadow with defaults", () => {
@@ -78,7 +78,7 @@ describe("applyShadowToLayers", () => {
 
   it("appends to existing sy array", () => {
     const existing = { ty: 1, c: { a: 0, k: [0, 0, 0, 1] }, o: { a: 0, k: 50 }, a: { a: 0, k: 0 }, s: { a: 0, k: 5 }, d: { a: 0, k: 3 } };
-    const layers: LottieLayerWithStyles[] = [{ nm: "L", sy: [existing as unknown] }];
+    const layers: LottieLayerWithStyles[] = [{ nm: "L", sy: [existing as ShadowStyle] }];
     applyShadowToLayers(layers, {});
     expect(layers[0].sy).toHaveLength(2);
   });

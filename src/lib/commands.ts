@@ -24,6 +24,7 @@ import { VALID_SHAKE_AXES, ShakeAxis, ShakeCommandOptions } from "@/lib/shake";
 import { VALID_SHADOW_TYPES, ShadowType, ShadowCommandOptions } from "@/lib/shadow";
 import { VALID_GRADIENT_TYPES, GradientType, VALID_GRADIENT_PRESETS, GradientPreset, VALID_GRADIENT_MODES, GradientMode, GradientCommandOptions } from "@/lib/gradient";
 import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
+import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -237,6 +238,7 @@ export type Command =
   | { type: "shadow"; options: ShadowCommandOptions }
   | { type: "gradient"; options: GradientCommandOptions }
   | { type: "mask"; maskType: MaskType; options: MaskCommandOptions }
+  | { type: "blur"; options: BlurCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1317,6 +1319,39 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "mask", maskType: maskType as MaskType, options: maskOpts };
+    }
+
+    case "blur": {
+      const blurOpts: BlurCommandOptions = {};
+      const firstArg = args[0]?.toLowerCase();
+      let startIdx = 0;
+      if (firstArg && (VALID_BLUR_MODES as readonly string[]).includes(firstArg)) {
+        blurOpts.mode = firstArg as BlurMode;
+        startIdx = 1;
+      }
+      for (let i = startIdx; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--intensity" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid intensity: must be a positive number.` };
+          blurOpts.intensity = n;
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: must be a positive number.` };
+          blurOpts.duration = n;
+        } else if (flag === "--layer" && args[i + 1]) {
+          blurOpts.layer = args[++i];
+        } else if (flag === "--from" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid from value: must be >= 0.` };
+          blurOpts.from = n;
+        } else if (flag === "--to" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid to value: must be >= 0.` };
+          blurOpts.to = n;
+        }
+      }
+      return { type: "blur", options: blurOpts };
     }
 
     case "gradient": {

@@ -32,6 +32,7 @@ import {
   handleShadow,
   handleGradient,
   handleMask,
+  handleBlur,
   handleLoop,
   handleTrail,
   handleReverse,
@@ -221,6 +222,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "mask") {
     return handleMask(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "blur") {
+    return handleBlur(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {
