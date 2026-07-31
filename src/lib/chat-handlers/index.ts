@@ -36,6 +36,7 @@ export { handlePhysics } from "./physics";
 export { handleTransition } from "./transition";
 export { handleHelp } from "./help";
 export { handleLoop } from "./loop";
+export { handleSequence } from "./sequence";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";
 export { handleImport } from "./import";
