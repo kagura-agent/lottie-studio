@@ -27,6 +27,7 @@ import { VALID_MASK_TYPES, MaskType, MaskCommandOptions } from "@/lib/mask";
 import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
 import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/lib/repeat";
 import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
+import { VALID_WAVE_TYPES, WaveType, VALID_WAVE_DIRECTIONS, WaveDirection, WaveCommandOptions } from "@/lib/wave";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -243,6 +244,7 @@ export type Command =
   | { type: "blur"; options: BlurCommandOptions }
   | { type: "repeat"; options: RepeatCommandOptions }
   | { type: "threed"; options: ThreeDCommandOptions }
+  | { type: "wave"; options: WaveCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1587,6 +1589,61 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "threed", options: threeDOpts };
+    }
+
+    case "wave":
+    case "waves":
+    case "sine":
+    case "ocean":
+    case "ripple": {
+      const waveOpts: WaveCommandOptions = {};
+      const firstArg = args[0]?.toLowerCase();
+      let startIdx = 0;
+      if (firstArg && (VALID_WAVE_TYPES as readonly string[]).includes(firstArg)) {
+        waveOpts.type = firstArg as WaveType;
+        startIdx = 1;
+      } else if (cmd === "sine") {
+        waveOpts.type = "sine";
+      } else if (cmd === "ocean") {
+        waveOpts.type = "ocean";
+      } else if (cmd === "ripple") {
+        waveOpts.type = "pulse";
+      }
+      for (let i = startIdx; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--amplitude" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid amplitude: must be a positive number.` };
+          waveOpts.amplitude = n;
+        } else if (flag === "--frequency" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid frequency: must be a positive number.` };
+          waveOpts.frequency = n;
+        } else if (flag === "--layers" && args[i + 1]) {
+          const n = parseInt(args[++i]);
+          if (isNaN(n) || n < 1) return { type: "error", message: `Invalid layers: must be >= 1.` };
+          waveOpts.layers = n;
+        } else if (flag === "--direction" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_WAVE_DIRECTIONS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid direction: "${val}". Valid: ${VALID_WAVE_DIRECTIONS.join(", ")}` };
+          }
+          waveOpts.direction = val as WaveDirection;
+        } else if (flag === "--speed" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid speed: must be a positive number.` };
+          waveOpts.speed = n;
+        } else if (flag === "--color" && args[i + 1]) {
+          waveOpts.color = args[++i];
+        } else if (flag === "--type" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_WAVE_TYPES as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid wave type: "${val}". Valid: ${VALID_WAVE_TYPES.join(", ")}` };
+          }
+          waveOpts.type = val as WaveType;
+        }
+      }
+      return { type: "wave", options: waveOpts };
     }
 
     default:
