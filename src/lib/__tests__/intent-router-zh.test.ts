@@ -228,6 +228,24 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("text", () => {
+    it("加文字 hello → text", () => {
+      expect(detectIntent("加文字 hello")).toMatchObject({ type: "text", text: "hello", options: {} });
+    });
+    it("写上欢迎 → text", () => {
+      expect(detectIntent("写上欢迎")).toMatchObject({ type: "text", text: "欢迎", options: {} });
+    });
+    it("添加文字 test → text", () => {
+      expect(detectIntent("添加文字 test")).toMatchObject({ type: "text", text: "test", options: {} });
+    });
+    it("加个标题 hello → text", () => {
+      expect(detectIntent("加个标题 hello")).toMatchObject({ type: "text", text: "hello", options: {} });
+    });
+    it("打字效果 loading → typewriter", () => {
+      expect(detectIntent("打字效果 loading")).toMatchObject({ type: "text", text: "loading", options: { style: "typewriter" } });
+    });
+  });
+
   describe("help", () => {
     it("帮助 → help", () => {
       expect(detectIntent("帮助")).toMatchObject({ type: "help" });

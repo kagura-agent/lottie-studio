@@ -587,6 +587,48 @@ describe("intent-router", () => {
     });
   });
 
+  describe("text", () => {
+    it("matches 'add text hello world'", () => {
+      expect(detectIntent("add text hello world")).toMatchObject({ type: "text", text: "hello world", options: {} });
+    });
+
+    it("matches 'write welcome'", () => {
+      expect(detectIntent("write welcome")).toMatchObject({ type: "text", text: "welcome", options: {} });
+    });
+
+    it("matches 'type out loading...'", () => {
+      expect(detectIntent("type out loading...")).toMatchObject({ type: "text", text: "loading...", options: { style: "typewriter" } });
+    });
+
+    it("matches 'put text saying goodbye'", () => {
+      expect(detectIntent("put text saying goodbye")).toMatchObject({ type: "text", text: "goodbye", options: {} });
+    });
+
+    it("matches 'text hello'", () => {
+      expect(detectIntent("text hello")).toMatchObject({ type: "text", text: "hello", options: {} });
+    });
+
+    it("matches 'typewriter text hello'", () => {
+      expect(detectIntent("typewriter text hello")).toMatchObject({ type: "text", text: "hello", options: { style: "typewriter" } });
+    });
+
+    it("matches 'bouncing text hello'", () => {
+      expect(detectIntent("bouncing text hello")).toMatchObject({ type: "text", text: "hello", options: { style: "bounce" } });
+    });
+
+    it("matches 'glitch text hello'", () => {
+      expect(detectIntent("glitch text hello")).toMatchObject({ type: "text", text: "hello", options: { style: "glitch" } });
+    });
+
+    it("matches 'wave text hello'", () => {
+      expect(detectIntent("wave text hello")).toMatchObject({ type: "text", text: "hello", options: { style: "wave" } });
+    });
+
+    it("does NOT match long creative prompts", () => {
+      expect(detectIntent("create an animation with text flying in from the left side")).toBeNull();
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });

@@ -378,6 +378,56 @@ const INTENT_PATTERNS: IntentPattern[] = [
     skipMultiCheck: true,
   },
 
+  // --- text ---
+  {
+    pattern: /^(?:typewriter|typing)\s+(?:text\s+)?(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:bouncing|bounce)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "bounce" as const } }),
+  },
+  {
+    pattern: /^(?:glitch)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "glitch" as const } }),
+  },
+  {
+    pattern: /^(?:wave)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "wave" as const } }),
+  },
+  {
+    pattern: /^(?:fade[- ]?in)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "fade-in" as const } }),
+  },
+  {
+    pattern: /^(?:scale)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "scale" as const } }),
+  },
+  {
+    pattern: /^(?:rotate)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "rotate" as const } }),
+  },
+  {
+    pattern: /^(?:slide)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "slide" as const } }),
+  },
+  {
+    pattern: /^type\s+out\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:add\s+text|put\s+text(?:\s+saying)?)\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^write\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+
   // --- help ---
   {
     pattern: /^(?:help|what\s*can\s*you\s*do|commands?|show\s*commands?)$/i,
@@ -705,6 +755,20 @@ const INTENT_PATTERNS: IntentPattern[] = [
     pattern: /^(?:显示颜色|调色板)$/,
     build: () => ({ type: "color", subcommand: { action: "palette" } as ColorSubcommand }),
     skipMultiCheck: true,
+  },
+
+  // --- text ---
+  {
+    pattern: /^打字效果\s*(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:加文字|添加文字|加个标题)\s*(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^写上(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
   },
 
   // --- help ---
