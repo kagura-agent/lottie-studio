@@ -11,7 +11,7 @@
  * - Never guess — return null if unsure
  */
 
-import type { Command } from "./commands";
+import type { Command, ColorSubcommand } from "./commands";
 
 // Max message length to consider for intent routing.
 // Longer messages are likely creative descriptions → send to LLM.
@@ -304,6 +304,77 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^(?:(?:make\s*(?:it\s*)?)?(?:slower|slow\s*(?:it\s*)?down))$/i,
     build: () => ({ type: "speed", speed: 0.5 }),
+    skipMultiCheck: true,
+  },
+
+  // --- color: warm/cool ---
+  {
+    pattern: /^(?:make\s*(?:it\s*)?warm(?:er)?)$/i,
+    build: () => ({ type: "color", subcommand: { action: "warm" } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:make\s*(?:it\s*)?cool(?:er)?)$/i,
+    build: () => ({ type: "color", subcommand: { action: "cool" } as ColorSubcommand }),
+  },
+
+  // --- color: invert ---
+  {
+    pattern: /^(?:invert\s*(?:the\s*)?(?:colors?|it)|invert)$/i,
+    build: () => ({ type: "color", subcommand: { action: "invert" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+
+  // --- color: brighten/darken ---
+  {
+    pattern: /^(?:make\s*(?:it\s*)?(?:brighter|lighter)|brighten)$/i,
+    build: () => ({ type: "color", subcommand: { action: "brighten", amount: 0.2 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:make\s*(?:it\s*)?(?:darker|dimmer)|darken)$/i,
+    build: () => ({ type: "color", subcommand: { action: "brighten", amount: -0.2 } as ColorSubcommand }),
+  },
+
+  // --- color: saturate/desaturate ---
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?)?(?:more\s*)?(?:saturated|vivid|vibrant)|saturate)$/i,
+    build: () => ({ type: "color", subcommand: { action: "saturate", amount: 0.3 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?)?(?:desaturated?|muted|dull)|desaturate)$/i,
+    build: () => ({ type: "color", subcommand: { action: "saturate", amount: -0.3 } as ColorSubcommand }),
+  },
+
+  // --- color: monochrome ---
+  {
+    pattern: /^(?:grayscale|grey\s*scale|black\s*(?:and|&)\s*white|monochrome)$/i,
+    build: () => ({ type: "color", subcommand: { action: "mono" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+
+  // --- color: named color swap ---
+  {
+    pattern: /^(?:make\s*(?:it\s*)?)(red|blue|green|yellow|orange|pink|purple|cyan|white|black|gold|teal)$/i,
+    build: (m) => {
+      const colorMap: Record<string, string> = {
+        red: "#ff0000", blue: "#0066ff", green: "#00cc00", yellow: "#ffcc00",
+        orange: "#ff6600", pink: "#ff69b4", purple: "#9900cc", cyan: "#00cccc",
+        white: "#ffffff", black: "#000000", gold: "#ffd700", teal: "#008080",
+      };
+      const name = m[1].toLowerCase();
+      return { type: "color", subcommand: { action: "swap", from: "all", to: colorMap[name] } as ColorSubcommand };
+    },
+  },
+
+  // --- color: hex color swap ---
+  {
+    pattern: /^(?:make\s*(?:it\s*)?|change\s*(?:(?:it|color)\s*)?to\s*)(#[0-9a-f]{3,8})$/i,
+    build: (m) => ({ type: "color", subcommand: { action: "swap", from: "all", to: m[1].toLowerCase() } as ColorSubcommand }),
+  },
+
+  // --- color: show palette ---
+  {
+    pattern: /^(?:show\s*(?:the\s*)?(?:colors?|palette)|what\s*colors?)$/i,
+    build: () => ({ type: "color", subcommand: { action: "palette" } as ColorSubcommand }),
     skipMultiCheck: true,
   },
 

@@ -481,6 +481,112 @@ describe("intent-router", () => {
     });
   });
 
+  describe("color intents", () => {
+    it("matches 'make it warm'", () => {
+      expect(detectIntent("make it warm")).toMatchObject({ type: "color", subcommand: { action: "warm" } });
+    });
+
+    it("matches 'make it warmer'", () => {
+      expect(detectIntent("make it warmer")).toMatchObject({ type: "color", subcommand: { action: "warm" } });
+    });
+
+    it("matches 'make it cool'", () => {
+      expect(detectIntent("make it cool")).toMatchObject({ type: "color", subcommand: { action: "cool" } });
+    });
+
+    it("matches 'make it cooler'", () => {
+      expect(detectIntent("make it cooler")).toMatchObject({ type: "color", subcommand: { action: "cool" } });
+    });
+
+    it("matches 'invert colors'", () => {
+      expect(detectIntent("invert colors")).toMatchObject({ type: "color", subcommand: { action: "invert" } });
+    });
+
+    it("matches 'invert it'", () => {
+      expect(detectIntent("invert it")).toMatchObject({ type: "color", subcommand: { action: "invert" } });
+    });
+
+    it("matches 'make it brighter'", () => {
+      expect(detectIntent("make it brighter")).toMatchObject({ type: "color", subcommand: { action: "brighten", amount: 0.2 } });
+    });
+
+    it("matches 'make it lighter'", () => {
+      expect(detectIntent("make it lighter")).toMatchObject({ type: "color", subcommand: { action: "brighten", amount: 0.2 } });
+    });
+
+    it("matches 'make it darker'", () => {
+      expect(detectIntent("make it darker")).toMatchObject({ type: "color", subcommand: { action: "brighten", amount: -0.2 } });
+    });
+
+    it("matches 'make it dimmer'", () => {
+      expect(detectIntent("make it dimmer")).toMatchObject({ type: "color", subcommand: { action: "brighten", amount: -0.2 } });
+    });
+
+    it("matches 'more saturated'", () => {
+      expect(detectIntent("more saturated")).toMatchObject({ type: "color", subcommand: { action: "saturate", amount: 0.3 } });
+    });
+
+    it("matches 'vivid'", () => {
+      expect(detectIntent("vivid")).toMatchObject({ type: "color", subcommand: { action: "saturate", amount: 0.3 } });
+    });
+
+    it("matches 'vibrant'", () => {
+      expect(detectIntent("vibrant")).toMatchObject({ type: "color", subcommand: { action: "saturate", amount: 0.3 } });
+    });
+
+    it("matches 'desaturate'", () => {
+      expect(detectIntent("desaturate")).toMatchObject({ type: "color", subcommand: { action: "saturate", amount: -0.3 } });
+    });
+
+    it("matches 'muted'", () => {
+      expect(detectIntent("muted")).toMatchObject({ type: "color", subcommand: { action: "saturate", amount: -0.3 } });
+    });
+
+    it("matches 'grayscale'", () => {
+      expect(detectIntent("grayscale")).toMatchObject({ type: "color", subcommand: { action: "mono" } });
+    });
+
+    it("matches 'black and white'", () => {
+      expect(detectIntent("black and white")).toMatchObject({ type: "color", subcommand: { action: "mono" } });
+    });
+
+    it("matches 'monochrome'", () => {
+      expect(detectIntent("monochrome")).toMatchObject({ type: "color", subcommand: { action: "mono" } });
+    });
+
+    it("matches 'make it red'", () => {
+      expect(detectIntent("make it red")).toMatchObject({ type: "color", subcommand: { action: "swap", from: "all", to: "#ff0000" } });
+    });
+
+    it("matches 'make it blue'", () => {
+      expect(detectIntent("make it blue")).toMatchObject({ type: "color", subcommand: { action: "swap", from: "all", to: "#0066ff" } });
+    });
+
+    it("matches 'make it gold'", () => {
+      expect(detectIntent("make it gold")).toMatchObject({ type: "color", subcommand: { action: "swap", from: "all", to: "#ffd700" } });
+    });
+
+    it("matches 'make it #ff6600'", () => {
+      expect(detectIntent("make it #ff6600")).toMatchObject({ type: "color", subcommand: { action: "swap", from: "all", to: "#ff6600" } });
+    });
+
+    it("matches 'change to #abc'", () => {
+      expect(detectIntent("change to #abc")).toMatchObject({ type: "color", subcommand: { action: "swap", from: "all", to: "#abc" } });
+    });
+
+    it("matches 'show palette'", () => {
+      expect(detectIntent("show palette")).toMatchObject({ type: "color", subcommand: { action: "palette" } });
+    });
+
+    it("matches 'show colors'", () => {
+      expect(detectIntent("show colors")).toMatchObject({ type: "color", subcommand: { action: "palette" } });
+    });
+
+    it("matches 'what colors'", () => {
+      expect(detectIntent("what colors")).toMatchObject({ type: "color", subcommand: { action: "palette" } });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
