@@ -18,7 +18,7 @@ import type { Command, ColorSubcommand } from "./commands";
 const MAX_INTENT_LENGTH = 80;
 
 // If message contains multiple action words, it's multi-intent → LLM
-const MULTI_INTENT_WORDS = /\b(and|then|also|plus|with)\b/i;
+const MULTI_INTENT_WORDS = /(?:\b(and|then|also|plus|with)\b|.+和.+|.+然后.+|.+还要.+|.+再.+|.+并且.+|.+同时.+)/i;
 
 interface IntentPattern {
   pattern: RegExp;
@@ -384,6 +384,335 @@ const INTENT_PATTERNS: IntentPattern[] = [
     build: () => ({ type: "help" }),
     skipMultiCheck: true,
   },
+
+  // === Chinese (zh) patterns ===
+
+  // --- reverse ---
+  {
+    pattern: /^(?:反转|倒放)$/,
+    build: () => ({ type: "reverse" }),
+    skipMultiCheck: true,
+  },
+
+  // --- loop ---
+  {
+    pattern: /^(?:循环|重复)$/,
+    build: () => ({ type: "loop", mode: "seamless" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:来回|乒乓)$/,
+    build: () => ({ type: "loop", mode: "pingpong" }),
+    skipMultiCheck: true,
+  },
+
+  // --- fade ---
+  {
+    pattern: /^淡入$/,
+    build: () => ({ type: "fade", mode: "in" as const, options: { mode: "in" as const } }),
+  },
+  {
+    pattern: /^淡出$/,
+    build: () => ({ type: "fade", mode: "out" as const, options: { mode: "out" as const } }),
+  },
+
+  // --- shadow ---
+  {
+    pattern: /^(?:阴影|投影)$/,
+    build: () => ({ type: "shadow", options: { shadowType: "drop" as const } }),
+  },
+  {
+    pattern: /^发光$/,
+    build: () => ({ type: "shadow", options: { shadowType: "glow" as const } }),
+  },
+
+  // --- blur ---
+  {
+    pattern: /^模糊$/,
+    build: () => ({ type: "blur", options: { blurMode: "gaussian" as const } }),
+  },
+  {
+    pattern: /^(?:对焦|景深)$/,
+    build: () => ({ type: "blur", options: { blurMode: "focus" as const } }),
+  },
+
+  // --- mirror ---
+  {
+    pattern: /^(?:镜像|水平翻转)$/,
+    build: () => ({ type: "mirror_h" }),
+  },
+  {
+    pattern: /^垂直翻转$/,
+    build: () => ({ type: "mirror_v" }),
+  },
+
+  // --- physics ---
+  {
+    pattern: /^弹跳$/,
+    build: () => ({ type: "physics", options: { effect: "bounce" as const } }),
+  },
+  {
+    pattern: /^(?:重力|下落)$/,
+    build: () => ({ type: "physics", options: { effect: "gravity" as const } }),
+  },
+  {
+    pattern: /^(?:摆动|钟摆)$/,
+    build: () => ({ type: "physics", options: { effect: "pendulum" as const } }),
+  },
+  {
+    pattern: /^(?:漂浮|悬浮)$/,
+    build: () => ({ type: "physics", options: { effect: "float" as const } }),
+  },
+
+  // --- wave ---
+  {
+    pattern: /^波浪$/,
+    build: () => ({ type: "wave", options: { waveType: "sine" as const } }),
+  },
+
+  // --- shake ---
+  {
+    pattern: /^抖动$/,
+    build: () => ({ type: "shake", options: {} }),
+  },
+
+  // --- wiggle ---
+  {
+    pattern: /^摇摆$/,
+    build: () => ({ type: "wiggle", options: {} }),
+  },
+
+  // --- spring ---
+  {
+    pattern: /^弹簧$/,
+    build: () => ({ type: "spring", options: {} }),
+  },
+
+  // --- particle ---
+  {
+    pattern: /^(?:粒子|闪光)$/,
+    build: () => ({ type: "particle", particleType: "sparkle" as const, options: {} }),
+  },
+  {
+    pattern: /^(?:纷飞|彩纸)$/,
+    build: () => ({ type: "particle", particleType: "confetti" as const, options: {} }),
+  },
+  {
+    pattern: /^(?:雪|下雪)$/,
+    build: () => ({ type: "particle", particleType: "snow" as const, options: {} }),
+  },
+  {
+    pattern: /^(?:雨|下雨)$/,
+    build: () => ({ type: "particle", particleType: "rain" as const, options: {} }),
+  },
+
+  // --- 3d ---
+  {
+    pattern: /^(?:3D|立体)$/,
+    build: () => ({ type: "threed", options: { effect: "flip" as const } }),
+  },
+
+  // --- gradient ---
+  {
+    pattern: /^渐变$/,
+    build: () => ({ type: "gradient", options: { gradientType: "linear" as const } }),
+  },
+
+  // --- mask ---
+  {
+    pattern: /^(?:遮罩|揭示)$/,
+    build: () => ({ type: "mask", maskType: "reveal" as const, options: {} }),
+  },
+
+  // --- repeat ---
+  {
+    pattern: /^(?:阵列|网格)$/,
+    build: () => ({ type: "repeat", options: { pattern: "grid" as const } }),
+  },
+
+  // --- trail ---
+  {
+    pattern: /^(?:拖影|残影)$/,
+    build: () => ({ type: "trail", options: {} }),
+  },
+
+  // --- draw ---
+  {
+    pattern: /^(?:描边|绘制)$/,
+    build: () => ({ type: "draw", options: {} }),
+  },
+
+  // --- slide ---
+  {
+    pattern: /^滑入$/,
+    build: () => ({ type: "slide", direction: "left" as const, options: { direction: "left" as const } }),
+  },
+  {
+    pattern: /^滑出$/,
+    build: () => ({ type: "slide", direction: "left" as const, options: { direction: "left" as const, out: true } }),
+  },
+
+  // --- rotate ---
+  {
+    pattern: /^旋转$/,
+    build: () => ({ type: "rotate", degrees: 360 }),
+    skipMultiCheck: true,
+  },
+
+  // --- scale ---
+  {
+    pattern: /^(?:放大|变大)$/,
+    build: () => ({ type: "scale", factor: 1.5 }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:缩小|变小)$/,
+    build: () => ({ type: "scale", factor: 0.5 }),
+    skipMultiCheck: true,
+  },
+
+  // --- optimize ---
+  {
+    pattern: /^(?:优化|压缩)$/,
+    build: () => ({ type: "optimize" }),
+    skipMultiCheck: true,
+  },
+
+  // --- transition ---
+  {
+    pattern: /^过渡$/,
+    build: () => ({ type: "transition", options: { transitionType: "fade" as const } }),
+  },
+
+  // --- sequence ---
+  {
+    pattern: /^(?:序列|连接)$/,
+    build: () => ({ type: "sequence_list" }),
+  },
+
+  // --- stagger ---
+  {
+    pattern: /^交错$/,
+    build: () => ({ type: "stagger", delayMs: 100, order: "normal" }),
+  },
+
+  // --- easing ---
+  {
+    pattern: /^(?:平滑|缓动)$/,
+    build: () => ({ type: "easing", preset: "ease-in-out" as const }),
+  },
+
+  // --- morph ---
+  {
+    pattern: /^变形$/,
+    build: () => ({ type: "morph", shape: "circle" as const, options: {} }),
+  },
+
+  // --- camera ---
+  {
+    pattern: /^放大镜头$/,
+    build: () => ({ type: "camera", movement: "zoom-in" as const, options: { movement: "zoom-in" as const } }),
+  },
+  {
+    pattern: /^缩小镜头$/,
+    build: () => ({ type: "camera", movement: "zoom-out" as const, options: { movement: "zoom-out" as const } }),
+  },
+  {
+    pattern: /^平移$/,
+    build: () => ({ type: "camera", movement: "pan" as const, options: { movement: "pan" as const } }),
+  },
+
+  // --- critique ---
+  {
+    pattern: /^(?:评审|分析)$/,
+    build: () => ({ type: "critique" }),
+    skipMultiCheck: true,
+  },
+
+  // --- fix ---
+  {
+    pattern: /^修复$/,
+    build: () => ({ type: "fix" }),
+    skipMultiCheck: true,
+  },
+
+  // --- polish ---
+  {
+    pattern: /^润色$/,
+    build: () => ({ type: "polish" }),
+    skipMultiCheck: true,
+  },
+
+  // --- speed ---
+  {
+    pattern: /^(?:加快|加速)$/,
+    build: () => ({ type: "speed", speed: 2 }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:减慢|减速)$/,
+    build: () => ({ type: "speed", speed: 0.5 }),
+    skipMultiCheck: true,
+  },
+
+  // --- color ---
+  {
+    pattern: /^(?:暖色|变暖)$/,
+    build: () => ({ type: "color", subcommand: { action: "warm" } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:冷色|变冷)$/,
+    build: () => ({ type: "color", subcommand: { action: "cool" } as ColorSubcommand }),
+  },
+  {
+    pattern: /^反色$/,
+    build: () => ({ type: "color", subcommand: { action: "invert" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^变亮$/,
+    build: () => ({ type: "color", subcommand: { action: "brighten", amount: 0.2 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^变暗$/,
+    build: () => ({ type: "color", subcommand: { action: "brighten", amount: -0.2 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:饱和|鲜艳)$/,
+    build: () => ({ type: "color", subcommand: { action: "saturate", amount: 0.3 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:去饱和|暗淡)$/,
+    build: () => ({ type: "color", subcommand: { action: "saturate", amount: -0.3 } as ColorSubcommand }),
+  },
+  {
+    pattern: /^(?:灰度|黑白|单色)$/,
+    build: () => ({ type: "color", subcommand: { action: "mono" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^变(红|蓝|绿|黄|橙|粉|紫|白|黑|金)$/,
+    build: (m) => {
+      const colorMap: Record<string, string> = {
+        红: "#ff0000", 蓝: "#0066ff", 绿: "#00cc00", 黄: "#ffcc00",
+        橙: "#ff6600", 粉: "#ff69b4", 紫: "#9900cc", 白: "#ffffff",
+        黑: "#000000", 金: "#ffd700",
+      };
+      return { type: "color", subcommand: { action: "swap", from: "all", to: colorMap[m[1]] } as ColorSubcommand };
+    },
+  },
+  {
+    pattern: /^(?:显示颜色|调色板)$/,
+    build: () => ({ type: "color", subcommand: { action: "palette" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+
+  // --- help ---
+  {
+    pattern: /^帮助$/,
+    build: () => ({ type: "help" }),
+    skipMultiCheck: true,
+  },
 ];
 
 /**
@@ -410,6 +739,7 @@ export function detectIntent(message: string): Command | null {
     // Exception: "make it X" patterns are modifications, not creations
     if (!/^make\s*(?:it|them)\s/i.test(trimmed)) return null;
   }
+  if (/^(?:创建|画一个|生成|设计|做一个)/.test(trimmed)) return null;
 
   for (const intent of INTENT_PATTERNS) {
     const match = trimmed.match(intent.pattern);
