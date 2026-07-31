@@ -11,7 +11,7 @@
  * - Never guess — return null if unsure
  */
 
-import type { Command, ColorSubcommand } from "./commands";
+import type { Command, ColorSubcommand, TextCommandOptions } from "./commands";
 
 // Max message length to consider for intent routing.
 // Longer messages are likely creative descriptions → send to LLM.
@@ -712,6 +712,62 @@ const INTENT_PATTERNS: IntentPattern[] = [
     pattern: /^帮助$/,
     build: () => ({ type: "help" }),
     skipMultiCheck: true,
+  },
+
+  // --- text (English) ---
+  {
+    pattern: /^(?:typewriter|typing)\s+(?:text\s+)?(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:bouncing|bounce)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "bounce" as const } }),
+  },
+  {
+    pattern: /^(?:fad(?:e|ing)[\s-]*in)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "fade-in" as const } }),
+  },
+  {
+    pattern: /^(?:wave|waving)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "wave" as const } }),
+  },
+  {
+    pattern: /^(?:glitch(?:y|ing)?)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "glitch" as const } }),
+  },
+  {
+    pattern: /^(?:slid(?:e|ing))\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "slide" as const } }),
+  },
+  {
+    pattern: /^type\s+out\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:add\s+text|put\s+text(?:\s+saying)?|write|text)\s+(.+)$/i,
+    build: (m) => {
+      const content = m[1].trim();
+      if (!content) return null;
+      return { type: "text", text: content, options: {} };
+    },
+  },
+  {
+    pattern: /^text$/i,
+    build: () => null,
+  },
+
+  // --- text (Chinese) ---
+  {
+    pattern: /^打字效果\s*(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:加文字|添加文字|写上)\s*(.+)$/,
+    build: (m) => {
+      const content = m[1].trim();
+      if (!content) return null;
+      return { type: "text", text: content, options: {} };
+    },
   },
 ];
 

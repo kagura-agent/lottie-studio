@@ -605,4 +605,42 @@ describe("intent-router", () => {
       expect(detectIntent("build a loading animation")).toBeNull();
     });
   });
+
+  describe("text", () => {
+    it("matches 'add text hello world'", () => {
+      expect(detectIntent("add text hello world")).toEqual({ type: "text", text: "hello world", options: {} });
+    });
+
+    it("matches 'write welcome'", () => {
+      expect(detectIntent("write welcome")).toEqual({ type: "text", text: "welcome", options: {} });
+    });
+
+    it("matches 'type out loading'", () => {
+      expect(detectIntent("type out loading")).toEqual({ type: "text", text: "loading", options: { style: "typewriter" } });
+    });
+
+    it("matches 'put text saying goodbye'", () => {
+      expect(detectIntent("put text saying goodbye")).toEqual({ type: "text", text: "goodbye", options: {} });
+    });
+
+    it("matches 'text hello'", () => {
+      expect(detectIntent("text hello")).toEqual({ type: "text", text: "hello", options: {} });
+    });
+
+    it("matches 'typewriter text hello'", () => {
+      expect(detectIntent("typewriter text hello")).toEqual({ type: "text", text: "hello", options: { style: "typewriter" } });
+    });
+
+    it("matches 'bouncing text hello'", () => {
+      expect(detectIntent("bouncing text hello")).toEqual({ type: "text", text: "hello", options: { style: "bounce" } });
+    });
+
+    it("returns null for 'text' alone", () => {
+      expect(detectIntent("text")).toBeNull();
+    });
+
+    it("does not match creative prompts with text", () => {
+      expect(detectIntent("create an animation with text flying in")).toBeNull();
+    });
+  });
 });

@@ -250,4 +250,22 @@ describe("Chinese intent patterns", () => {
       expect(detectIntent("做一个按钮")).toBeNull();
     });
   });
+
+  describe("text (Chinese)", () => {
+    it("matches '加文字 hello'", () => {
+      expect(detectIntent("加文字 hello")).toEqual({ type: "text", text: "hello", options: {} });
+    });
+
+    it("matches '写上欢迎'", () => {
+      expect(detectIntent("写上欢迎")).toEqual({ type: "text", text: "欢迎", options: {} });
+    });
+
+    it("matches '添加文字 test'", () => {
+      expect(detectIntent("添加文字 test")).toEqual({ type: "text", text: "test", options: {} });
+    });
+
+    it("matches '打字效果 loading'", () => {
+      expect(detectIntent("打字效果 loading")).toEqual({ type: "text", text: "loading", options: { style: "typewriter" } });
+    });
+  });
 });
