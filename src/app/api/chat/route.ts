@@ -37,6 +37,7 @@ import {
   handleThreeD,
   handleWave,
   handlePhysics,
+  handleTransition,
   handleLoop,
   handleTrail,
   handleReverse,
@@ -251,6 +252,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "physics") {
     return handlePhysics(animationId, parsedCmd.options, message);
+  }
+
+  if (parsedCmd && parsedCmd.type === "transition") {
+    return handleTransition(animationId, parsedCmd.options, message);
   }
 
   if (parsedCmd && parsedCmd.type === "loop") {

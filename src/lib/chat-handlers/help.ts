@@ -29,6 +29,7 @@ const HELP_TEXT = `# Available Commands
 - \`/repeat\` — Array/grid/circle patterns with staggered animation
 - \`/text\` — Animated text layers
 - \`/physics\` — Physics simulations (gravity, bounce, throw, pendulum, float)
+- \`/transition\` — Animated state transitions (fade, slide, wipe, zoom, flip, dissolve)
 
 ## Style & Color
 - \`/color\` — Palette, shift, warm, cool, mono, invert, saturate

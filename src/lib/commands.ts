@@ -29,6 +29,7 @@ import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/li
 import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
 import { VALID_WAVE_TYPES, WaveType, VALID_WAVE_DIRECTIONS, WaveDirection, WaveCommandOptions } from "@/lib/wave";
 import { VALID_PHYSICS_EFFECTS, PhysicsEffect, PhysicsCommandOptions } from "@/lib/physics";
+import { VALID_TRANSITION_TYPES, TransitionType, VALID_TRANSITION_DIRECTIONS, TransitionDirection, VALID_TRANSITION_EASINGS, TransitionEasing, TransitionCommandOptions } from "@/lib/transition";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -247,6 +248,7 @@ export type Command =
   | { type: "threed"; options: ThreeDCommandOptions }
   | { type: "wave"; options: WaveCommandOptions }
   | { type: "physics"; options: PhysicsCommandOptions }
+  | { type: "transition"; options: TransitionCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1693,6 +1695,45 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "physics", options: physicsOpts };
+    }
+
+    case "transition": {
+      const transOpts: TransitionCommandOptions = { type: "fade" };
+      const firstArg = args[0]?.toLowerCase();
+      if (firstArg && !firstArg.startsWith("--")) {
+        if (!(VALID_TRANSITION_TYPES as readonly string[]).includes(firstArg)) {
+          return { type: "error", message: `Invalid transition type "${firstArg}". Available: ${VALID_TRANSITION_TYPES.join(", ")}` };
+        }
+        transOpts.type = firstArg as TransitionType;
+        args.shift();
+      }
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--layer" && args[i + 1]) {
+          transOpts.layer = args[++i];
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: "${args[i]}". Must be a positive number.` };
+          transOpts.duration = n;
+        } else if (flag === "--easing" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_TRANSITION_EASINGS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid easing "${val}". Available: ${VALID_TRANSITION_EASINGS.join(", ")}` };
+          }
+          transOpts.easing = val as TransitionEasing;
+        } else if (flag === "--direction" && args[i + 1]) {
+          const val = args[++i].toLowerCase();
+          if (!(VALID_TRANSITION_DIRECTIONS as readonly string[]).includes(val)) {
+            return { type: "error", message: `Invalid direction "${val}". Available: ${VALID_TRANSITION_DIRECTIONS.join(", ")}` };
+          }
+          transOpts.direction = val as TransitionDirection;
+        } else if (flag === "--stagger" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid stagger: "${args[i]}". Must be a non-negative number.` };
+          transOpts.stagger = n;
+        }
+      }
+      return { type: "transition", options: transOpts };
     }
 
     default:
