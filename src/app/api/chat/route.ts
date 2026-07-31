@@ -1,6 +1,7 @@
 import { isUndoIntent } from "@/lib/chat-utils";
 import { extractIp, checkRate } from "@/lib/rateLimit";
 import { parseCommand } from "@/lib/commands";
+import { detectIntent } from "@/lib/intent-router";
 import {
   handleUndo,
   handleCompose,
@@ -105,8 +106,12 @@ export async function POST(request: Request) {
     return handleUndo(animationId, message);
   }
 
+  // --- Natural language intent detection (maps common phrases to commands
+  // before falling through to explicit slash-command parsing or the LLM) ---
+  const intentCmd = detectIntent(message);
+
   // --- Command dispatch ---
-  const parsedCmd = parseCommand(message);
+  const parsedCmd = intentCmd ?? parseCommand(message);
 
   if (parsedCmd && parsedCmd.type === "help") {
     return handleHelp();
