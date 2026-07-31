@@ -63,9 +63,9 @@ describe("filterCommands", () => {
     expect(commands).toContain("/fix");
   });
 
-  it("filters '/p' to play, pause, path, presets, polish, and particle", () => {
+  it("filters '/p' to play, pause, path, presets, polish, particle, and physics", () => {
     const result = filterCommands("/p");
-    expect(result).toHaveLength(6);
+    expect(result).toHaveLength(7);
     const commands = result.map((c) => c.command);
     expect(commands).toContain("/play");
     expect(commands).toContain("/pause");
@@ -73,6 +73,7 @@ describe("filterCommands", () => {
     expect(commands).toContain("/presets");
     expect(commands).toContain("/polish");
     expect(commands).toContain("/particle");
+    expect(commands).toContain("/physics");
   });
 
   it("exact match '/loop' returns one result", () => {
