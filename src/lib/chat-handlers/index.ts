@@ -33,6 +33,7 @@ export { handleRepeat } from "./repeat";
 export { handleThreeD } from "./threed";
 export { handleWave } from "./wave";
 export { handlePhysics } from "./physics";
+export { handleTransition } from "./transition";
 export { handleHelp } from "./help";
 export { handleLoop } from "./loop";
 export { handleTrail } from "./trail";

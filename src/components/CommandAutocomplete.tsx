@@ -69,6 +69,7 @@ export const COMMANDS: CommandDef[] = [
   { command: "/3d", description: "3D perspective effects — card flip, rotation, parallax depth (e.g. /3d flip, /3d rotate --axis y)", hasParams: true },
   { command: "/wave", description: "Wave/sine motion effects — sine, ocean, flag, pulse, sound (e.g. /wave ocean --amplitude 40 --layers 4)", hasParams: true },
   { command: "/physics", description: "Physics simulations — gravity, bounce, throw, pendulum, float (e.g. /physics bounce --bounces 5 --damping 0.3)", hasParams: true },
+  { command: "/transition", description: "Animated state transitions — fade, slide, wipe, zoom, flip, dissolve (e.g. /transition slide --direction right --duration 800)", hasParams: true },
   { command: "/import", description: "Import animation from URL", hasParams: true },
   { command: "/critique", description: "Get expert feedback on the current animation", hasParams: false },
 ];
