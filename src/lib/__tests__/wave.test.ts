@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateWaveAnimation, WaveOptions, VALID_WAVE_TYPES, VALID_WAVE_DIRECTIONS } from "@/lib/wave";
+import { generateWaveAnimation, VALID_WAVE_TYPES, VALID_WAVE_DIRECTIONS } from "@/lib/wave";
 
 interface LottieAnim {
   v: string;

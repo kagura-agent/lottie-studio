@@ -142,8 +142,6 @@ function generateOcean(options: WaveOptions): object {
 
     const keyframes = [];
     for (let f = 0; f < FRAMES; f++) {
-      const shape = sineWaveVertices(f, layerAmplitude, layerFrequency, speed, direction, phaseOffset);
-      const closed = { ...shape, c: true, v: [...shape.v, ...[...shape.v].reverse().map(v => direction === "horizontal" ? [v[0], CANVAS] : [CANVAS, v[1]])] };
       const fillVerts: number[][] = [];
       const fillIn: number[][] = [];
       const fillOut: number[][] = [];
