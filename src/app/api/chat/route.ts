@@ -39,6 +39,7 @@ import {
   handlePhysics,
   handleTransition,
   handleLoop,
+  handleSequence,
   handleTrail,
   handleReverse,
   handleImport,
@@ -260,6 +261,10 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "loop") {
     return handleLoop(animationId, parsedCmd.mode, message);
+  }
+
+  if (parsedCmd && parsedCmd.type.startsWith("sequence_")) {
+    return handleSequence(parsedCmd as Parameters<typeof handleSequence>[0], animationId, message);
   }
 
   if (parsedCmd && parsedCmd.type === "import") {
