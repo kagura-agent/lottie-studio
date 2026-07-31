@@ -28,6 +28,7 @@ import { VALID_BLUR_MODES, BlurMode, BlurCommandOptions } from "@/lib/blur";
 import { VALID_REPEAT_PATTERNS, RepeatPattern, RepeatCommandOptions } from "@/lib/repeat";
 import { VALID_3D_EFFECTS, ThreeDEffect, VALID_3D_DIRECTIONS, VALID_3D_EASINGS, ThreeDCommandOptions } from "@/lib/threed";
 import { VALID_WAVE_TYPES, WaveType, VALID_WAVE_DIRECTIONS, WaveDirection, WaveCommandOptions } from "@/lib/wave";
+import { VALID_PHYSICS_EFFECTS, PhysicsEffect, PhysicsCommandOptions } from "@/lib/physics";
 
 export interface DrawCommandOptions {
   duration?: number;
@@ -245,6 +246,7 @@ export type Command =
   | { type: "repeat"; options: RepeatCommandOptions }
   | { type: "threed"; options: ThreeDCommandOptions }
   | { type: "wave"; options: WaveCommandOptions }
+  | { type: "physics"; options: PhysicsCommandOptions }
   | { type: "error"; message: string };
 
 export type ColorSubcommand =
@@ -1644,6 +1646,53 @@ export function parseCommand(input: string): Command | null {
         }
       }
       return { type: "wave", options: waveOpts };
+    }
+
+    case "physics": {
+      const physicsOpts: PhysicsCommandOptions = { effect: "gravity" };
+      const firstArg = args[0]?.toLowerCase();
+      if (firstArg && !firstArg.startsWith("--")) {
+        if (!(VALID_PHYSICS_EFFECTS as readonly string[]).includes(firstArg)) {
+          return { type: "error", message: `Invalid physics effect "${firstArg}". Available: ${VALID_PHYSICS_EFFECTS.join(", ")}` };
+        }
+        physicsOpts.effect = firstArg as PhysicsEffect;
+        args.shift();
+      }
+      for (let i = 0; i < args.length; i++) {
+        const flag = args[i].toLowerCase();
+        if (flag === "--layer" && args[i + 1]) {
+          physicsOpts.layer = args[++i];
+        } else if (flag === "--duration" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid duration: "${args[i]}". Must be a positive number.` };
+          physicsOpts.duration = n;
+        } else if (flag === "--bounces" && args[i + 1]) {
+          const n = parseInt(args[++i], 10);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid bounces: "${args[i]}". Must be a positive integer.` };
+          physicsOpts.bounces = n;
+        } else if (flag === "--angle" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: `Invalid angle: "${args[i]}". Must be a number.` };
+          physicsOpts.angle = n;
+        } else if (flag === "--force" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid force: "${args[i]}". Must be a positive number.` };
+          physicsOpts.force = n;
+        } else if (flag === "--length" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n <= 0) return { type: "error", message: `Invalid length: "${args[i]}". Must be a positive number.` };
+          physicsOpts.length = n;
+        } else if (flag === "--damping" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n) || n < 0) return { type: "error", message: `Invalid damping: "${args[i]}". Must be a non-negative number.` };
+          physicsOpts.damping = n;
+        } else if (flag === "--gravity" && args[i + 1]) {
+          const n = parseFloat(args[++i]);
+          if (isNaN(n)) return { type: "error", message: `Invalid gravity: "${args[i]}". Must be a number.` };
+          physicsOpts.gravity = n;
+        }
+      }
+      return { type: "physics", options: physicsOpts };
     }
 
     default:

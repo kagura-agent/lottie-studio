@@ -28,6 +28,7 @@ const HELP_TEXT = `# Available Commands
 - \`/3d\` — 3D perspective effects (card flip, rotation, parallax depth)
 - \`/repeat\` — Array/grid/circle patterns with staggered animation
 - \`/text\` — Animated text layers
+- \`/physics\` — Physics simulations (gravity, bounce, throw, pendulum, float)
 
 ## Style & Color
 - \`/color\` — Palette, shift, warm, cool, mono, invert, saturate
