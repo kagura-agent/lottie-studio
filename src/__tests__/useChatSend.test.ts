@@ -432,7 +432,7 @@ describe("useChatSend", () => {
   });
 
   describe("command handling", () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     async function setupCommand(commandObj: object, inputText: string, _optsOverrides = {}) {
       const { parseCommand } = await import("@/lib/commands");
       const { apiFetch } = await import("@/lib/apiFetch");

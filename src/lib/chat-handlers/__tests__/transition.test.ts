@@ -35,7 +35,7 @@ vi.mock("node:fs", () => ({
 }));
 
 import { handleTransition } from "../transition";
-import { generateTransitionKeyframes, TransitionCommandOptions } from "@/lib/transition";
+import { generateTransitionKeyframes } from "@/lib/transition";
 import { parseCommand } from "@/lib/commands";
 
 function parseData(text: string) {

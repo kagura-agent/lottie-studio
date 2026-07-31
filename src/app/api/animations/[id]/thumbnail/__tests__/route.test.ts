@@ -14,7 +14,7 @@ vi.mock("@/lib/thumbnail-renderer", () => ({
 vi.mock("@/lib/db", () => ({
   db: {
     prepare: () => ({
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       get: (..._args: unknown[]) => mockDbGetReturn,
     }),
   },
