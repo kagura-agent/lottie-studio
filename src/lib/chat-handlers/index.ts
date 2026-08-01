@@ -40,5 +40,6 @@ export { handleSequence } from "./sequence";
 export { handleTrail } from "./trail";
 export { handleReverse } from "./reverse";
 export { handleImport } from "./import";
+export { handleExport } from "./export";
 export { handleMainChat } from "./stream";
 export { sendDoneEvent, animationExists } from "./helpers";

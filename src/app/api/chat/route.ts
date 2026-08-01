@@ -44,6 +44,7 @@ import {
   handleTrail,
   handleReverse,
   handleImport,
+  handleExport,
   handleHelp,
   handleMainChat,
   sendDoneEvent,
@@ -274,6 +275,11 @@ export async function POST(request: Request) {
 
   if (parsedCmd && parsedCmd.type === "import") {
     return handleImport(parsedCmd.url);
+  }
+
+  if (parsedCmd && parsedCmd.type.startsWith("export_")) {
+    const format = parsedCmd.type.replace("export_", "") as "gif" | "apng" | "video" | "json" | "dotlottie";
+    return handleExport(format, animationId);
   }
 
   if (parsedCmd && parsedCmd.type === "presets") {
