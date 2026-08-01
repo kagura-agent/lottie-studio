@@ -28,6 +28,20 @@ interface IntentPattern {
 }
 
 const INTENT_PATTERNS: IntentPattern[] = [
+  // --- undo ---
+  {
+    pattern: /^(?:undo(?:\s*(?:that|it))?|go\s*back|never\s*mind|nvm|revert(?:\s*that)?)$/i,
+    build: () => ({ type: "undo" }),
+    skipMultiCheck: true,
+  },
+
+  // --- redo ---
+  {
+    pattern: /^(?:redo(?:\s*(?:that|it))?)$/i,
+    build: () => ({ type: "redo" }),
+    skipMultiCheck: true,
+  },
+
   // --- reverse ---
   {
     pattern: /^(?:reverse|play\s*(?:it\s*)?backwards?|backwards?)$/i,
@@ -817,6 +831,20 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^导出apng$/,
     build: () => ({ type: "export_apng" }),
+    skipMultiCheck: true,
+  },
+
+  // --- undo ---
+  {
+    pattern: /^(?:取消|撤销|回退|撤回)$/,
+    build: () => ({ type: "undo" }),
+    skipMultiCheck: true,
+  },
+
+  // --- redo ---
+  {
+    pattern: /^(?:重做|恢复)$/,
+    build: () => ({ type: "redo" }),
     skipMultiCheck: true,
   },
 

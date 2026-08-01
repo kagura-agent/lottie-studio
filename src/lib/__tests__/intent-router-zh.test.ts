@@ -2,6 +2,18 @@ import { describe, it, expect } from "vitest";
 import { detectIntent } from "../intent-router";
 
 describe("Chinese intent patterns", () => {
+  describe("undo", () => {
+    it.each(["取消", "撤销", "回退", "撤回"])("%s → undo", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "undo" });
+    });
+  });
+
+  describe("redo", () => {
+    it.each(["重做", "恢复"])("%s → redo", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "redo" });
+    });
+  });
+
   describe("reverse", () => {
     it.each(["反转", "倒放"])("%s → reverse", (msg) => {
       expect(detectIntent(msg)).toMatchObject({ type: "reverse" });
