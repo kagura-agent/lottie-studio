@@ -378,6 +378,83 @@ const INTENT_PATTERNS: IntentPattern[] = [
     skipMultiCheck: true,
   },
 
+  // --- text ---
+  {
+    pattern: /^(?:typewriter|typing)\s+(?:text\s+)?(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:bouncing|bounce)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "bounce" as const } }),
+  },
+  {
+    pattern: /^(?:glitch)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "glitch" as const } }),
+  },
+  {
+    pattern: /^(?:wave)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "wave" as const } }),
+  },
+  {
+    pattern: /^(?:fade[- ]?in)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "fade-in" as const } }),
+  },
+  {
+    pattern: /^(?:scale)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "scale" as const } }),
+  },
+  {
+    pattern: /^(?:rotate)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "rotate" as const } }),
+  },
+  {
+    pattern: /^(?:slide)\s+text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "slide" as const } }),
+  },
+  {
+    pattern: /^type\s+out\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:add\s+text|put\s+text(?:\s+saying)?)\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^write\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^text\s+(.+)$/i,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+
+  // --- export ---
+  {
+    pattern: /^(?:export\s+(?:as\s+)?gif|save\s+as\s+gif|download\s+gif)$/i,
+    build: () => ({ type: "export_gif" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?(?:video|mp4)|save\s+as\s+(?:video|mp4)|download\s+(?:video|mp4))$/i,
+    build: () => ({ type: "export_video" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?json|save\s+(?:as\s+)?json|download\s+json)$/i,
+    build: () => ({ type: "export_json" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?dotlottie|save\s+as\s+\.?lottie|export\s+\.?lottie)$/i,
+    build: () => ({ type: "export_dotlottie" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?apng|save\s+as\s+apng|download\s+apng)$/i,
+    build: () => ({ type: "export_apng" }),
+    skipMultiCheck: true,
+  },
+
   // --- help ---
   {
     pattern: /^(?:help|what\s*can\s*you\s*do|commands?|show\s*commands?)$/i,
@@ -704,6 +781,42 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^(?:显示颜色|调色板)$/,
     build: () => ({ type: "color", subcommand: { action: "palette" } as ColorSubcommand }),
+    skipMultiCheck: true,
+  },
+
+  // --- text ---
+  {
+    pattern: /^打字效果\s*(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: { style: "typewriter" as const } }),
+  },
+  {
+    pattern: /^(?:加文字|添加文字|加个标题)\s*(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+  {
+    pattern: /^写上(.+)$/,
+    build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+
+  // --- export ---
+  {
+    pattern: /^(?:导出gif|导出动图|保存为gif|下载gif)$/,
+    build: () => ({ type: "export_gif" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:导出视频|保存为视频|导出mp4|下载视频)$/,
+    build: () => ({ type: "export_video" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:导出json|保存json|下载json)$/,
+    build: () => ({ type: "export_json" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^导出apng$/,
+    build: () => ({ type: "export_apng" }),
     skipMultiCheck: true,
   },
 

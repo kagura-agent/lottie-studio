@@ -228,9 +228,77 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("text", () => {
+    it("加文字 hello → text", () => {
+      expect(detectIntent("加文字 hello")).toMatchObject({ type: "text", text: "hello", options: {} });
+    });
+    it("写上欢迎 → text", () => {
+      expect(detectIntent("写上欢迎")).toMatchObject({ type: "text", text: "欢迎", options: {} });
+    });
+    it("添加文字 test → text", () => {
+      expect(detectIntent("添加文字 test")).toMatchObject({ type: "text", text: "test", options: {} });
+    });
+    it("加个标题 hello → text", () => {
+      expect(detectIntent("加个标题 hello")).toMatchObject({ type: "text", text: "hello", options: {} });
+    });
+    it("打字效果 loading → typewriter", () => {
+      expect(detectIntent("打字效果 loading")).toMatchObject({ type: "text", text: "loading", options: { style: "typewriter" } });
+    });
+  });
+
   describe("help", () => {
     it("帮助 → help", () => {
       expect(detectIntent("帮助")).toMatchObject({ type: "help" });
+    });
+  });
+
+  describe("export", () => {
+    it("matches '导出gif'", () => {
+      expect(detectIntent("导出gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '保存为gif'", () => {
+      expect(detectIntent("保存为gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '下载gif'", () => {
+      expect(detectIntent("下载gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '导出动图'", () => {
+      expect(detectIntent("导出动图")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '导出视频'", () => {
+      expect(detectIntent("导出视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '保存为视频'", () => {
+      expect(detectIntent("保存为视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '导出mp4'", () => {
+      expect(detectIntent("导出mp4")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '下载视频'", () => {
+      expect(detectIntent("下载视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '导出json'", () => {
+      expect(detectIntent("导出json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '保存json'", () => {
+      expect(detectIntent("保存json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '下载json'", () => {
+      expect(detectIntent("下载json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '导出apng'", () => {
+      expect(detectIntent("导出apng")).toEqual({ type: "export_apng" });
     });
   });
 
