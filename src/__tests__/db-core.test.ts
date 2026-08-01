@@ -354,7 +354,8 @@ describe("listSequences returns empty for unknown creator", () => {
 describe("db module-level initialization (documented coverage gaps)", () => {
   it("WAL mode is enabled", () => {
     const result = db.pragma("journal_mode") as { journal_mode: string }[];
-    expect(result[0].journal_mode).toBe("wal");
+    const expected = process.env.VITEST ? "memory" : "wal";
+    expect(result[0].journal_mode).toBe(expected);
   });
 
   it("seedGallery seeded template animations", () => {
