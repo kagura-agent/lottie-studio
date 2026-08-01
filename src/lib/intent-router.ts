@@ -428,6 +428,33 @@ const INTENT_PATTERNS: IntentPattern[] = [
     build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
   },
 
+  // --- export ---
+  {
+    pattern: /^(?:export\s+(?:as\s+)?gif|save\s+as\s+gif|download\s+gif)$/i,
+    build: () => ({ type: "export_gif" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?(?:video|mp4)|save\s+as\s+(?:video|mp4)|download\s+(?:video|mp4))$/i,
+    build: () => ({ type: "export_video" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?json|save\s+(?:as\s+)?json|download\s+json)$/i,
+    build: () => ({ type: "export_json" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?dotlottie|save\s+as\s+\.?lottie|export\s+\.?lottie)$/i,
+    build: () => ({ type: "export_dotlottie" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:export\s+(?:as\s+)?apng|save\s+as\s+apng|download\s+apng)$/i,
+    build: () => ({ type: "export_apng" }),
+    skipMultiCheck: true,
+  },
+
   // --- help ---
   {
     pattern: /^(?:help|what\s*can\s*you\s*do|commands?|show\s*commands?)$/i,
@@ -769,6 +796,28 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^写上(.+)$/,
     build: (m) => ({ type: "text", text: m[1].trim(), options: {} }),
+  },
+
+  // --- export ---
+  {
+    pattern: /^(?:导出gif|导出动图|保存为gif|下载gif)$/,
+    build: () => ({ type: "export_gif" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:导出视频|保存为视频|导出mp4|下载视频)$/,
+    build: () => ({ type: "export_video" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:导出json|保存json|下载json)$/,
+    build: () => ({ type: "export_json" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^导出apng$/,
+    build: () => ({ type: "export_apng" }),
+    skipMultiCheck: true,
   },
 
   // --- help ---

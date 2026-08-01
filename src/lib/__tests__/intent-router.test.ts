@@ -629,6 +629,84 @@ describe("intent-router", () => {
     });
   });
 
+  describe("export", () => {
+    it("matches 'export as gif'", () => {
+      expect(detectIntent("export as gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches 'save as gif'", () => {
+      expect(detectIntent("save as gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches 'download gif'", () => {
+      expect(detectIntent("download gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches 'export as video'", () => {
+      expect(detectIntent("export as video")).toEqual({ type: "export_video" });
+    });
+
+    it("matches 'save as mp4'", () => {
+      expect(detectIntent("save as mp4")).toEqual({ type: "export_video" });
+    });
+
+    it("matches 'download video'", () => {
+      expect(detectIntent("download video")).toEqual({ type: "export_video" });
+    });
+
+    it("matches 'export mp4'", () => {
+      expect(detectIntent("export mp4")).toEqual({ type: "export_video" });
+    });
+
+    it("matches 'export json'", () => {
+      expect(detectIntent("export json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches 'save json'", () => {
+      expect(detectIntent("save json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches 'download json'", () => {
+      expect(detectIntent("download json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches 'export as json'", () => {
+      expect(detectIntent("export as json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches 'export as dotlottie'", () => {
+      expect(detectIntent("export as dotlottie")).toEqual({ type: "export_dotlottie" });
+    });
+
+    it("matches 'save as .lottie'", () => {
+      expect(detectIntent("save as .lottie")).toEqual({ type: "export_dotlottie" });
+    });
+
+    it("matches 'export dotlottie'", () => {
+      expect(detectIntent("export dotlottie")).toEqual({ type: "export_dotlottie" });
+    });
+
+    it("matches 'export as apng'", () => {
+      expect(detectIntent("export as apng")).toEqual({ type: "export_apng" });
+    });
+
+    it("matches 'save as apng'", () => {
+      expect(detectIntent("save as apng")).toEqual({ type: "export_apng" });
+    });
+
+    it("matches 'download apng'", () => {
+      expect(detectIntent("download apng")).toEqual({ type: "export_apng" });
+    });
+
+    it("returns null for ambiguous 'export'", () => {
+      expect(detectIntent("export")).toBeNull();
+    });
+
+    it("returns null for 'I want to export my creativity'", () => {
+      expect(detectIntent("I want to export my creativity")).toBeNull();
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });

@@ -252,6 +252,56 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("export", () => {
+    it("matches '导出gif'", () => {
+      expect(detectIntent("导出gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '保存为gif'", () => {
+      expect(detectIntent("保存为gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '下载gif'", () => {
+      expect(detectIntent("下载gif")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '导出动图'", () => {
+      expect(detectIntent("导出动图")).toEqual({ type: "export_gif" });
+    });
+
+    it("matches '导出视频'", () => {
+      expect(detectIntent("导出视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '保存为视频'", () => {
+      expect(detectIntent("保存为视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '导出mp4'", () => {
+      expect(detectIntent("导出mp4")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '下载视频'", () => {
+      expect(detectIntent("下载视频")).toEqual({ type: "export_video" });
+    });
+
+    it("matches '导出json'", () => {
+      expect(detectIntent("导出json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '保存json'", () => {
+      expect(detectIntent("保存json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '下载json'", () => {
+      expect(detectIntent("下载json")).toEqual({ type: "export_json" });
+    });
+
+    it("matches '导出apng'", () => {
+      expect(detectIntent("导出apng")).toEqual({ type: "export_apng" });
+    });
+  });
+
   describe("multi-intent Chinese connectors", () => {
     it("returns null for messages with Chinese connectors", () => {
       expect(detectIntent("模糊和波浪")).toBeNull();
