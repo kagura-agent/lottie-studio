@@ -124,7 +124,7 @@ describe("intent-router", () => {
 
     it("matches 'drop shadow'", () => {
       const result = detectIntent("drop shadow");
-      expect(result).toMatchObject({ type: "shadow", options: { shadowType: "drop" } });
+      expect(result).toMatchObject({ type: "shadow", options: { type: "drop" } });
     });
 
     it("matches 'give it a shadow'", () => {
@@ -134,12 +134,12 @@ describe("intent-router", () => {
 
     it("matches 'add glow'", () => {
       const result = detectIntent("add glow");
-      expect(result).toMatchObject({ type: "shadow", options: { shadowType: "glow" } });
+      expect(result).toMatchObject({ type: "shadow", options: { type: "glow" } });
     });
 
     it("matches 'glow effect'", () => {
       const result = detectIntent("glow effect");
-      expect(result).toMatchObject({ type: "shadow", options: { shadowType: "glow" } });
+      expect(result).toMatchObject({ type: "shadow", options: { type: "glow" } });
     });
   });
 
@@ -157,7 +157,7 @@ describe("intent-router", () => {
     });
 
     it("matches 'depth of field'", () => {
-      expect(detectIntent("depth of field")).toMatchObject({ type: "blur", options: { blurMode: "focus" } });
+      expect(detectIntent("depth of field")).toMatchObject({ type: "blur", options: { mode: "pulse" } });
     });
   });
 
@@ -358,7 +358,7 @@ describe("intent-router", () => {
     });
 
     it("matches 'slide it up'", () => {
-      expect(detectIntent("slide it up")).toMatchObject({ type: "slide", direction: "top" });
+      expect(detectIntent("slide it up")).toMatchObject({ type: "slide", direction: "up" });
     });
   });
 
@@ -414,7 +414,7 @@ describe("intent-router", () => {
     });
 
     it("matches 'pan'", () => {
-      expect(detectIntent("pan")).toMatchObject({ type: "camera", movement: "pan" });
+      expect(detectIntent("pan")).toMatchObject({ type: "camera", movement: "pan-left" });
     });
   });
 

@@ -12,6 +12,7 @@
  */
 
 import type { Command, ColorSubcommand, TrimPoint } from "./commands";
+import type { SlideDirection } from "./slide";
 
 // Max message length to consider for intent routing.
 // Longer messages are likely creative descriptions → send to LLM.
@@ -78,21 +79,21 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- shadow ---
   {
     pattern: /^(?:(?:add|give\s*(?:it)?|apply)\s*(?:a\s*)?(?:drop\s*)?shadow|shadow\s*(?:effect)?|(?:drop\s*)?shadow)$/i,
-    build: () => ({ type: "shadow", options: { shadowType: "drop" as const } }),
+    build: () => ({ type: "shadow", options: { type: "drop" as const } }),
   },
   {
     pattern: /^(?:(?:add|give\s*(?:it)?|apply)\s*(?:a\s*)?glow|glow\s*(?:effect)?)$/i,
-    build: () => ({ type: "shadow", options: { shadowType: "glow" as const } }),
+    build: () => ({ type: "shadow", options: { type: "glow" as const } }),
   },
 
   // --- blur ---
   {
     pattern: /^(?:(?:add|apply)\s*(?:a\s*)?blur|blur\s*(?:it|effect)?|make\s*(?:it\s*)?blur(?:ry)?)$/i,
-    build: () => ({ type: "blur", options: { blurMode: "gaussian" as const } }),
+    build: () => ({ type: "blur", options: { mode: "in" as const } }),
   },
   {
     pattern: /^(?:(?:add\s*)?focus\s*(?:effect)?|depth\s*of\s*field)$/i,
-    build: () => ({ type: "blur", options: { blurMode: "focus" as const } }),
+    build: () => ({ type: "blur", options: { mode: "pulse" as const } }),
   },
 
   // --- mirror ---
@@ -126,7 +127,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- wave ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?wave|wave\s*(?:effect|animation)|make\s*(?:it\s*)?wave)$/i,
-    build: () => ({ type: "wave", options: { waveType: "sine" as const } }),
+    build: () => ({ type: "wave", options: { type: "sine" as const } }),
   },
 
   // --- shake ---
@@ -173,7 +174,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- gradient ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?gradient|gradient\s*(?:fill|effect)?|make\s*(?:it\s*)?gradient)$/i,
-    build: () => ({ type: "gradient", options: { gradientType: "linear" as const } }),
+    build: () => ({ type: "gradient", options: { type: "linear" as const } }),
   },
 
   // --- mask ---
@@ -191,7 +192,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- trail ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?trail|trail\s*(?:effect)?|(?:add\s*)?motion\s*trail)$/i,
-    build: () => ({ type: "trail", options: {} }),
+    build: () => ({ type: "trail", options: { count: 5, fade: "exponential" as const, scale: false } }),
   },
 
   // --- draw ---
@@ -213,8 +214,8 @@ const INTENT_PATTERNS: IntentPattern[] = [
     pattern: /^(?:slide\s*(?:it\s*)?(?:from\s*)?(?:the\s*)?(?:left|right|top|bottom|up|down))$/i,
     build: (m) => {
       const dir = m[0].match(/left|right|top|up|bottom|down/i)?.[0]?.toLowerCase() || "left";
-      const mapped = dir === "up" ? "top" : dir === "down" ? "bottom" : dir;
-      return { type: "slide", direction: mapped as "left" | "right" | "top" | "bottom", options: { direction: mapped as "left" | "right" | "top" | "bottom" } };
+      const mapped = dir === "top" ? "up" : dir === "bottom" ? "down" : dir;
+      return { type: "slide", direction: mapped as SlideDirection, options: { direction: mapped as SlideDirection } };
     },
   },
 
@@ -247,7 +248,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- transition ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?transition|transition\s*(?:effect)?)$/i,
-    build: () => ({ type: "transition", options: { transitionType: "fade" as const } }),
+    build: () => ({ type: "transition", options: { type: "fade" as const } }),
   },
 
   // --- sequence ---
@@ -285,7 +286,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   },
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?(?:camera\s*)?pan|pan\s*(?:it)?)$/i,
-    build: () => ({ type: "camera", movement: "pan" as const, options: { movement: "pan" as const } }),
+    build: () => ({ type: "camera", movement: "pan-left" as const, options: { movement: "pan-left" as const } }),
   },
 
   // --- critique ---
@@ -611,21 +612,21 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- shadow ---
   {
     pattern: /^(?:阴影|投影)$/,
-    build: () => ({ type: "shadow", options: { shadowType: "drop" as const } }),
+    build: () => ({ type: "shadow", options: { type: "drop" as const } }),
   },
   {
     pattern: /^发光$/,
-    build: () => ({ type: "shadow", options: { shadowType: "glow" as const } }),
+    build: () => ({ type: "shadow", options: { type: "glow" as const } }),
   },
 
   // --- blur ---
   {
     pattern: /^模糊$/,
-    build: () => ({ type: "blur", options: { blurMode: "gaussian" as const } }),
+    build: () => ({ type: "blur", options: { mode: "in" as const } }),
   },
   {
     pattern: /^(?:对焦|景深)$/,
-    build: () => ({ type: "blur", options: { blurMode: "focus" as const } }),
+    build: () => ({ type: "blur", options: { mode: "pulse" as const } }),
   },
 
   // --- mirror ---
@@ -659,7 +660,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- wave ---
   {
     pattern: /^波浪$/,
-    build: () => ({ type: "wave", options: { waveType: "sine" as const } }),
+    build: () => ({ type: "wave", options: { type: "sine" as const } }),
   },
 
   // --- shake ---
@@ -707,7 +708,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- gradient ---
   {
     pattern: /^渐变$/,
-    build: () => ({ type: "gradient", options: { gradientType: "linear" as const } }),
+    build: () => ({ type: "gradient", options: { type: "linear" as const } }),
   },
 
   // --- mask ---
@@ -725,7 +726,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- trail ---
   {
     pattern: /^(?:拖影|残影)$/,
-    build: () => ({ type: "trail", options: {} }),
+    build: () => ({ type: "trail", options: { count: 5, fade: "exponential" as const, scale: false } }),
   },
 
   // --- draw ---
@@ -773,7 +774,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- transition ---
   {
     pattern: /^过渡$/,
-    build: () => ({ type: "transition", options: { transitionType: "fade" as const } }),
+    build: () => ({ type: "transition", options: { type: "fade" as const } }),
   },
 
   // --- sequence ---
@@ -811,7 +812,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   },
   {
     pattern: /^平移$/,
-    build: () => ({ type: "camera", movement: "pan" as const, options: { movement: "pan" as const } }),
+    build: () => ({ type: "camera", movement: "pan-left" as const, options: { movement: "pan-left" as const } }),
   },
 
   // --- critique ---
