@@ -43,16 +43,16 @@ describe("Chinese intent patterns", () => {
       expect(detectIntent(msg)).toMatchObject({ type: "shadow" });
     });
     it("发光 → glow", () => {
-      expect(detectIntent("发光")).toMatchObject({ type: "shadow", options: { shadowType: "glow" } });
+      expect(detectIntent("发光")).toMatchObject({ type: "shadow", options: { type: "glow" } });
     });
   });
 
   describe("blur", () => {
-    it("模糊 → gaussian", () => {
-      expect(detectIntent("模糊")).toMatchObject({ type: "blur", options: { blurMode: "gaussian" } });
+    it("模糊 → blur in", () => {
+      expect(detectIntent("模糊")).toMatchObject({ type: "blur", options: { mode: "in" } });
     });
-    it.each(["对焦", "景深"])("%s → focus", (msg) => {
-      expect(detectIntent(msg)).toMatchObject({ type: "blur", options: { blurMode: "focus" } });
+    it.each(["对焦", "景深"])("%s → blur pulse", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "blur", options: { mode: "pulse" } });
     });
   });
 
@@ -177,8 +177,8 @@ describe("Chinese intent patterns", () => {
     it("缩小镜头 → zoom-out", () => {
       expect(detectIntent("缩小镜头")).toMatchObject({ type: "camera", movement: "zoom-out" });
     });
-    it("平移 → pan", () => {
-      expect(detectIntent("平移")).toMatchObject({ type: "camera", movement: "pan" });
+    it("平移 → pan-left", () => {
+      expect(detectIntent("平移")).toMatchObject({ type: "camera", movement: "pan-left" });
     });
   });
 

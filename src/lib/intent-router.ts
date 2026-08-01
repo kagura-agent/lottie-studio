@@ -11,7 +11,8 @@
  * - Never guess — return null if unsure
  */
 
-import type { Command, ColorSubcommand } from "./commands";
+import type { Command, ColorSubcommand, TrimPoint } from "./commands";
+import type { SlideDirection } from "./slide";
 
 // Max message length to consider for intent routing.
 // Longer messages are likely creative descriptions → send to LLM.
@@ -78,21 +79,21 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- shadow ---
   {
     pattern: /^(?:(?:add|give\s*(?:it)?|apply)\s*(?:a\s*)?(?:drop\s*)?shadow|shadow\s*(?:effect)?|(?:drop\s*)?shadow)$/i,
-    build: () => ({ type: "shadow", options: { shadowType: "drop" as const } }),
+    build: () => ({ type: "shadow", options: { type: "drop" as const } }),
   },
   {
     pattern: /^(?:(?:add|give\s*(?:it)?|apply)\s*(?:a\s*)?glow|glow\s*(?:effect)?)$/i,
-    build: () => ({ type: "shadow", options: { shadowType: "glow" as const } }),
+    build: () => ({ type: "shadow", options: { type: "glow" as const } }),
   },
 
   // --- blur ---
   {
     pattern: /^(?:(?:add|apply)\s*(?:a\s*)?blur|blur\s*(?:it|effect)?|make\s*(?:it\s*)?blur(?:ry)?)$/i,
-    build: () => ({ type: "blur", options: { blurMode: "gaussian" as const } }),
+    build: () => ({ type: "blur", options: { mode: "in" as const } }),
   },
   {
     pattern: /^(?:(?:add\s*)?focus\s*(?:effect)?|depth\s*of\s*field)$/i,
-    build: () => ({ type: "blur", options: { blurMode: "focus" as const } }),
+    build: () => ({ type: "blur", options: { mode: "pulse" as const } }),
   },
 
   // --- mirror ---
@@ -126,7 +127,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- wave ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?wave|wave\s*(?:effect|animation)|make\s*(?:it\s*)?wave)$/i,
-    build: () => ({ type: "wave", options: { waveType: "sine" as const } }),
+    build: () => ({ type: "wave", options: { type: "sine" as const } }),
   },
 
   // --- shake ---
@@ -173,7 +174,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- gradient ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?gradient|gradient\s*(?:fill|effect)?|make\s*(?:it\s*)?gradient)$/i,
-    build: () => ({ type: "gradient", options: { gradientType: "linear" as const } }),
+    build: () => ({ type: "gradient", options: { type: "linear" as const } }),
   },
 
   // --- mask ---
@@ -191,7 +192,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- trail ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?trail|trail\s*(?:effect)?|(?:add\s*)?motion\s*trail)$/i,
-    build: () => ({ type: "trail", options: {} }),
+    build: () => ({ type: "trail", options: { count: 5, fade: "exponential" as const, scale: false } }),
   },
 
   // --- draw ---
@@ -213,8 +214,8 @@ const INTENT_PATTERNS: IntentPattern[] = [
     pattern: /^(?:slide\s*(?:it\s*)?(?:from\s*)?(?:the\s*)?(?:left|right|top|bottom|up|down))$/i,
     build: (m) => {
       const dir = m[0].match(/left|right|top|up|bottom|down/i)?.[0]?.toLowerCase() || "left";
-      const mapped = dir === "up" ? "top" : dir === "down" ? "bottom" : dir;
-      return { type: "slide", direction: mapped as "left" | "right" | "top" | "bottom", options: { direction: mapped as "left" | "right" | "top" | "bottom" } };
+      const mapped = dir === "top" ? "up" : dir === "bottom" ? "down" : dir;
+      return { type: "slide", direction: mapped as SlideDirection, options: { direction: mapped as SlideDirection } };
     },
   },
 
@@ -247,7 +248,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- transition ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?transition|transition\s*(?:effect)?)$/i,
-    build: () => ({ type: "transition", options: { transitionType: "fade" as const } }),
+    build: () => ({ type: "transition", options: { type: "fade" as const } }),
   },
 
   // --- sequence ---
@@ -285,7 +286,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   },
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?(?:camera\s*)?pan|pan\s*(?:it)?)$/i,
-    build: () => ({ type: "camera", movement: "pan" as const, options: { movement: "pan" as const } }),
+    build: () => ({ type: "camera", movement: "pan-left" as const, options: { movement: "pan-left" as const } }),
   },
 
   // --- critique ---
@@ -469,6 +470,107 @@ const INTENT_PATTERNS: IntentPattern[] = [
     skipMultiCheck: true,
   },
 
+  // --- trim ---
+  {
+    pattern: /^(?:trim\s*(?:it\s*)?to\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?|trim\s*(?:it\s*)?to\s+(\d+(?:\.\d+)?)\s*(?:seconds?))$/i,
+    build: (m) => {
+      const val = parseFloat(m[1] || m[2]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:cut|trim)\s*(?:the\s*)?first\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:trim\s*(?:the\s*)?first\s+second)$/i,
+    build: () => ({ type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: 1, unit: "seconds" } as TrimPoint } }),
+  },
+  {
+    pattern: /^keep\s*(?:the\s*)?last\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: val, unit: "seconds" } as TrimPoint, end: { value: 0, unit: "end" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:trim|keep)\s*frames?\s+(\d+)\s*[-–]\s*(\d+)$/i,
+    build: (m) => {
+      const start = parseInt(m[1]);
+      const end = parseInt(m[2]);
+      return { type: "trim", range: { start: { value: start, unit: "frame" } as TrimPoint, end: { value: end, unit: "frame" } as TrimPoint } };
+    },
+  },
+  // Chinese trim
+  {
+    pattern: /^裁剪到(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^截取前(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^保留最后(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: val, unit: "seconds" } as TrimPoint, end: { value: 0, unit: "end" } as TrimPoint } };
+    },
+  },
+
+  // --- duration ---
+  {
+    pattern: /^(?:make\s*it|set\s*(?:the\s*)?(?:duration|length)\s*(?:to)?|(?:duration|length)\s*(?:to)?|change\s*(?:the\s*)?(?:duration|length)\s*(?:to)?)\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^(?:make\s*it|set\s*(?:the\s*)?(?:duration|length)\s*(?:to)?|(?:duration|length)\s*(?:to)?|change\s*(?:the\s*)?(?:duration|length)\s*(?:to)?)\s*(\d+)\s*ms$/i,
+    build: (m) => ({ type: "duration", durationMs: parseInt(m[1]) }),
+  },
+  {
+    pattern: /^(?:set\s*(?:the\s*)?length|change\s*(?:the\s*)?length\s*to)\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  // Chinese duration
+  {
+    pattern: /^(?:改成|改为|设为|设置?时长(?:为|设为)?)\s*(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^时长设为(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^(?:改为|改成|设为)\s*(\d+)\s*毫秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseInt(m[1]) }),
+  },
+  {
+    pattern: /^设置时长(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+
+  // --- layers ---
+  {
+    pattern: /^(?:show\s*(?:the\s*)?layers?|list\s*(?:the\s*)?layers?|what\s*layers?|layers?)$/i,
+    build: () => ({ type: "layers" }),
+    skipMultiCheck: true,
+  },
+  // Chinese layers
+  {
+    pattern: /^(?:显示图层|有哪些图层|图层列表|查看图层|图层)$/,
+    build: () => ({ type: "layers" }),
+    skipMultiCheck: true,
+  },
+
   // --- help ---
   {
     pattern: /^(?:help|what\s*can\s*you\s*do|commands?|show\s*commands?)$/i,
@@ -510,21 +612,21 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- shadow ---
   {
     pattern: /^(?:阴影|投影)$/,
-    build: () => ({ type: "shadow", options: { shadowType: "drop" as const } }),
+    build: () => ({ type: "shadow", options: { type: "drop" as const } }),
   },
   {
     pattern: /^发光$/,
-    build: () => ({ type: "shadow", options: { shadowType: "glow" as const } }),
+    build: () => ({ type: "shadow", options: { type: "glow" as const } }),
   },
 
   // --- blur ---
   {
     pattern: /^模糊$/,
-    build: () => ({ type: "blur", options: { blurMode: "gaussian" as const } }),
+    build: () => ({ type: "blur", options: { mode: "in" as const } }),
   },
   {
     pattern: /^(?:对焦|景深)$/,
-    build: () => ({ type: "blur", options: { blurMode: "focus" as const } }),
+    build: () => ({ type: "blur", options: { mode: "pulse" as const } }),
   },
 
   // --- mirror ---
@@ -558,7 +660,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- wave ---
   {
     pattern: /^波浪$/,
-    build: () => ({ type: "wave", options: { waveType: "sine" as const } }),
+    build: () => ({ type: "wave", options: { type: "sine" as const } }),
   },
 
   // --- shake ---
@@ -606,7 +708,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- gradient ---
   {
     pattern: /^渐变$/,
-    build: () => ({ type: "gradient", options: { gradientType: "linear" as const } }),
+    build: () => ({ type: "gradient", options: { type: "linear" as const } }),
   },
 
   // --- mask ---
@@ -624,7 +726,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- trail ---
   {
     pattern: /^(?:拖影|残影)$/,
-    build: () => ({ type: "trail", options: {} }),
+    build: () => ({ type: "trail", options: { count: 5, fade: "exponential" as const, scale: false } }),
   },
 
   // --- draw ---
@@ -672,7 +774,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   // --- transition ---
   {
     pattern: /^过渡$/,
-    build: () => ({ type: "transition", options: { transitionType: "fade" as const } }),
+    build: () => ({ type: "transition", options: { type: "fade" as const } }),
   },
 
   // --- sequence ---
@@ -710,7 +812,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   },
   {
     pattern: /^平移$/,
-    build: () => ({ type: "camera", movement: "pan" as const, options: { movement: "pan" as const } }),
+    build: () => ({ type: "camera", movement: "pan-left" as const, options: { movement: "pan-left" as const } }),
   },
 
   // --- critique ---

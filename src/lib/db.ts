@@ -5,26 +5,31 @@ import crypto from "node:crypto";
 import { templates } from "@/data/templates";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 
+const IS_TEST = !!process.env.VITEST;
 const DATA_DIR = path.join(process.cwd(), "data");
 const ANIMATIONS_DIR = path.join(DATA_DIR, "animations");
 const DB_PATH = path.join(DATA_DIR, "lottie-studio.db");
 
-fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
+if (!IS_TEST) {
+  fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
+}
 
-const db = new Database(DB_PATH);
+const db = new Database(IS_TEST ? ":memory:" : DB_PATH);
 db.pragma("busy_timeout = 30000");
 
-// journal_mode = WAL needs an exclusive lock; retry if another process
-// is initializing concurrently (common in parallel test workers)
-for (let attempt = 0; attempt < 3; attempt++) {
-  try {
-    db.pragma("journal_mode = WAL");
-    break;
-  } catch (e: unknown) /* v8 ignore start */ {
-    if (attempt === 2 || !(e instanceof Error) || !e.message.includes("database is locked")) throw e;
-    const start = Date.now();
-    while (Date.now() - start < 500 + attempt * 500) { /* busy wait */ }
-  /* v8 ignore stop */
+if (!IS_TEST) {
+  // journal_mode = WAL needs an exclusive lock; retry if another process
+  // is initializing concurrently (common in parallel test workers)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      db.pragma("journal_mode = WAL");
+      break;
+    } catch (e: unknown) /* v8 ignore start */ {
+      if (attempt === 2 || !(e instanceof Error) || !e.message.includes("database is locked")) throw e;
+      const start = Date.now();
+      while (Date.now() - start < 500 + attempt * 500) { /* busy wait */ }
+    /* v8 ignore stop */
+    }
   }
 }
 
@@ -311,7 +316,9 @@ function seedGallery(): void {
   seedAll();
 }
 
-seedGallery();
+if (!IS_TEST) {
+  seedGallery();
+}
 
 // --- Collections ---
 
