@@ -11,7 +11,7 @@
  * - Never guess — return null if unsure
  */
 
-import type { Command, ColorSubcommand } from "./commands";
+import type { Command, ColorSubcommand, TrimPoint } from "./commands";
 
 // Max message length to consider for intent routing.
 // Longer messages are likely creative descriptions → send to LLM.
@@ -466,6 +466,107 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^(?:export\s+(?:as\s+)?apng|save\s+as\s+apng|download\s+apng)$/i,
     build: () => ({ type: "export_apng" }),
+    skipMultiCheck: true,
+  },
+
+  // --- trim ---
+  {
+    pattern: /^(?:trim\s*(?:it\s*)?to\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?|trim\s*(?:it\s*)?to\s+(\d+(?:\.\d+)?)\s*(?:seconds?))$/i,
+    build: (m) => {
+      const val = parseFloat(m[1] || m[2]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:cut|trim)\s*(?:the\s*)?first\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:trim\s*(?:the\s*)?first\s+second)$/i,
+    build: () => ({ type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: 1, unit: "seconds" } as TrimPoint } }),
+  },
+  {
+    pattern: /^keep\s*(?:the\s*)?last\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: val, unit: "seconds" } as TrimPoint, end: { value: 0, unit: "end" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^(?:trim|keep)\s*frames?\s+(\d+)\s*[-–]\s*(\d+)$/i,
+    build: (m) => {
+      const start = parseInt(m[1]);
+      const end = parseInt(m[2]);
+      return { type: "trim", range: { start: { value: start, unit: "frame" } as TrimPoint, end: { value: end, unit: "frame" } as TrimPoint } };
+    },
+  },
+  // Chinese trim
+  {
+    pattern: /^裁剪到(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^截取前(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: 0, unit: "start" } as TrimPoint, end: { value: val, unit: "seconds" } as TrimPoint } };
+    },
+  },
+  {
+    pattern: /^保留最后(\d+(?:\.\d+)?)秒$/,
+    build: (m) => {
+      const val = parseFloat(m[1]);
+      return { type: "trim", range: { start: { value: val, unit: "seconds" } as TrimPoint, end: { value: 0, unit: "end" } as TrimPoint } };
+    },
+  },
+
+  // --- duration ---
+  {
+    pattern: /^(?:make\s*it|set\s*(?:the\s*)?(?:duration|length)\s*(?:to)?|(?:duration|length)\s*(?:to)?|change\s*(?:the\s*)?(?:duration|length)\s*(?:to)?)\s*(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^(?:make\s*it|set\s*(?:the\s*)?(?:duration|length)\s*(?:to)?|(?:duration|length)\s*(?:to)?|change\s*(?:the\s*)?(?:duration|length)\s*(?:to)?)\s*(\d+)\s*ms$/i,
+    build: (m) => ({ type: "duration", durationMs: parseInt(m[1]) }),
+  },
+  {
+    pattern: /^(?:set\s*(?:the\s*)?length|change\s*(?:the\s*)?length\s*to)\s+(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?$/i,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  // Chinese duration
+  {
+    pattern: /^(?:改成|改为|设为|设置?时长(?:为|设为)?)\s*(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^时长设为(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+  {
+    pattern: /^(?:改为|改成|设为)\s*(\d+)\s*毫秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseInt(m[1]) }),
+  },
+  {
+    pattern: /^设置时长(\d+(?:\.\d+)?)秒$/,
+    build: (m) => ({ type: "duration", durationMs: parseFloat(m[1]) * 1000 }),
+  },
+
+  // --- layers ---
+  {
+    pattern: /^(?:show\s*(?:the\s*)?layers?|list\s*(?:the\s*)?layers?|what\s*layers?|layers?)$/i,
+    build: () => ({ type: "layers" }),
+    skipMultiCheck: true,
+  },
+  // Chinese layers
+  {
+    pattern: /^(?:显示图层|有哪些图层|图层列表|查看图层|图层)$/,
+    build: () => ({ type: "layers" }),
     skipMultiCheck: true,
   },
 

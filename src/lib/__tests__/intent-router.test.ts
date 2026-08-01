@@ -730,6 +730,128 @@ describe("intent-router", () => {
     });
   });
 
+  describe("trim", () => {
+    it("matches 'trim to 2 seconds'", () => {
+      expect(detectIntent("trim to 2 seconds")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 2, unit: "seconds" } } });
+    });
+
+    it("matches 'trim it to 2s'", () => {
+      expect(detectIntent("trim it to 2s")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 2, unit: "seconds" } } });
+    });
+
+    it("matches 'cut first 1s'", () => {
+      expect(detectIntent("cut first 1s")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 1, unit: "seconds" } } });
+    });
+
+    it("matches 'trim first second'", () => {
+      expect(detectIntent("trim first second")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 1, unit: "seconds" } } });
+    });
+
+    it("matches 'keep last 2 seconds'", () => {
+      expect(detectIntent("keep last 2 seconds")).toMatchObject({ type: "trim", range: { start: { value: 2, unit: "seconds" }, end: { value: 0, unit: "end" } } });
+    });
+
+    it("matches 'trim frames 10-50'", () => {
+      expect(detectIntent("trim frames 10-50")).toMatchObject({ type: "trim", range: { start: { value: 10, unit: "frame" }, end: { value: 50, unit: "frame" } } });
+    });
+
+    it("matches 'keep frames 0-30'", () => {
+      expect(detectIntent("keep frames 0-30")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "frame" }, end: { value: 30, unit: "frame" } } });
+    });
+
+    it("matches Chinese '裁剪到2秒'", () => {
+      expect(detectIntent("裁剪到2秒")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 2, unit: "seconds" } } });
+    });
+
+    it("matches Chinese '截取前2秒'", () => {
+      expect(detectIntent("截取前2秒")).toMatchObject({ type: "trim", range: { start: { value: 0, unit: "start" }, end: { value: 2, unit: "seconds" } } });
+    });
+
+    it("matches Chinese '保留最后3秒'", () => {
+      expect(detectIntent("保留最后3秒")).toMatchObject({ type: "trim", range: { start: { value: 3, unit: "seconds" }, end: { value: 0, unit: "end" } } });
+    });
+  });
+
+  describe("duration", () => {
+    it("matches 'make it 2 seconds'", () => {
+      expect(detectIntent("make it 2 seconds")).toEqual({ type: "duration", durationMs: 2000 });
+    });
+
+    it("matches 'set duration to 2s'", () => {
+      expect(detectIntent("set duration to 2s")).toEqual({ type: "duration", durationMs: 2000 });
+    });
+
+    it("matches 'make it 500ms'", () => {
+      expect(detectIntent("make it 500ms")).toEqual({ type: "duration", durationMs: 500 });
+    });
+
+    it("matches 'duration 3s'", () => {
+      expect(detectIntent("duration 3s")).toEqual({ type: "duration", durationMs: 3000 });
+    });
+
+    it("matches 'change length to 3 seconds'", () => {
+      expect(detectIntent("change length to 3 seconds")).toEqual({ type: "duration", durationMs: 3000 });
+    });
+
+    it("matches 'set length 3s'", () => {
+      expect(detectIntent("set length 3s")).toEqual({ type: "duration", durationMs: 3000 });
+    });
+
+    it("matches Chinese '改成2秒'", () => {
+      expect(detectIntent("改成2秒")).toEqual({ type: "duration", durationMs: 2000 });
+    });
+
+    it("matches Chinese '时长设为3秒'", () => {
+      expect(detectIntent("时长设为3秒")).toEqual({ type: "duration", durationMs: 3000 });
+    });
+
+    it("matches Chinese '设置时长2秒'", () => {
+      expect(detectIntent("设置时长2秒")).toEqual({ type: "duration", durationMs: 2000 });
+    });
+
+    it("matches Chinese '改为500毫秒'", () => {
+      expect(detectIntent("改为500毫秒")).toEqual({ type: "duration", durationMs: 500 });
+    });
+  });
+
+  describe("layers", () => {
+    it("matches 'show layers'", () => {
+      expect(detectIntent("show layers")).toEqual({ type: "layers" });
+    });
+
+    it("matches 'list layers'", () => {
+      expect(detectIntent("list layers")).toEqual({ type: "layers" });
+    });
+
+    it("matches 'what layers'", () => {
+      expect(detectIntent("what layers")).toEqual({ type: "layers" });
+    });
+
+    it("matches 'layers'", () => {
+      expect(detectIntent("layers")).toEqual({ type: "layers" });
+    });
+
+    it("matches Chinese '显示图层'", () => {
+      expect(detectIntent("显示图层")).toEqual({ type: "layers" });
+    });
+
+    it("matches Chinese '有哪些图层'", () => {
+      expect(detectIntent("有哪些图层")).toEqual({ type: "layers" });
+    });
+
+    it("matches Chinese '图层列表'", () => {
+      expect(detectIntent("图层列表")).toEqual({ type: "layers" });
+    });
+
+    it("matches Chinese '查看图层'", () => {
+      expect(detectIntent("查看图层")).toEqual({ type: "layers" });
+    });
+
+    it("returns null for overly long message mentioning layers", () => {
+      expect(detectIntent("show me all the layers in this animation and tell me what each one does in detail")).toBeNull();
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
