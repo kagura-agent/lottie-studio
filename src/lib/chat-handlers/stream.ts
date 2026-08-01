@@ -8,6 +8,7 @@ import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
 import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
+import { extractPartialLottie } from "@/lib/partial-lottie";
 import { analyzeQuality } from "@/lib/quality";
 import { validateStructure } from "@/lib/validation";
 import { summarizeChanges } from "@/lib/animation-diff";
@@ -197,6 +198,9 @@ export async function handleMainChat(
       const reader = llmBody.getReader();
       let accumulated = "";
       let sseBuffer = "";
+      let inJsonBlock = false;
+      let jsonBuffer = "";
+      let jsonTokenCount = 0;
 
       try {
         while (true) {
@@ -219,6 +223,33 @@ export async function handleMainChat(
               if (content) {
                 accumulated += content;
                 controller.enqueue(encodeSSE(JSON.stringify({ type: "token", text: content })));
+
+                // Track JSON code block boundaries
+                if (!inJsonBlock && accumulated.includes("```json")) {
+                  inJsonBlock = true;
+                  const blockStart = accumulated.indexOf("```json") + 7;
+                  jsonBuffer = accumulated.slice(blockStart);
+                  jsonTokenCount = 0;
+                } else if (inJsonBlock) {
+                  if (content.includes("```") && accumulated.lastIndexOf("```") > accumulated.indexOf("```json") + 7) {
+                    inJsonBlock = false;
+                  } else {
+                    jsonBuffer += content;
+                    jsonTokenCount++;
+
+                    if (jsonTokenCount % 30 === 0 && jsonBuffer.length >= 50) {
+                      const partial = extractPartialLottie(jsonBuffer);
+                      if (partial) {
+                        const progress = jsonBuffer.length / (jsonBuffer.length + 2000);
+                        controller.enqueue(encodeSSE(JSON.stringify({
+                          type: "partial_animation",
+                          json: partial,
+                          progress,
+                        })));
+                      }
+                    }
+                  }
+                }
               }
             } catch {}
           }
