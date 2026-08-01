@@ -40,6 +40,29 @@ describe("intent-router", () => {
     });
   });
 
+  describe("undo", () => {
+    it.each(["undo", "undo that", "undo it", "go back", "never mind", "nvm", "revert", "revert that"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "undo" });
+      },
+    );
+
+    it("does not match 'undo the animation'", () => {
+      expect(detectIntent("undo the animation")).toBeNull();
+    });
+  });
+
+  describe("redo", () => {
+    it.each(["redo", "redo that", "redo it"])("matches '%s'", (msg) => {
+      expect(detectIntent(msg)).toEqual({ type: "redo" });
+    });
+
+    it("does not match 'redo the whole thing'", () => {
+      expect(detectIntent("redo the whole thing")).toBeNull();
+    });
+  });
+
   describe("reverse", () => {
     it("matches 'reverse'", () => {
       expect(detectIntent("reverse")).toEqual({ type: "reverse" });
