@@ -11,7 +11,7 @@
  * - Never guess — return null if unsure
  */
 
-import type { Command, ColorSubcommand, TrimPoint } from "./commands";
+import type { Command, ColorSubcommand, TrimPoint, StyleName } from "./commands";
 import type { SlideDirection } from "./slide";
 
 // Max message length to consider for intent routing.
@@ -616,6 +616,50 @@ const INTENT_PATTERNS: IntentPattern[] = [
     skipMultiCheck: true,
   },
 
+  // --- style ---
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?neon(?:\s*(?:style|look|vibe|colors?|theme))?)$/i,
+    build: () => ({ type: "style", style: "neon" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?pastel(?:\s*(?:style|look|vibe|colors?|theme))?|soft\s*pastels?)$/i,
+    build: () => ({ type: "style", style: "pastel" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?monochrome(?:\s*(?:style|look|vibe|colors?|theme))?|black\s*(?:and|&)\s*white\s*style|mono(?:\s*(?:style|look|vibe|theme)))$/i,
+    build: () => ({ type: "style", style: "monochrome" as StyleName }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?gradient(?:\s*(?:style|look|vibe|colors?|theme)))$/i,
+    build: () => ({ type: "style", style: "gradient" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?retro(?:\s*(?:style|look|vibe|colors?|theme))?|vintage\s*look)$/i,
+    build: () => ({ type: "style", style: "retro" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?minimal(?:\s*(?:style|look|vibe|colors?|theme))?|minimalist|clean\s*style)$/i,
+    build: () => ({ type: "style", style: "minimal" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?bold(?:\s*(?:style|look|vibe|colors?|theme))?)$/i,
+    build: () => ({ type: "style", style: "bold" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:make\s*(?:it\s*)?|apply\s*(?:a\s*)?|go\s*|use\s*)?nature(?:\s*(?:style|look|vibe|colors?|theme))?|earthy|organic\s*style)$/i,
+    build: () => ({ type: "style", style: "nature" as StyleName }),
+  },
+  {
+    pattern: /^(?:(?:list|show|what)\s*(?:are\s*(?:the\s*)?)?styles?|style\s*list|available\s*styles?)$/i,
+    build: () => ({ type: "style_list" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:make\s*(?:it\s*)?look\s*(?:like\s*)?|style\s*(?:it\s*)?(?:like|as)\s*)(.+)$/i,
+    build: (m) => ({ type: "style_custom", description: m[1].trim() }),
+  },
+
   // === Chinese (zh) patterns ===
 
   // --- reverse ---
@@ -1023,6 +1067,46 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^(?:重做|恢复)$/,
     build: () => ({ type: "redo" }),
+    skipMultiCheck: true,
+  },
+
+  // --- style ---
+  {
+    pattern: /^(?:霓虹风格|霓虹)$/,
+    build: () => ({ type: "style", style: "neon" as StyleName }),
+  },
+  {
+    pattern: /^(?:马卡龙|粉嫩|柔和风)$/,
+    build: () => ({ type: "style", style: "pastel" as StyleName }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^单色风格$/,
+    build: () => ({ type: "style", style: "monochrome" as StyleName }),
+  },
+  {
+    pattern: /^(?:渐变风格|渐变风)$/,
+    build: () => ({ type: "style", style: "gradient" as StyleName }),
+  },
+  {
+    pattern: /^(?:复古风|复古风格|怀旧风)$/,
+    build: () => ({ type: "style", style: "retro" as StyleName }),
+  },
+  {
+    pattern: /^(?:简约风|极简|简约风格)$/,
+    build: () => ({ type: "style", style: "minimal" as StyleName }),
+  },
+  {
+    pattern: /^(?:大胆风格|粗犷)$/,
+    build: () => ({ type: "style", style: "bold" as StyleName }),
+  },
+  {
+    pattern: /^(?:自然风|自然风格|大地色)$/,
+    build: () => ({ type: "style", style: "nature" as StyleName }),
+  },
+  {
+    pattern: /^(?:风格列表|有什么风格|显示风格)$/,
+    build: () => ({ type: "style_list" }),
     skipMultiCheck: true,
   },
 
