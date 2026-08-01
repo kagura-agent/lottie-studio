@@ -1021,6 +1021,96 @@ describe("intent-router", () => {
     });
   });
 
+  describe("style - named styles", () => {
+    it.each(["neon style", "make it neon", "neon look", "neon vibe", "go neon"])(
+      "matches '%s' → style neon",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "neon" });
+      },
+    );
+
+    it.each(["pastel style", "make it pastel", "pastel colors", "soft pastels"])(
+      "matches '%s' → style pastel",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "pastel" });
+      },
+    );
+
+    it.each(["monochrome style", "make it monochrome", "black and white style", "mono style"])(
+      "matches '%s' → style monochrome",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "monochrome" });
+      },
+    );
+
+    it.each(["gradient style", "gradient look"])(
+      "matches '%s' → style gradient",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "gradient" });
+      },
+    );
+
+    it.each(["retro style", "make it retro", "vintage look", "retro vibe"])(
+      "matches '%s' → style retro",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "retro" });
+      },
+    );
+
+    it.each(["minimal style", "make it minimal", "minimalist", "clean style"])(
+      "matches '%s' → style minimal",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "minimal" });
+      },
+    );
+
+    it.each(["bold style", "make it bold", "bold look", "bold colors"])(
+      "matches '%s' → style bold",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "bold" });
+      },
+    );
+
+    it.each(["nature style", "make it nature", "nature look", "earthy", "organic style"])(
+      "matches '%s' → style nature",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style", style: "nature" });
+      },
+    );
+  });
+
+  describe("style - list", () => {
+    it.each(["list styles", "show styles", "what are the styles", "style list", "available styles"])(
+      "matches '%s' → style_list",
+      (msg) => {
+        expect(detectIntent(msg)).toMatchObject({ type: "style_list" });
+      },
+    );
+  });
+
+  describe("style - custom", () => {
+    it("matches 'make it look like underwater'", () => {
+      expect(detectIntent("make it look like underwater")).toMatchObject({
+        type: "style_custom",
+        description: "underwater",
+      });
+    });
+
+    it("matches 'style it like cyberpunk'", () => {
+      expect(detectIntent("style it like cyberpunk")).toMatchObject({
+        type: "style_custom",
+        description: "cyberpunk",
+      });
+    });
+
+    it("matches 'style it as watercolor'", () => {
+      expect(detectIntent("style it as watercolor")).toMatchObject({
+        type: "style_custom",
+        description: "watercolor",
+      });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });

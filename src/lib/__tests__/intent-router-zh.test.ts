@@ -258,6 +258,36 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("style", () => {
+    it.each(["霓虹风格", "霓虹"])("%s → style neon", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "neon" });
+    });
+    it.each(["马卡龙", "粉嫩", "柔和风"])("%s → style pastel", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "pastel" });
+    });
+    it("单色风格 → style monochrome", () => {
+      expect(detectIntent("单色风格")).toMatchObject({ type: "style", style: "monochrome" });
+    });
+    it.each(["渐变风格", "渐变风"])("%s → style gradient", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "gradient" });
+    });
+    it.each(["复古风", "复古风格", "怀旧风"])("%s → style retro", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "retro" });
+    });
+    it.each(["简约风", "极简", "简约风格"])("%s → style minimal", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "minimal" });
+    });
+    it.each(["大胆风格", "粗犷"])("%s → style bold", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "bold" });
+    });
+    it.each(["自然风", "自然风格", "大地色"])("%s → style nature", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style", style: "nature" });
+    });
+    it.each(["风格列表", "有什么风格", "显示风格"])("%s → style_list", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "style_list" });
+    });
+  });
+
   describe("help", () => {
     it("帮助 → help", () => {
       expect(detectIntent("帮助")).toMatchObject({ type: "help" });
