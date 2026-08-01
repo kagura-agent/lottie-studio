@@ -124,6 +124,44 @@ const INTENT_PATTERNS: IntentPattern[] = [
     build: () => ({ type: "physics", options: { effect: "float" as const } }),
   },
 
+  // --- path motion ---
+  {
+    pattern: /^(?:(?:move|go)\s*(?:it\s*)?in\s*(?:a\s*)?circle|orbit|circular\s*(?:path|motion)|go\s*around)$/i,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const } }),
+  },
+  {
+    pattern: /^(?:(?:wave|wavy|sine)\s*(?:path|motion)|(?:move|go)\s*(?:along\s*)?(?:a\s*)?(?:wave|wavy|sine)\s*path)$/i,
+    build: () => ({ type: "path", shape: "wave" as const, options: { shape: "wave" as const } }),
+  },
+  {
+    pattern: /^(?:spiral(?:\s*(?:path|motion))?|(?:move|go)\s*(?:in\s*)?(?:a\s*)?spiral)$/i,
+    build: () => ({ type: "path", shape: "spiral" as const, options: { shape: "spiral" as const } }),
+  },
+  {
+    pattern: /^(?:figure\s*(?:eight|8)|figure-8|infinity\s*(?:path|motion|loop))$/i,
+    build: () => ({ type: "path", shape: "figure-8" as const, options: { shape: "figure-8" as const } }),
+  },
+  {
+    pattern: /^(?:arc\s*(?:path|motion)|curved\s*path|(?:move|go)\s*(?:in\s*)?(?:an?\s*)?arc)$/i,
+    build: () => ({ type: "path", shape: "arc" as const, options: { shape: "arc" as const } }),
+  },
+  {
+    pattern: /^(?:zigzag\s*(?:path|motion)|(?:move|go)\s*(?:in\s*)?(?:a\s*)?zigzag)$/i,
+    build: () => ({ type: "path", shape: "zigzag" as const, options: { shape: "zigzag" as const } }),
+  },
+  {
+    pattern: /^(?:pendulum\s*(?:path|motion\s*path)|swing\s*(?:path|motion\s*path))$/i,
+    build: () => ({ type: "path", shape: "pendulum" as const, options: { shape: "pendulum" as const } }),
+  },
+  {
+    pattern: /^(?:(?:move|go)\s*(?:it\s*)?(?:in\s*(?:a\s*)?circle\s*)?(?:clockwise|cw))$/i,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const, clockwise: true } }),
+  },
+  {
+    pattern: /^(?:(?:move|go)\s*(?:it\s*)?(?:in\s*(?:a\s*)?circle\s*)?(?:counter\s*clockwise|ccw|anticlockwise))$/i,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const, clockwise: false } }),
+  },
+
   // --- wave ---
   {
     pattern: /^(?:(?:add\s*(?:a\s*)?)?wave|wave\s*(?:effect|animation)|make\s*(?:it\s*)?wave)$/i,
@@ -637,6 +675,44 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     pattern: /^垂直翻转$/,
     build: () => ({ type: "mirror_v" }),
+  },
+
+  // --- path motion ---
+  {
+    pattern: /^(?:圆形路径|绕圈|绕圆)$/,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const } }),
+  },
+  {
+    pattern: /^螺旋路径$/,
+    build: () => ({ type: "path", shape: "spiral" as const, options: { shape: "spiral" as const } }),
+  },
+  {
+    pattern: /^弧形路径$/,
+    build: () => ({ type: "path", shape: "arc" as const, options: { shape: "arc" as const } }),
+  },
+  {
+    pattern: /^之字形路径$/,
+    build: () => ({ type: "path", shape: "zigzag" as const, options: { shape: "zigzag" as const } }),
+  },
+  {
+    pattern: /^8字形$/,
+    build: () => ({ type: "path", shape: "figure-8" as const, options: { shape: "figure-8" as const } }),
+  },
+  {
+    pattern: /^钟摆路径$/,
+    build: () => ({ type: "path", shape: "pendulum" as const, options: { shape: "pendulum" as const } }),
+  },
+  {
+    pattern: /^沿路径$/,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const } }),
+  },
+  {
+    pattern: /^顺时针$/,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const, clockwise: true } }),
+  },
+  {
+    pattern: /^逆时针$/,
+    build: () => ({ type: "path", shape: "circle" as const, options: { shape: "circle" as const, clockwise: false } }),
   },
 
   // --- physics ---

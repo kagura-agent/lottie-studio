@@ -852,6 +852,175 @@ describe("intent-router", () => {
     });
   });
 
+  describe("path motion", () => {
+    // circle
+    it("matches 'move in a circle'", () => {
+      expect(detectIntent("move in a circle")).toMatchObject({ type: "path", shape: "circle", options: { shape: "circle" } });
+    });
+
+    it("matches 'orbit'", () => {
+      expect(detectIntent("orbit")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    it("matches 'circular path'", () => {
+      expect(detectIntent("circular path")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    it("matches 'circular motion'", () => {
+      expect(detectIntent("circular motion")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    it("matches 'go around'", () => {
+      expect(detectIntent("go around")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    // wave path (disambiguated from wave visual effect)
+    it("matches 'wave path'", () => {
+      expect(detectIntent("wave path")).toMatchObject({ type: "path", shape: "wave" });
+    });
+
+    it("matches 'wavy path'", () => {
+      expect(detectIntent("wavy path")).toMatchObject({ type: "path", shape: "wave" });
+    });
+
+    it("matches 'sine path'", () => {
+      expect(detectIntent("sine path")).toMatchObject({ type: "path", shape: "wave" });
+    });
+
+    it("matches 'wave motion'", () => {
+      expect(detectIntent("wave motion")).toMatchObject({ type: "path", shape: "wave" });
+    });
+
+    // spiral
+    it("matches 'spiral'", () => {
+      expect(detectIntent("spiral")).toMatchObject({ type: "path", shape: "spiral" });
+    });
+
+    it("matches 'spiral motion'", () => {
+      expect(detectIntent("spiral motion")).toMatchObject({ type: "path", shape: "spiral" });
+    });
+
+    it("matches 'spiral path'", () => {
+      expect(detectIntent("spiral path")).toMatchObject({ type: "path", shape: "spiral" });
+    });
+
+    // figure-8
+    it("matches 'figure eight'", () => {
+      expect(detectIntent("figure eight")).toMatchObject({ type: "path", shape: "figure-8" });
+    });
+
+    it("matches 'figure 8'", () => {
+      expect(detectIntent("figure 8")).toMatchObject({ type: "path", shape: "figure-8" });
+    });
+
+    it("matches 'figure-8'", () => {
+      expect(detectIntent("figure-8")).toMatchObject({ type: "path", shape: "figure-8" });
+    });
+
+    it("matches 'infinity path'", () => {
+      expect(detectIntent("infinity path")).toMatchObject({ type: "path", shape: "figure-8" });
+    });
+
+    // arc
+    it("matches 'arc motion'", () => {
+      expect(detectIntent("arc motion")).toMatchObject({ type: "path", shape: "arc" });
+    });
+
+    it("matches 'arc path'", () => {
+      expect(detectIntent("arc path")).toMatchObject({ type: "path", shape: "arc" });
+    });
+
+    it("matches 'curved path'", () => {
+      expect(detectIntent("curved path")).toMatchObject({ type: "path", shape: "arc" });
+    });
+
+    it("matches 'move in an arc'", () => {
+      expect(detectIntent("move in an arc")).toMatchObject({ type: "path", shape: "arc" });
+    });
+
+    // zigzag
+    it("matches 'zigzag path'", () => {
+      expect(detectIntent("zigzag path")).toMatchObject({ type: "path", shape: "zigzag" });
+    });
+
+    it("matches 'zigzag motion'", () => {
+      expect(detectIntent("zigzag motion")).toMatchObject({ type: "path", shape: "zigzag" });
+    });
+
+    // pendulum path (disambiguated from physics pendulum)
+    it("matches 'pendulum path'", () => {
+      expect(detectIntent("pendulum path")).toMatchObject({ type: "path", shape: "pendulum" });
+    });
+
+    it("matches 'pendulum motion path'", () => {
+      expect(detectIntent("pendulum motion path")).toMatchObject({ type: "path", shape: "pendulum" });
+    });
+
+    it("matches 'swing path'", () => {
+      expect(detectIntent("swing path")).toMatchObject({ type: "path", shape: "pendulum" });
+    });
+
+    // clockwise/counterclockwise
+    it("matches 'move clockwise'", () => {
+      expect(detectIntent("move clockwise")).toMatchObject({ type: "path", shape: "circle", options: { clockwise: true } });
+    });
+
+    it("matches 'go counterclockwise'", () => {
+      expect(detectIntent("go counterclockwise")).toMatchObject({ type: "path", shape: "circle", options: { clockwise: false } });
+    });
+
+    it("matches 'move ccw'", () => {
+      expect(detectIntent("move ccw")).toMatchObject({ type: "path", shape: "circle", options: { clockwise: false } });
+    });
+
+    // Chinese path patterns
+    it("matches Chinese '圆形路径'", () => {
+      expect(detectIntent("圆形路径")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    it("matches Chinese '绕圈'", () => {
+      expect(detectIntent("绕圈")).toMatchObject({ type: "path", shape: "circle" });
+    });
+
+    it("matches Chinese '螺旋路径'", () => {
+      expect(detectIntent("螺旋路径")).toMatchObject({ type: "path", shape: "spiral" });
+    });
+
+    it("matches Chinese '弧形路径'", () => {
+      expect(detectIntent("弧形路径")).toMatchObject({ type: "path", shape: "arc" });
+    });
+
+    it("matches Chinese '之字形路径'", () => {
+      expect(detectIntent("之字形路径")).toMatchObject({ type: "path", shape: "zigzag" });
+    });
+
+    it("matches Chinese '8字形'", () => {
+      expect(detectIntent("8字形")).toMatchObject({ type: "path", shape: "figure-8" });
+    });
+
+    it("matches Chinese '钟摆路径'", () => {
+      expect(detectIntent("钟摆路径")).toMatchObject({ type: "path", shape: "pendulum" });
+    });
+
+    it("matches Chinese '顺时针'", () => {
+      expect(detectIntent("顺时针")).toMatchObject({ type: "path", shape: "circle", options: { clockwise: true } });
+    });
+
+    it("matches Chinese '逆时针'", () => {
+      expect(detectIntent("逆时针")).toMatchObject({ type: "path", shape: "circle", options: { clockwise: false } });
+    });
+
+    // disambiguation: 'pendulum' alone → physics, not path
+    it("'pendulum' alone maps to physics, not path", () => {
+      expect(detectIntent("pendulum")).toMatchObject({ type: "physics", options: { effect: "pendulum" } });
+    });
+
+    // disambiguation: 'wave' alone → wave visual effect, not path
+    it("'add wave' maps to wave effect, not path", () => {
+      expect(detectIntent("add wave")).toMatchObject({ type: "wave" });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
