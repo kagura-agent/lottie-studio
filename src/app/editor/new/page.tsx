@@ -5,7 +5,7 @@ import { Suspense, useState, useCallback } from "react";
 import EditorLayout from "@/components/EditorLayout";
 import QuickStartWizard from "@/components/QuickStartWizard";
 
-const STORAGE_KEY = "lottie-wizard-skip";
+const STORAGE_KEY = "lottie-studio-quickstart-seen";
 
 function shouldSkipWizard(): boolean {
   try {
