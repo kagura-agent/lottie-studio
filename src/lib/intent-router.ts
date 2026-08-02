@@ -1278,6 +1278,28 @@ const INTENT_PATTERNS: IntentPattern[] = [
     pattern: /^(?:重命名图层)\s*(.+?)\s*(?:为|到)\s*(.+)$/,
     build: (m) => ({ type: "rename_layer", oldName: m[1].trim(), newName: m[2].trim() }),
   },
+
+  // --- variations ---
+  {
+    pattern: /^(?:show\s*(?:me\s*)?(?:options|alternatives|variations)|(?:give\s*me\s*)\d+\s*(?:versions?|options|variations)|try\s*different\s*(?:styles|colors|approaches)|explore\s*(?:variations|alternatives)|(?:make|create)\s*variations|what\s*else\s*can\s*you\s*do\s*with\s*this|more\s*options|other\s*ideas)$/i,
+    build: () => ({ type: "variations", prompt: "" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:show\s*(?:me\s*)?(?:options|alternatives|variations)|(?:give\s*me\s*)\d+\s*(?:versions?|options|variations)|try\s*different\s*(?:styles|colors|approaches)|explore\s*(?:variations|alternatives)|(?:make|create)\s*variations)\s+(?:of\s+|for\s+)?(.+)$/i,
+    build: (m) => ({ type: "variations", prompt: m[1].trim() }),
+  },
+  {
+    pattern: /^(?:variations|alternatives)\s+(?:of\s+|for\s+)?(.+)$/i,
+    build: (m) => ({ type: "variations", prompt: m[1].trim() }),
+  },
+
+  // --- variations (Chinese) ---
+  {
+    pattern: /^(?:给我几个(?:版本|选择|方案)|换几种(?:风格|颜色|方式)试试|多来几个|其他(?:方案|选择)|变体|试试不同的)$/,
+    build: () => ({ type: "variations", prompt: "" }),
+    skipMultiCheck: true,
+  },
 ];
 
 /**
