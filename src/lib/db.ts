@@ -10,9 +10,7 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const ANIMATIONS_DIR = path.join(DATA_DIR, "animations");
 const DB_PATH = path.join(DATA_DIR, "lottie-studio.db");
 
-if (!IS_TEST) {
-  fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
-}
+fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
 
 const db = new Database(IS_TEST ? ":memory:" : DB_PATH);
 db.pragma("busy_timeout = 30000");
