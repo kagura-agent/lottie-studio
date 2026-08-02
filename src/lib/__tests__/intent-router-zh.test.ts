@@ -294,6 +294,90 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("play", () => {
+    it.each(["播放", "开始播放", "继续播放", "继续"])("%s → play", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "play" });
+    });
+  });
+
+  describe("pause", () => {
+    it.each(["暂停", "停止播放", "停止"])("%s → pause", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "pause" });
+    });
+  });
+
+  describe("once", () => {
+    it.each(["播放一次", "播一次", "不循环", "单次播放"])("%s → once", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "once" });
+    });
+  });
+
+  describe("random", () => {
+    it.each(["随机", "随机动画", "随便来一个"])("%s → random", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "random" });
+    });
+  });
+
+  describe("a11y", () => {
+    it.each(["无障碍检查", "可访问性", "辅助功能检查"])("%s → a11y", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "a11y" });
+    });
+  });
+
+  describe("fullscreen", () => {
+    it.each(["全屏", "最大化"])("%s → fullscreen", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "fullscreen" });
+    });
+  });
+
+  describe("background", () => {
+    it("背景黑色 → background black", () => {
+      expect(detectIntent("背景黑色")).toMatchObject({ type: "background", color: "black" });
+    });
+    it("背景白色 → background white", () => {
+      expect(detectIntent("背景白色")).toMatchObject({ type: "background", color: "white" });
+    });
+    it("背景设为红色 → background red", () => {
+      expect(detectIntent("背景设为红色")).toMatchObject({ type: "background", color: "red" });
+    });
+    it("背景透明 → background transparent", () => {
+      expect(detectIntent("背景透明")).toMatchObject({ type: "background", color: "transparent" });
+    });
+  });
+
+  describe("resize", () => {
+    it("调整大小 500x500 → resize", () => {
+      expect(detectIntent("调整大小 500x500")).toMatchObject({ type: "resize", width: 500, height: 500 });
+    });
+    it("尺寸设为 1920x1080 → resize", () => {
+      expect(detectIntent("尺寸设为 1920x1080")).toMatchObject({ type: "resize", width: 1920, height: 1080 });
+    });
+  });
+
+  describe("duplicate_layer", () => {
+    it("复制图层 背景 → duplicate_layer", () => {
+      expect(detectIntent("复制图层 背景")).toMatchObject({ type: "duplicate_layer", name: "背景" });
+    });
+    it("克隆图层 Logo → duplicate_layer", () => {
+      expect(detectIntent("克隆图层 Logo")).toMatchObject({ type: "duplicate_layer", name: "Logo" });
+    });
+  });
+
+  describe("delete_layer", () => {
+    it("删除图层 背景 → delete_layer", () => {
+      expect(detectIntent("删除图层 背景")).toMatchObject({ type: "delete_layer", name: "背景" });
+    });
+    it("移除图层 Shape → delete_layer", () => {
+      expect(detectIntent("移除图层 Shape")).toMatchObject({ type: "delete_layer", name: "Shape" });
+    });
+  });
+
+  describe("rename_layer", () => {
+    it("重命名图层 旧名 为 新名 → rename_layer", () => {
+      expect(detectIntent("重命名图层 旧名 为 新名")).toMatchObject({ type: "rename_layer", oldName: "旧名", newName: "新名" });
+    });
+  });
+
   describe("export", () => {
     it("matches '导出gif'", () => {
       expect(detectIntent("导出gif")).toEqual({ type: "export_gif" });

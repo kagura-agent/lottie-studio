@@ -1116,6 +1116,168 @@ const INTENT_PATTERNS: IntentPattern[] = [
     build: () => ({ type: "help" }),
     skipMultiCheck: true,
   },
+
+  // --- play ---
+  {
+    pattern: /^(?:play(?:\s*(?:it|animation))?|start\s*playing|resume(?:\s*(?:it|playing|playback))?)$/i,
+    build: () => ({ type: "play" }),
+    skipMultiCheck: true,
+  },
+
+  // --- pause ---
+  {
+    pattern: /^(?:pause(?:\s*(?:it|animation))?|stop(?:\s*playing)?)$/i,
+    build: () => ({ type: "pause" }),
+    skipMultiCheck: true,
+  },
+
+  // --- once ---
+  {
+    pattern: /^(?:play\s*(?:it\s*)?once|play\s*one\s*time|stop\s*looping|no\s*loop|once)$/i,
+    build: () => ({ type: "once" }),
+    skipMultiCheck: true,
+  },
+
+  // --- random ---
+  {
+    pattern: /^(?:random(?:\s*animation)?|surprise\s*me|give\s*me\s*something\s*random)$/i,
+    build: () => ({ type: "random" }),
+    skipMultiCheck: true,
+  },
+
+  // --- a11y ---
+  {
+    pattern: /^(?:(?:check\s*)?accessibility(?:\s*(?:audit|check))?|a11y(?:\s*check)?|wcag(?:\s*check)?)$/i,
+    build: () => ({ type: "a11y" }),
+    skipMultiCheck: true,
+  },
+
+  // --- fullscreen ---
+  {
+    pattern: /^(?:full\s*screen|fullscreen|go\s*fullscreen|maximize)$/i,
+    build: () => ({ type: "fullscreen" }),
+    skipMultiCheck: true,
+  },
+
+  // --- background ---
+  {
+    pattern: /^(?:(?:change\s*)?(?:bg|background)(?:\s*(?:color|colour)?)?\s*(?:to\s*)?)(#[0-9a-f]{3,8}|black|white|red|blue|green|yellow|orange|pink|purple|cyan|gray|grey|transparent)$/i,
+    build: (m) => ({ type: "background", color: m[1].toLowerCase() }),
+  },
+  {
+    pattern: /^(black|white|red|blue|green|yellow|orange|pink|purple|cyan|gray|grey|transparent)\s*(?:bg|background)$/i,
+    build: (m) => ({ type: "background", color: m[1].toLowerCase() }),
+  },
+
+  // --- resize ---
+  {
+    pattern: /^(?:resize(?:\s*(?:it|to))?|make\s*it|set\s*size(?:\s*to)?)\s*(\d+)\s*[x×]\s*(\d+)$/i,
+    build: (m) => ({ type: "resize", width: parseInt(m[1]), height: parseInt(m[2]) }),
+  },
+  {
+    pattern: /^(?:resize(?:\s*(?:it|to))?|set\s*size(?:\s*to)?)\s*(\d+)\s+(\d+)$/i,
+    build: (m) => ({ type: "resize", width: parseInt(m[1]), height: parseInt(m[2]) }),
+  },
+
+  // --- duplicate_layer ---
+  {
+    pattern: /^(?:duplicate|copy|clone)\s*layer\s+(.+)$/i,
+    build: (m) => ({ type: "duplicate_layer", name: m[1].trim() }),
+  },
+
+  // --- delete_layer ---
+  {
+    pattern: /^(?:delete|remove)\s*layer\s+(.+)$/i,
+    build: (m) => ({ type: "delete_layer", name: m[1].trim() }),
+  },
+
+  // --- rename_layer ---
+  {
+    pattern: /^rename\s*layer\s+(.+?)\s+to\s+(.+)$/i,
+    build: (m) => ({ type: "rename_layer", oldName: m[1].trim(), newName: m[2].trim() }),
+  },
+
+  // === Chinese (zh) new patterns ===
+
+  // --- play ---
+  {
+    pattern: /^(?:播放|开始播放|继续播放|继续)$/,
+    build: () => ({ type: "play" }),
+    skipMultiCheck: true,
+  },
+
+  // --- pause ---
+  {
+    pattern: /^(?:暂停|停止播放|停止)$/,
+    build: () => ({ type: "pause" }),
+    skipMultiCheck: true,
+  },
+
+  // --- once ---
+  {
+    pattern: /^(?:播放一次|播一次|不循环|单次播放)$/,
+    build: () => ({ type: "once" }),
+    skipMultiCheck: true,
+  },
+
+  // --- random ---
+  {
+    pattern: /^(?:随机|随机动画|随便来一个)$/,
+    build: () => ({ type: "random" }),
+    skipMultiCheck: true,
+  },
+
+  // --- a11y ---
+  {
+    pattern: /^(?:无障碍检查|可访问性|辅助功能检查)$/,
+    build: () => ({ type: "a11y" }),
+    skipMultiCheck: true,
+  },
+
+  // --- fullscreen ---
+  {
+    pattern: /^(?:全屏|最大化)$/,
+    build: () => ({ type: "fullscreen" }),
+    skipMultiCheck: true,
+  },
+
+  // --- background ---
+  {
+    pattern: /^(?:背景(?:颜?色?)?(?:改?为|设为|换成)?)\s*(黑色?|白色?|红色?|蓝色?|绿色?|透明|#[0-9a-f]{3,8})$/i,
+    build: (m) => {
+      const zhColorMap: Record<string, string> = {
+        黑: "black", 黑色: "black", 白: "white", 白色: "white",
+        红: "red", 红色: "red", 蓝: "blue", 蓝色: "blue",
+        绿: "green", 绿色: "green", 透明: "transparent",
+      };
+      const color = zhColorMap[m[1]] || m[1].toLowerCase();
+      return { type: "background", color };
+    },
+  },
+
+  // --- resize ---
+  {
+    pattern: /^(?:调整大小|尺寸(?:改?为|设为)?)\s*(\d+)\s*[x×]\s*(\d+)$/,
+    build: (m) => ({ type: "resize", width: parseInt(m[1]), height: parseInt(m[2]) }),
+  },
+
+  // --- duplicate_layer ---
+  {
+    pattern: /^(?:复制图层|克隆图层)\s*(.+)$/,
+    build: (m) => ({ type: "duplicate_layer", name: m[1].trim() }),
+  },
+
+  // --- delete_layer ---
+  {
+    pattern: /^(?:删除图层|移除图层)\s*(.+)$/,
+    build: (m) => ({ type: "delete_layer", name: m[1].trim() }),
+  },
+
+  // --- rename_layer ---
+  {
+    pattern: /^(?:重命名图层)\s*(.+?)\s*(?:为|到)\s*(.+)$/,
+    build: (m) => ({ type: "rename_layer", oldName: m[1].trim(), newName: m[2].trim() }),
+  },
 ];
 
 /**
