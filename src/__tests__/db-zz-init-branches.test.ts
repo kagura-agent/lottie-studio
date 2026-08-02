@@ -23,11 +23,51 @@ const templateFiles = fs.existsSync(TEMPLATES_DIR)
   ? fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith(".json") && f !== "index.json")
   : [];
 
+// --- Ensure data directories exist (CI may not have them) ---
+fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
+
 // --- DB manipulation before module load ---
 const rawDb = new Database(DB_PATH);
 rawDb.pragma("journal_mode = WAL");
 rawDb.pragma("busy_timeout = 5000");
 rawDb.pragma("foreign_keys = OFF");
+
+// Ensure base schema exists (CI starts with no DB file)
+rawDb.exec(`
+  CREATE TABLE IF NOT EXISTS animations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    frame_count INTEGER,
+    duration_seconds REAL,
+    share_chat INTEGER DEFAULT 0,
+    template_source TEXT,
+    tags TEXT,
+    view_count INTEGER DEFAULT 0,
+    description TEXT,
+    like_count INTEGER DEFAULT 0,
+    remixed_from TEXT,
+    creator_id TEXT,
+    creator_name TEXT,
+    user_id TEXT,
+    comment_count INTEGER DEFAULT 0,
+    template_tier TEXT DEFAULT 'free'
+  )
+`);
+rawDb.exec(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    animation_id TEXT NOT NULL REFERENCES animations(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    lottie_json TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    image_url TEXT,
+    previous_lottie_json TEXT
+  )
+`);
+rawDb.exec(`CREATE INDEX IF NOT EXISTS idx_messages_animation_id ON messages(animation_id, created_at)`);
 
 // Drop FTS triggers and table to avoid "malformed" errors
 rawDb.exec("DROP TRIGGER IF EXISTS animations_fts_ai");

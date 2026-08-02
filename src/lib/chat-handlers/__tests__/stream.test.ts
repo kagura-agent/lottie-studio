@@ -919,3 +919,105 @@ describe("handleMainChat", () => {
     expect(callArgs[0].content).toContain("preset prompt");
   });
 });
+
+describe("handleMainChat - partial_animation events", () => {
+  function makeMultiChunkSSEStream(chunks: string[]): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder();
+    return new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          const line = `data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`;
+          controller.enqueue(encoder.encode(line));
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+  }
+
+  async function collectSSEEvents(response: Response): Promise<unknown[]> {
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    const events: unknown[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n\n");
+      buf = lines.pop() || "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data: ")) {
+          try { events.push(JSON.parse(trimmed.slice(6))); } catch {}
+        }
+      }
+    }
+    return events;
+  }
+
+  it("emits partial_animation events during JSON streaming", async () => {
+    setupDbForExisting();
+    const lottieJson = { v: "5.7.0", w: 512, h: 512, fr: 30, ip: 0, op: 60, layers: [{ ty: 4 }] };
+    setupLottieResponse(lottieJson);
+    setupOptimizer(lottieJson);
+
+    // Build a stream that sends "```json\n" then many tokens of JSON content
+    const lottieStr = JSON.stringify({ v: "5.7.0", w: 512, h: 512, fr: 30, ip: 0, op: 60, layers: [{ ty: 4, nm: "Shape", ks: { o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [256, 256] }, s: { a: 0, k: [100, 100] } }, shapes: [{ ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] } }] }] });
+    const chunks: string[] = ["Here is the animation:\n\n```json\n"];
+    // Send JSON one char at a time to accumulate 30+ tokens
+    for (const ch of lottieStr) {
+      chunks.push(ch);
+    }
+    chunks.push("\n```");
+
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue({
+      body: makeMultiChunkSSEStream(chunks),
+    });
+
+    const response = await handleMainChat(
+      makeRequest(),
+      { message: "create a circle" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const events = await collectSSEEvents(response);
+    const partialEvents = events.filter((e: unknown) => (e as Record<string, unknown>).type === "partial_animation");
+
+    expect(partialEvents.length).toBeGreaterThan(0);
+    for (const pe of partialEvents) {
+      const evt = pe as Record<string, unknown>;
+      expect(evt.json).toBeDefined();
+      expect((evt.json as Record<string, unknown>).layers).toBeDefined();
+      expect(typeof evt.progress).toBe("number");
+      expect(evt.progress as number).toBeGreaterThan(0);
+      expect(evt.progress as number).toBeLessThan(1);
+    }
+  });
+
+  it("does not emit partial_animation for short buffers", async () => {
+    setupDbForExisting();
+    setupLottieResponse(null);
+
+    // Send a very short JSON block (< 50 chars, won't reach 30 tokens)
+    const chunks = ["```json\n", '{"v":', '"5"', "\n```"];
+    (chatCompletionStream as ReturnType<typeof vi.fn>).mockResolvedValue({
+      body: makeMultiChunkSSEStream(chunks),
+    });
+
+    const response = await handleMainChat(
+      makeRequest(),
+      { message: "create something" },
+      "anim1",
+      undefined,
+      null,
+    );
+
+    const events = await collectSSEEvents(response);
+    const partialEvents = events.filter((e: unknown) => (e as Record<string, unknown>).type === "partial_animation");
+    expect(partialEvents).toHaveLength(0);
+  });
+});
+
