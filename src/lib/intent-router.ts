@@ -1300,6 +1300,80 @@ const INTENT_PATTERNS: IntentPattern[] = [
     build: () => ({ type: "variations", prompt: "" }),
     skipMultiCheck: true,
   },
+
+  // --- presets ---
+  {
+    pattern: /^(?:list\s*presets|show\s*presets|my\s*presets|preset\s*list)$/i,
+    build: () => ({ type: "presets", subcommand: "list" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:save\s*(?:as\s*)?preset)\s+(.+)$/i,
+    build: (m) => ({ type: "presets", subcommand: { action: "save", name: m[1].trim().toLowerCase() } }),
+  },
+  {
+    pattern: /^save\s*(?:as\s*)?preset$/i,
+    build: () => ({ type: "presets", subcommand: { action: "save", name: "" } }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:delete|remove)\s*preset\s+(.+)$/i,
+    build: (m) => ({ type: "presets", subcommand: { action: "delete", name: m[1].trim().toLowerCase() } }),
+  },
+  {
+    pattern: /^(?:apply|use)\s*preset\s+(.+)$/i,
+    build: (m) => ({ type: "presets", subcommand: { action: "apply", name: m[1].trim().toLowerCase() } }),
+  },
+  // --- presets (Chinese) ---
+  {
+    pattern: /^(?:预设列表|显示预设|我的预设)$/,
+    build: () => ({ type: "presets", subcommand: "list" }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^保存预设(?:\s*(.+))?$/,
+    build: (m) => ({ type: "presets", subcommand: { action: "save", name: m[1]?.trim() || "" } }),
+  },
+  {
+    pattern: /^删除预设\s*(.+)$/,
+    build: (m) => ({ type: "presets", subcommand: { action: "delete", name: m[1].trim() } }),
+  },
+  {
+    pattern: /^(?:应用|使用)预设\s*(.+)$/,
+    build: (m) => ({ type: "presets", subcommand: { action: "apply", name: m[1].trim() } }),
+  },
+
+  // --- import ---
+  {
+    pattern: /^(?:import|load)\s+(https?:\/\/\S+)$/i,
+    build: (m) => ({ type: "import", url: m[1] }),
+  },
+  {
+    pattern: /^导入\s+(https?:\/\/\S+)$/,
+    build: (m) => ({ type: "import", url: m[1] }),
+  },
+  {
+    pattern: /^(?:import|load)\s+(?:svg|lottie|file|animation)$/i,
+    build: () => ({ type: "import" as const }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:导入文件|导入(?:svg|lottie))$/,
+    build: () => ({ type: "import" as const }),
+    skipMultiCheck: true,
+  },
+
+  // --- compose ---
+  {
+    pattern: /^(?:compose|merge\s*layers|combine\s*(?:animations?|layers))$/i,
+    build: () => ({ type: "compose" as const }),
+    skipMultiCheck: true,
+  },
+  {
+    pattern: /^(?:合并动画|合并图层|组合动画)$/,
+    build: () => ({ type: "compose" as const }),
+    skipMultiCheck: true,
+  },
 ];
 
 /**

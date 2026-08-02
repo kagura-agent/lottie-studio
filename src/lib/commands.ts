@@ -165,7 +165,8 @@ export type PresetsSubcommand =
   | { action: "save"; name: string; description?: string }
   | { action: "delete"; name: string }
   | { action: "rename"; oldName: string; newName: string }
-  | { action: "info"; name: string };
+  | { action: "info"; name: string }
+  | { action: "apply"; name: string };
 
 export type Command =
   | { type: "play" }
@@ -196,7 +197,9 @@ export type Command =
   | { type: "marker_list" }
   | { type: "marker_clear" }
   | { type: "import"; url: string }
+  | { type: "import" }
   | { type: "compose"; id: string }
+  | { type: "compose" }
   | { type: "sequence_create"; name: string }
   | { type: "sequence_add"; name?: string }
   | { type: "sequence_list" }
@@ -629,7 +632,14 @@ export function parseCommand(input: string): Command | null {
         const name = args[1].toLowerCase();
         return { type: "presets", subcommand: { action: "info", name } };
       }
-      return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list, save, delete, rename, or info.` };
+      if (sub === "apply" || sub === "use") {
+        if (args.length < 2) {
+          return { type: "error", message: "Usage: /presets apply <name>" };
+        }
+        const name = args[1].toLowerCase();
+        return { type: "presets", subcommand: { action: "apply", name } };
+      }
+      return { type: "error", message: `Unknown presets subcommand "${args[0]}". Use list, save, delete, rename, apply, or info.` };
     }
 
     case "layers":
