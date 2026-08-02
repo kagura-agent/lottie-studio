@@ -23,6 +23,9 @@ const templateFiles = fs.existsSync(TEMPLATES_DIR)
   ? fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith(".json") && f !== "index.json")
   : [];
 
+// --- Ensure data directories exist (CI may not have them) ---
+fs.mkdirSync(ANIMATIONS_DIR, { recursive: true });
+
 // --- DB manipulation before module load ---
 const rawDb = new Database(DB_PATH);
 rawDb.pragma("journal_mode = WAL");
