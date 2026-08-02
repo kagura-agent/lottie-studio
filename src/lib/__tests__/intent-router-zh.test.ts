@@ -378,6 +378,24 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("variations", () => {
+    it.each([
+      "给我几个版本",
+      "给我几个选择",
+      "给我几个方案",
+      "换几种风格试试",
+      "换几种颜色试试",
+      "换几种方式试试",
+      "多来几个",
+      "其他方案",
+      "其他选择",
+      "变体",
+      "试试不同的",
+    ])("%s → variations with empty prompt", (msg) => {
+      expect(detectIntent(msg)).toEqual({ type: "variations", prompt: "" });
+    });
+  });
+
   describe("export", () => {
     it("matches '导出gif'", () => {
       expect(detectIntent("导出gif")).toEqual({ type: "export_gif" });

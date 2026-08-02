@@ -1251,6 +1251,52 @@ describe("intent-router", () => {
     });
   });
 
+  describe("variations", () => {
+    it.each([
+      "show me options",
+      "show me alternatives",
+      "show me variations",
+      "give me 3 versions",
+      "give me 5 options",
+      "give me 3 variations",
+      "try different styles",
+      "try different colors",
+      "try different approaches",
+      "explore variations",
+      "explore alternatives",
+      "make variations",
+      "what else can you do with this",
+      "more options",
+      "other ideas",
+    ])("matches '%s' → variations with empty prompt", (msg) => {
+      expect(detectIntent(msg)).toEqual({ type: "variations", prompt: "" });
+    });
+
+    it("matches 'show me variations of a bouncing ball'", () => {
+      expect(detectIntent("show me variations of a bouncing ball")).toEqual({ type: "variations", prompt: "a bouncing ball" });
+    });
+
+    it("matches 'explore variations of the logo'", () => {
+      expect(detectIntent("explore variations of the logo")).toEqual({ type: "variations", prompt: "the logo" });
+    });
+
+    it("matches 'make variations of circles'", () => {
+      expect(detectIntent("make variations of circles")).toEqual({ type: "variations", prompt: "circles" });
+    });
+
+    it("matches 'variations of a star'", () => {
+      expect(detectIntent("variations of a star")).toEqual({ type: "variations", prompt: "a star" });
+    });
+
+    it("matches 'alternatives for loading spinner'", () => {
+      expect(detectIntent("alternatives for loading spinner")).toEqual({ type: "variations", prompt: "loading spinner" });
+    });
+
+    it("matches 'give me 5 versions of this icon'", () => {
+      expect(detectIntent("give me 5 versions of this icon")).toEqual({ type: "variations", prompt: "this icon" });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
