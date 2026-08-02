@@ -1111,6 +1111,146 @@ describe("intent-router", () => {
     });
   });
 
+  describe("play", () => {
+    it.each(["play", "play it", "play animation", "start playing", "resume", "resume it", "resume playing", "resume playback"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "play" });
+      },
+    );
+  });
+
+  describe("pause", () => {
+    it.each(["pause", "pause it", "pause animation", "stop", "stop playing"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "pause" });
+      },
+    );
+  });
+
+  describe("once", () => {
+    it.each(["play once", "play it once", "play one time", "stop looping", "no loop", "once"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "once" });
+      },
+    );
+  });
+
+  describe("random", () => {
+    it.each(["random", "random animation", "surprise me", "give me something random"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "random" });
+      },
+    );
+  });
+
+  describe("a11y", () => {
+    it.each(["check accessibility", "accessibility audit", "accessibility check", "a11y check", "a11y", "wcag check", "accessibility"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "a11y" });
+      },
+    );
+  });
+
+  describe("fullscreen", () => {
+    it.each(["fullscreen", "full screen", "go fullscreen", "maximize"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "fullscreen" });
+      },
+    );
+  });
+
+  describe("background", () => {
+    it("matches 'black background'", () => {
+      expect(detectIntent("black background")).toEqual({ type: "background", color: "black" });
+    });
+
+    it("matches 'white background'", () => {
+      expect(detectIntent("white background")).toEqual({ type: "background", color: "white" });
+    });
+
+    it("matches 'background red'", () => {
+      expect(detectIntent("background red")).toEqual({ type: "background", color: "red" });
+    });
+
+    it("matches 'change background to blue'", () => {
+      expect(detectIntent("change background to blue")).toEqual({ type: "background", color: "blue" });
+    });
+
+    it("matches 'bg color blue'", () => {
+      expect(detectIntent("bg color blue")).toEqual({ type: "background", color: "blue" });
+    });
+
+    it("matches 'bg #ff0000'", () => {
+      expect(detectIntent("bg #ff0000")).toEqual({ type: "background", color: "#ff0000" });
+    });
+
+    it("matches 'background transparent'", () => {
+      expect(detectIntent("background transparent")).toEqual({ type: "background", color: "transparent" });
+    });
+  });
+
+  describe("resize", () => {
+    it("matches 'resize to 500x500'", () => {
+      expect(detectIntent("resize to 500x500")).toEqual({ type: "resize", width: 500, height: 500 });
+    });
+
+    it("matches 'resize 1920x1080'", () => {
+      expect(detectIntent("resize 1920x1080")).toEqual({ type: "resize", width: 1920, height: 1080 });
+    });
+
+    it("matches 'make it 800x600'", () => {
+      expect(detectIntent("make it 800x600")).toEqual({ type: "resize", width: 800, height: 600 });
+    });
+
+    it("matches 'set size 400x300'", () => {
+      expect(detectIntent("set size 400x300")).toEqual({ type: "resize", width: 400, height: 300 });
+    });
+
+    it("matches 'resize 800 600' (space separated)", () => {
+      expect(detectIntent("resize 800 600")).toEqual({ type: "resize", width: 800, height: 600 });
+    });
+  });
+
+  describe("duplicate_layer", () => {
+    it("matches 'duplicate layer Background'", () => {
+      expect(detectIntent("duplicate layer Background")).toEqual({ type: "duplicate_layer", name: "Background" });
+    });
+
+    it("matches 'copy layer Shape 1'", () => {
+      expect(detectIntent("copy layer Shape 1")).toEqual({ type: "duplicate_layer", name: "Shape 1" });
+    });
+
+    it("matches 'clone layer Logo'", () => {
+      expect(detectIntent("clone layer Logo")).toEqual({ type: "duplicate_layer", name: "Logo" });
+    });
+  });
+
+  describe("delete_layer", () => {
+    it("matches 'delete layer Background'", () => {
+      expect(detectIntent("delete layer Background")).toEqual({ type: "delete_layer", name: "Background" });
+    });
+
+    it("matches 'remove layer Shape 1'", () => {
+      expect(detectIntent("remove layer Shape 1")).toEqual({ type: "delete_layer", name: "Shape 1" });
+    });
+  });
+
+  describe("rename_layer", () => {
+    it("matches 'rename layer Old to New'", () => {
+      expect(detectIntent("rename layer Old to New")).toEqual({ type: "rename_layer", oldName: "Old", newName: "New" });
+    });
+
+    it("matches 'rename layer Shape 1 to Logo'", () => {
+      expect(detectIntent("rename layer Shape 1 to Logo")).toEqual({ type: "rename_layer", oldName: "Shape 1", newName: "Logo" });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
