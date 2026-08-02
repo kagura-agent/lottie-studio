@@ -1297,6 +1297,106 @@ describe("intent-router", () => {
     });
   });
 
+  describe("presets", () => {
+    it.each(["list presets", "show presets", "my presets", "preset list"])(
+      "matches '%s' → presets list",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "presets", subcommand: "list" });
+      },
+    );
+
+    it("matches 'save preset mypreset'", () => {
+      expect(detectIntent("save preset mypreset")).toEqual({ type: "presets", subcommand: { action: "save", name: "mypreset" } });
+    });
+
+    it("matches 'save as preset glow'", () => {
+      expect(detectIntent("save as preset glow")).toEqual({ type: "presets", subcommand: { action: "save", name: "glow" } });
+    });
+
+    it("matches 'save preset' (no name)", () => {
+      expect(detectIntent("save preset")).toEqual({ type: "presets", subcommand: { action: "save", name: "" } });
+    });
+
+    it("matches 'delete preset bounce'", () => {
+      expect(detectIntent("delete preset bounce")).toEqual({ type: "presets", subcommand: { action: "delete", name: "bounce" } });
+    });
+
+    it("matches 'remove preset old'", () => {
+      expect(detectIntent("remove preset old")).toEqual({ type: "presets", subcommand: { action: "delete", name: "old" } });
+    });
+
+    it("matches 'apply preset neon'", () => {
+      expect(detectIntent("apply preset neon")).toEqual({ type: "presets", subcommand: { action: "apply", name: "neon" } });
+    });
+
+    it("matches 'use preset glow'", () => {
+      expect(detectIntent("use preset glow")).toEqual({ type: "presets", subcommand: { action: "apply", name: "glow" } });
+    });
+
+    it("matches Chinese '预设列表'", () => {
+      expect(detectIntent("预设列表")).toEqual({ type: "presets", subcommand: "list" });
+    });
+
+    it("matches Chinese '显示预设'", () => {
+      expect(detectIntent("显示预设")).toEqual({ type: "presets", subcommand: "list" });
+    });
+
+    it("matches Chinese '保存预设'", () => {
+      expect(detectIntent("保存预设")).toEqual({ type: "presets", subcommand: { action: "save", name: "" } });
+    });
+
+    it("matches Chinese '删除预设 bounce'", () => {
+      expect(detectIntent("删除预设 bounce")).toEqual({ type: "presets", subcommand: { action: "delete", name: "bounce" } });
+    });
+
+    it("matches Chinese '应用预设 neon'", () => {
+      expect(detectIntent("应用预设 neon")).toEqual({ type: "presets", subcommand: { action: "apply", name: "neon" } });
+    });
+  });
+
+  describe("import", () => {
+    it("matches 'import https://example.com/anim.json'", () => {
+      expect(detectIntent("import https://example.com/anim.json")).toEqual({ type: "import", url: "https://example.com/anim.json" });
+    });
+
+    it("matches 'load https://lottie.host/abc.json'", () => {
+      expect(detectIntent("load https://lottie.host/abc.json")).toEqual({ type: "import", url: "https://lottie.host/abc.json" });
+    });
+
+    it("matches 'import svg'", () => {
+      expect(detectIntent("import svg")).toEqual({ type: "import" });
+    });
+
+    it("matches 'import lottie'", () => {
+      expect(detectIntent("import lottie")).toEqual({ type: "import" });
+    });
+
+    it("matches Chinese '导入 https://example.com/a.json'", () => {
+      expect(detectIntent("导入 https://example.com/a.json")).toEqual({ type: "import", url: "https://example.com/a.json" });
+    });
+
+    it("matches Chinese '导入文件'", () => {
+      expect(detectIntent("导入文件")).toEqual({ type: "import" });
+    });
+  });
+
+  describe("compose", () => {
+    it.each(["compose", "merge layers", "combine animations", "combine layers"])(
+      "matches '%s'",
+      (msg) => {
+        expect(detectIntent(msg)).toEqual({ type: "compose" });
+      },
+    );
+
+    it("matches Chinese '合并动画'", () => {
+      expect(detectIntent("合并动画")).toEqual({ type: "compose" });
+    });
+
+    it("matches Chinese '合并图层'", () => {
+      expect(detectIntent("合并图层")).toEqual({ type: "compose" });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles leading/trailing whitespace", () => {
       expect(detectIntent("  reverse  ")).toEqual({ type: "reverse" });
