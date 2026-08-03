@@ -7,7 +7,7 @@ import { animationEvents, emitWebhook } from "@/lib/events";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
 import extractTitle from "@/lib/titleExtractor";
-import { roundDecimals, removeEmptyGroups, removeHiddenLayers, validateAndFix } from "@/lib/optimizer";
+import { roundDecimals, removeEmptyGroups, removeHiddenLayers, removeRedundantKeyframes, validateAndFix } from "@/lib/optimizer";
 import { extractPartialLottie } from "@/lib/partial-lottie";
 import { analyzeQuality } from "@/lib/quality";
 import { validateStructure } from "@/lib/validation";
@@ -343,7 +343,9 @@ export async function handleMainChat(
           const validation = validateAndFix(lottieJson);
           lottieJson = removeHiddenLayers(
             removeEmptyGroups(
-              roundDecimals(validation.fixed, 3)
+              removeRedundantKeyframes(
+                roundDecimals(validation.fixed, 3)
+              )
             )
           ) as object;
 
