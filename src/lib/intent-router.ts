@@ -1354,24 +1354,24 @@ const INTENT_PATTERNS: IntentPattern[] = [
   },
   {
     pattern: /^(?:import|load)\s+(?:svg|lottie|file|animation)$/i,
-    build: () => ({ type: "import" as const }),
+    build: () => ({ type: "error" as const, message: "Usage: /import <url>" }),
     skipMultiCheck: true,
   },
   {
     pattern: /^(?:导入文件|导入(?:svg|lottie))$/,
-    build: () => ({ type: "import" as const }),
+    build: () => ({ type: "error" as const, message: "Usage: /import <url>" }),
     skipMultiCheck: true,
   },
 
   // --- compose ---
   {
     pattern: /^(?:compose|merge\s*layers|combine\s*(?:animations?|layers))$/i,
-    build: () => ({ type: "compose" as const }),
+    build: () => ({ type: "error" as const, message: "Usage: /compose <animation_id>" }),
     skipMultiCheck: true,
   },
   {
     pattern: /^(?:合并动画|合并图层|组合动画)$/,
-    build: () => ({ type: "compose" as const }),
+    build: () => ({ type: "error" as const, message: "Usage: /compose <animation_id>" }),
     skipMultiCheck: true,
   },
 ];

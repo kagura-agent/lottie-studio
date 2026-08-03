@@ -1364,11 +1364,11 @@ describe("intent-router", () => {
     });
 
     it("matches 'import svg'", () => {
-      expect(detectIntent("import svg")).toEqual({ type: "import" });
+      expect(detectIntent("import svg")).toEqual({ type: "error", message: "Usage: /import <url>" });
     });
 
     it("matches 'import lottie'", () => {
-      expect(detectIntent("import lottie")).toEqual({ type: "import" });
+      expect(detectIntent("import lottie")).toEqual({ type: "error", message: "Usage: /import <url>" });
     });
 
     it("matches Chinese '导入 https://example.com/a.json'", () => {
@@ -1376,7 +1376,7 @@ describe("intent-router", () => {
     });
 
     it("matches Chinese '导入文件'", () => {
-      expect(detectIntent("导入文件")).toEqual({ type: "import" });
+      expect(detectIntent("导入文件")).toEqual({ type: "error", message: "Usage: /import <url>" });
     });
   });
 
@@ -1384,16 +1384,16 @@ describe("intent-router", () => {
     it.each(["compose", "merge layers", "combine animations", "combine layers"])(
       "matches '%s'",
       (msg) => {
-        expect(detectIntent(msg)).toEqual({ type: "compose" });
+        expect(detectIntent(msg)).toEqual({ type: "error", message: "Usage: /compose <animation_id>" });
       },
     );
 
     it("matches Chinese '合并动画'", () => {
-      expect(detectIntent("合并动画")).toEqual({ type: "compose" });
+      expect(detectIntent("合并动画")).toEqual({ type: "error", message: "Usage: /compose <animation_id>" });
     });
 
     it("matches Chinese '合并图层'", () => {
-      expect(detectIntent("合并图层")).toEqual({ type: "compose" });
+      expect(detectIntent("合并图层")).toEqual({ type: "error", message: "Usage: /compose <animation_id>" });
     });
   });
 
