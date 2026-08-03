@@ -304,6 +304,56 @@ describe("collapseSingleItemGroups", () => {
     const result = collapseSingleItemGroups(data);
     expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("gr");
   });
+
+  it("does NOT collapse group with non-default position", () => {
+    const data = {
+      layers: [{
+        shapes: [{ ty: "gr", it: [{ ty: "fl" }, { ty: "tr", p: { a: 0, k: [50, 50] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }] }],
+      }],
+    };
+    const result = collapseSingleItemGroups(data);
+    expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("gr");
+  });
+
+  it("does NOT collapse group with animated scale", () => {
+    const data = {
+      layers: [{
+        shapes: [{ ty: "gr", it: [{ ty: "fl" }, { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 1, k: [{ t: 0, s: [100, 100], e: [200, 200] }] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }] }],
+      }],
+    };
+    const result = collapseSingleItemGroups(data);
+    expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("gr");
+  });
+
+  it("does NOT collapse group with opacity != 100", () => {
+    const data = {
+      layers: [{
+        shapes: [{ ty: "gr", it: [{ ty: "fl" }, { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 50 }, a: { a: 0, k: [0, 0] } }] }],
+      }],
+    };
+    const result = collapseSingleItemGroups(data);
+    expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("gr");
+  });
+
+  it("does NOT collapse group with rotation != 0", () => {
+    const data = {
+      layers: [{
+        shapes: [{ ty: "gr", it: [{ ty: "fl" }, { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 45 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }] }],
+      }],
+    };
+    const result = collapseSingleItemGroups(data);
+    expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("gr");
+  });
+
+  it("collapses group with all-default identity transform", () => {
+    const data = {
+      layers: [{
+        shapes: [{ ty: "gr", it: [{ ty: "fl" }, { ty: "tr", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } }] }],
+      }],
+    };
+    const result = collapseSingleItemGroups(data);
+    expect((result.layers as LottieTestObj[])[0].shapes[0].ty).toBe("fl");
+  });
 });
 
 describe("validateAndFix", () => {
