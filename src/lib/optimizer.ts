@@ -238,18 +238,40 @@ export function validateAndFix(data: unknown): ValidationResult {
   const rootW = (fixed.w as number) ?? 512;
   const rootH = (fixed.h as number) ?? 512;
 
-  // --- Helper: fix color values 0-255 → 0-1 ---
-  function fixColor(colorProp: LottieData, context: string) {
-    const k = colorProp.k;
-    if (!Array.isArray(k)) return;
-    // Check if ANY of the first 3 (RGB) values are > 1
-    const rgb = k.slice(0, 3) as number[];
+  // --- Helper: normalize a single color array [r,g,b,a?] from 0-255 → 0-1 ---
+  function normalizeColorArray(arr: unknown[]): boolean {
+    const rgb = arr.slice(0, 3);
     if (rgb.some((v) => typeof v === "number" && v > 1)) {
-      for (let i = 0; i < 3 && i < k.length; i++) {
-        if (typeof k[i] === "number") {
-          k[i] = (k[i] as number) / 255;
+      for (let i = 0; i < 3 && i < arr.length; i++) {
+        if (typeof arr[i] === "number") {
+          arr[i] = (arr[i] as number) / 255;
         }
       }
+      return true;
+    }
+    return false;
+  }
+
+  // --- Helper: fix color values 0-255 → 0-1 (static and animated) ---
+  function fixColor(colorProp: LottieData, context: string) {
+    if (colorProp.a === 1 && Array.isArray(colorProp.k)) {
+      let fixed = false;
+      for (const kf of colorProp.k as LottieData[]) {
+        if (Array.isArray(kf.s) && normalizeColorArray(kf.s as unknown[])) {
+          fixed = true;
+        }
+        if (Array.isArray(kf.e) && normalizeColorArray(kf.e as unknown[])) {
+          fixed = true;
+        }
+      }
+      if (fixed) {
+        fixesApplied.push(`Normalized animated color values (0-255 → 0-1) in ${context}`);
+      }
+      return;
+    }
+    const k = colorProp.k;
+    if (!Array.isArray(k)) return;
+    if (normalizeColorArray(k as unknown[])) {
       fixesApplied.push(`Normalized color values (0-255 → 0-1) in ${context}`);
     }
   }
@@ -259,7 +281,7 @@ export function validateAndFix(data: unknown): ValidationResult {
     for (const shape of shapes) {
       if (shape.ty === "fl" || shape.ty === "st") {
         const c = shape.c as LottieData | undefined;
-        if (c && (c.a === 0 || c.a === undefined)) {
+        if (c) {
           fixColor(c, `${layerName} ${shape.ty === "fl" ? "fill" : "stroke"}`);
         }
       }
