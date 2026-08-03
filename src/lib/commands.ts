@@ -197,9 +197,7 @@ export type Command =
   | { type: "marker_list" }
   | { type: "marker_clear" }
   | { type: "import"; url: string }
-  | { type: "import" }
   | { type: "compose"; id: string }
-  | { type: "compose" }
   | { type: "sequence_create"; name: string }
   | { type: "sequence_add"; name?: string }
   | { type: "sequence_list" }
