@@ -446,6 +446,39 @@ describe("Chinese intent patterns", () => {
     });
   });
 
+  describe("presets", () => {
+    it.each(["预设列表", "显示预设", "我的预设"])("%s → presets list", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "presets", subcommand: "list" });
+    });
+    it("保存预设 → presets save (no name)", () => {
+      expect(detectIntent("保存预设")).toMatchObject({ type: "presets", subcommand: { action: "save", name: "" } });
+    });
+    it("保存预设 mypreset → presets save", () => {
+      expect(detectIntent("保存预设 mypreset")).toMatchObject({ type: "presets", subcommand: { action: "save", name: "mypreset" } });
+    });
+    it("删除预设 old → presets delete", () => {
+      expect(detectIntent("删除预设 old")).toMatchObject({ type: "presets", subcommand: { action: "delete", name: "old" } });
+    });
+    it.each(["应用预设 bounce", "使用预设 bounce"])("%s → presets apply", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "presets", subcommand: { action: "apply", name: "bounce" } });
+    });
+  });
+
+  describe("import", () => {
+    it("导入 URL → import", () => {
+      expect(detectIntent("导入 https://example.com/anim.json")).toMatchObject({ type: "import", url: "https://example.com/anim.json" });
+    });
+    it.each(["导入文件", "导入svg", "导入lottie"])("%s → error", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "error", message: "Usage: /import <url>" });
+    });
+  });
+
+  describe("compose bare", () => {
+    it.each(["合并动画", "合并图层", "组合动画"])("%s → error", (msg) => {
+      expect(detectIntent(msg)).toMatchObject({ type: "error", message: "Usage: /compose <animation_id>" });
+    });
+  });
+
   describe("multi-intent Chinese connectors", () => {
     it("returns null for messages with Chinese connectors", () => {
       expect(detectIntent("模糊和波浪")).toBeNull();
