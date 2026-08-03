@@ -517,4 +517,92 @@ describe("validateAndFix", () => {
     validateAndFix(input);
     expect(input).toEqual(original);
   });
+
+  it("normalizes static fill color from 0-255 to 0-1", () => {
+    const input = {
+      v: "5.7.0", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+      layers: [{ ind: 0, ty: 4, nm: "L", ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{ ty: "fl", c: { a: 0, k: [255, 128, 0, 1] } }]
+      }],
+    };
+    const result = validateAndFix(input);
+    const c = (result.fixed.layers as any)[0].shapes[0].c;
+    expect(c.k[0]).toBeCloseTo(1, 3);
+    expect(c.k[1]).toBeCloseTo(128 / 255, 3);
+    expect(c.k[2]).toBeCloseTo(0, 3);
+    expect(result.fixesApplied.some((f: string) => f.includes("Normalized color"))).toBe(true);
+  });
+
+  it("normalizes animated fill color keyframes from 0-255 to 0-1", () => {
+    const input = {
+      v: "5.7.0", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+      layers: [{ ind: 0, ty: 4, nm: "L", ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{ ty: "fl", c: { a: 1, k: [
+          { t: 0, s: [255, 0, 0, 1], e: [0, 255, 0, 1] },
+          { t: 30, s: [0, 255, 0, 1], e: [0, 0, 255, 1] },
+        ] } }]
+      }],
+    };
+    const result = validateAndFix(input);
+    const kfs = (result.fixed.layers as any)[0].shapes[0].c.k;
+    expect(kfs[0].s).toEqual([1, 0, 0, 1]);
+    expect(kfs[0].e).toEqual([0, 1, 0, 1]);
+    expect(kfs[1].s).toEqual([0, 1, 0, 1]);
+    expect(kfs[1].e).toEqual([0, 0, 1, 1]);
+    expect(result.fixesApplied.some((f: string) => f.includes("animated color"))).toBe(true);
+  });
+
+  it("normalizes animated stroke color keyframes from 0-255 to 0-1", () => {
+    const input = {
+      v: "5.7.0", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+      layers: [{ ind: 0, ty: 4, nm: "L", ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{ ty: "st", c: { a: 1, k: [
+          { t: 0, s: [200, 100, 50, 1] },
+          { t: 30, s: [0, 0, 0, 1] },
+        ] } }]
+      }],
+    };
+    const result = validateAndFix(input);
+    const kfs = (result.fixed.layers as any)[0].shapes[0].c.k;
+    expect(kfs[0].s[0]).toBeCloseTo(200 / 255, 3);
+    expect(kfs[0].s[1]).toBeCloseTo(100 / 255, 3);
+    expect(kfs[0].s[2]).toBeCloseTo(50 / 255, 3);
+    expect(kfs[1].s).toEqual([0, 0, 0, 1]);
+    expect(result.fixesApplied.some((f: string) => f.includes("animated color"))).toBe(true);
+  });
+
+  it("handles mixed keyframes where some need fixing and some don't", () => {
+    const input = {
+      v: "5.7.0", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+      layers: [{ ind: 0, ty: 4, nm: "L", ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{ ty: "fl", c: { a: 1, k: [
+          { t: 0, s: [255, 0, 0, 1], e: [0.5, 0.5, 0.5, 1] },
+          { t: 30, s: [0.5, 0.5, 0.5, 1], e: [128, 64, 32, 1] },
+        ] } }]
+      }],
+    };
+    const result = validateAndFix(input);
+    const kfs = (result.fixed.layers as any)[0].shapes[0].c.k;
+    expect(kfs[0].s).toEqual([1, 0, 0, 1]);
+    expect(kfs[0].e).toEqual([0.5, 0.5, 0.5, 1]);
+    expect(kfs[1].s).toEqual([0.5, 0.5, 0.5, 1]);
+    expect(kfs[1].e[0]).toBeCloseTo(128 / 255, 3);
+  });
+
+  it("does not change already-normalized animated colors", () => {
+    const input = {
+      v: "5.7.0", fr: 30, ip: 0, op: 60, w: 512, h: 512,
+      layers: [{ ind: 0, ty: 4, nm: "L", ip: 0, op: 60, ks: { p: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, a: { a: 0, k: [0, 0] } },
+        shapes: [{ ty: "fl", c: { a: 1, k: [
+          { t: 0, s: [1, 0, 0, 1], e: [0, 1, 0, 1] },
+          { t: 30, s: [0, 1, 0, 1], e: [0, 0, 1, 1] },
+        ] } }]
+      }],
+    };
+    const result = validateAndFix(input);
+    const kfs = (result.fixed.layers as any)[0].shapes[0].c.k;
+    expect(kfs[0].s).toEqual([1, 0, 0, 1]);
+    expect(kfs[0].e).toEqual([0, 1, 0, 1]);
+    expect(result.fixesApplied.every((f: string) => !f.includes("animated color"))).toBe(true);
+  });
 });
