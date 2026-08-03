@@ -44,6 +44,7 @@ vi.mock("@/lib/optimizer", () => ({
   validateAndFix: vi.fn(),
   roundDecimals: vi.fn(),
   removeEmptyGroups: vi.fn(),
+  removeRedundantKeyframes: vi.fn(),
   removeHiddenLayers: vi.fn(),
 }));
 
@@ -77,7 +78,7 @@ import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from 
 import { buildDesignTokensPrompt } from "@/lib/prompts";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
-import { validateAndFix, roundDecimals, removeEmptyGroups, removeHiddenLayers } from "@/lib/optimizer";
+import { validateAndFix, roundDecimals, removeEmptyGroups, removeRedundantKeyframes, removeHiddenLayers } from "@/lib/optimizer";
 import { analyzeQuality } from "@/lib/quality";
 import { summarizeChanges } from "@/lib/animation-diff";
 import { validateStructure } from "@/lib/validation";
@@ -135,6 +136,7 @@ function setupLottieResponse(lottieJson: object | null, extra: Record<string, un
 function setupOptimizer(json: object) {
   (validateAndFix as ReturnType<typeof vi.fn>).mockReturnValue({ fixed: json, warnings: [] });
   (roundDecimals as ReturnType<typeof vi.fn>).mockReturnValue(json);
+  (removeRedundantKeyframes as ReturnType<typeof vi.fn>).mockReturnValue(json);
   (removeEmptyGroups as ReturnType<typeof vi.fn>).mockReturnValue(json);
   (removeHiddenLayers as ReturnType<typeof vi.fn>).mockReturnValue(json);
 }
@@ -596,6 +598,7 @@ describe("handleMainChat", () => {
     setupLottieResponse(lottie);
     (validateAndFix as ReturnType<typeof vi.fn>).mockReturnValue({ fixed: lottie, warnings: ["missing width"] });
     (roundDecimals as ReturnType<typeof vi.fn>).mockReturnValue(lottie);
+    (removeRedundantKeyframes as ReturnType<typeof vi.fn>).mockReturnValue(lottie);
     (removeEmptyGroups as ReturnType<typeof vi.fn>).mockReturnValue(lottie);
     (removeHiddenLayers as ReturnType<typeof vi.fn>).mockReturnValue(lottie);
 
