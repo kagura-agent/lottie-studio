@@ -120,6 +120,45 @@ export function removeRedundantKeyframes(data: unknown): LottieData {
   return cloned;
 }
 
+function isIdentityTransform(tr: LottieData): boolean {
+  const p = tr.p as LottieData | undefined;
+  const s = tr.s as LottieData | undefined;
+  const r = tr.r as LottieData | undefined;
+  const o = tr.o as LottieData | undefined;
+  const a = tr.a as LottieData | undefined;
+
+  function isAnimated(prop: LottieData | undefined): boolean {
+    return prop !== undefined && prop.a === 1;
+  }
+
+  if (isAnimated(p) || isAnimated(s) || isAnimated(r) || isAnimated(o) || isAnimated(a)) {
+    return false;
+  }
+
+  if (p && Array.isArray(p.k)) {
+    const k = p.k as number[];
+    if (k[0] !== 0 || k[1] !== 0) return false;
+  }
+  if (s && Array.isArray(s.k)) {
+    const k = s.k as number[];
+    if (k[0] !== 100 || k[1] !== 100) return false;
+  }
+  if (r) {
+    const k = r.k as number;
+    if (k !== 0) return false;
+  }
+  if (o) {
+    const k = o.k as number;
+    if (k !== 100) return false;
+  }
+  if (a && Array.isArray(a.k)) {
+    const k = a.k as number[];
+    if (k[0] !== 0 || k[1] !== 0) return false;
+  }
+
+  return true;
+}
+
 export function collapseSingleItemGroups(data: unknown): LottieData {
   const cloned = deepClone(data) as LottieData;
   if (!Array.isArray(cloned.layers)) return cloned;
@@ -132,6 +171,8 @@ export function collapseSingleItemGroups(data: unknown): LottieData {
       const items = shape.it as LottieData[];
       const nonTransformItems = items.filter((item) => item.ty !== "tr");
       if (nonTransformItems.length === 1) {
+        const tr = items.find((item) => item.ty === "tr");
+        if (tr && !isIdentityTransform(tr)) return shape;
         return nonTransformItems[0];
       }
       return shape;

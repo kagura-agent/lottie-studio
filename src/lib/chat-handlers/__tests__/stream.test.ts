@@ -45,6 +45,7 @@ vi.mock("@/lib/optimizer", () => ({
   roundDecimals: vi.fn(),
   removeEmptyGroups: vi.fn(),
   removeRedundantKeyframes: vi.fn(),
+  collapseSingleItemGroups: vi.fn(),
   removeHiddenLayers: vi.fn(),
 }));
 
@@ -78,7 +79,7 @@ import { chatCompletionStream, chatCompletionRepairStream, parseResponse } from 
 import { buildDesignTokensPrompt } from "@/lib/prompts";
 import { inferTags, serializeTags } from "@/lib/tag-inference";
 import { extractDescription } from "@/lib/description";
-import { validateAndFix, roundDecimals, removeEmptyGroups, removeRedundantKeyframes, removeHiddenLayers } from "@/lib/optimizer";
+import { validateAndFix, roundDecimals, removeEmptyGroups, removeRedundantKeyframes, collapseSingleItemGroups, removeHiddenLayers } from "@/lib/optimizer";
 import { analyzeQuality } from "@/lib/quality";
 import { summarizeChanges } from "@/lib/animation-diff";
 import { validateStructure } from "@/lib/validation";
