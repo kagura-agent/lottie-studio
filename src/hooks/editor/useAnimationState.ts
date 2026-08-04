@@ -182,11 +182,18 @@ export function useAnimationState(
 
   const handleAnimationUpdated = useCallback((animId: string, data: object) => {
     clearProgressivePreview();
+    if (animationData) {
+      beforeAfter.setBeforeState(animationData);
+      beforeAfter.setAfterState(data);
+    }
+    setJsonText(JSON.stringify(data, null, 2));
+    setAnimationData(data);
+    pushState(data);
     import("@/lib/captureThumbnail").then(({ captureAndUploadThumbnail }) => {
       captureAndUploadThumbnail(animId, data);
     });
     saveAnimation(animId, name, data, { synced: true }).catch(() => {});
-  }, [name, clearProgressivePreview]);
+  }, [animationData, beforeAfter, clearProgressivePreview, name, pushState]);
 
   const handleProgressivePreview = useCallback((data: object | null) => {
     if (data) {

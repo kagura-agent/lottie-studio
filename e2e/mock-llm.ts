@@ -84,7 +84,7 @@ export const MOCK_UPDATED_LOTTIE_JSON = {
  * that the ChatPanel can handle via the fallback (non-SSE) path.
  */
 export async function mockLLMRoute(page: Page) {
-  let turn = 0;
+  const requests: Array<{ animationId?: string; message?: string }> = [];
 
   await page.route("**/api/chat", async (route: Route) => {
     const method = route.request().method();
@@ -93,7 +93,8 @@ export async function mockLLMRoute(page: Page) {
       return;
     }
 
-    const response = turn++ === 0
+    requests.push(route.request().postDataJSON() as { animationId?: string; message?: string });
+    const response = requests.length === 1
       ? {
           reply: "Here's a bouncing circle animation for you!",
           animationId: "test-animation-id",
@@ -116,6 +117,8 @@ export async function mockLLMRoute(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem("lottie-studio-onboarding-done", "true");
   });
+
+  return { requests };
 }
 
 /**

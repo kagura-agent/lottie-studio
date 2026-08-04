@@ -2,26 +2,31 @@ import { test, expect } from "@playwright/test";
 import { mockLLMRoute } from "./mock-llm";
 
 test.describe("Chat interaction", () => {
-  test("updates the same preview across two fallback chat turns", async ({ page }) => {
-    await mockLLMRoute(page);
+  test("renders fallback replies and updates the preview in one editor session", async ({ page }) => {
+    const { requests } = await mockLLMRoute(page);
     await page.goto("/editor/new?skip=true");
+    await page.waitForLoadState("networkidle");
 
-    const input = page.locator("textarea[placeholder*='Describe']");
+    const composer = page.getByRole("textbox", { name: "Chat message" });
+    const send = page.getByRole("button", { name: "Send message" });
+    const chat = page.getByRole("log", { name: "Chat messages" });
     const preview = page.getByRole("region", { name: "Animation preview" });
-    await expect(input).toBeVisible({ timeout: 10_000 });
 
-    await input.fill("Create a bouncing ball animation");
-    await input.press("Enter");
-    await expect(page.getByText("Here's a bouncing circle animation for you!")).toBeVisible({ timeout: 15_000 });
+    await expect(composer).toBeVisible({ timeout: 10_000 });
 
-    const previewSvg = preview.locator("svg");
-    await expect(previewSvg).toBeVisible();
-    const firstPreviewMarkup = await previewSvg.evaluate((svg) => svg.outerHTML);
+    await composer.fill("Create a bouncing ball animation");
+    await send.click();
+    await expect(chat.getByText("Here's a bouncing circle animation for you!")).toBeVisible({ timeout: 15_000 });
+    await expect(preview.getByRole("img", { name: "Blue Circle animation preview" })).toBeVisible();
 
-    await input.fill("Change it to a red square");
-    await input.press("Enter");
-    await expect(page.getByText("I changed it to a red square.")).toBeVisible({ timeout: 15_000 });
+    await composer.fill("Change it to a red square");
+    await send.click();
+    await expect(chat.getByText("I changed it to a red square.")).toBeVisible({ timeout: 15_000 });
+    await expect(preview.getByRole("img", { name: "Red Square animation preview" })).toBeVisible();
 
-    await expect.poll(async () => previewSvg.evaluate((svg) => svg.outerHTML)).not.toBe(firstPreviewMarkup);
+    expect(requests).toEqual([
+      { message: "Create a bouncing ball animation" },
+      { animationId: "test-animation-id", message: "Change it to a red square" },
+    ]);
   });
 });

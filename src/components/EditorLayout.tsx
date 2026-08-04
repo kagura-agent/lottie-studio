@@ -283,6 +283,11 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
     }
   }, [anim, playback, exportState, panels]);
 
+  const previewData = version.versionPreviewData ?? anim.progressivePreviewData ?? anim.animationData;
+  const previewName = typeof (previewData as Record<string, unknown> | null)?.nm === "string"
+    ? (previewData as Record<string, unknown>).nm as string
+    : anim.name || "Animation";
+
   return (
     <div className="flex flex-col h-[100dvh]">
       <h1 className="sr-only">Lottie Studio Editor</h1>
@@ -514,7 +519,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
               onReset={() => anim.setAnimationData(anim.animationData)}
             >
               <LottiePreview
-                animationData={version.versionPreviewData ?? anim.progressivePreviewData ?? anim.animationData}
+                animationData={previewData}
                 isPlaying={playback.isPlaying}
                 speed={playback.speed}
                 loopConfig={playback.loopConfig}
@@ -522,7 +527,7 @@ export default function EditorPage({ id, initialName, initialData, remixedFrom, 
                 seekToFrame={playback.seekFrame}
                 background={anim.canvasBg}
                 placeholder={anim.isNewMode && anim.animationData === null && !anim.progressivePreviewData}
-                ariaLabel={anim.name || "Animation preview"}
+                ariaLabel={`${previewName} animation preview`}
               />
               {anim.isPreviewActive && (
                 <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
