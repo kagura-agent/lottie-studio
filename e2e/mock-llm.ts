@@ -10,7 +10,7 @@ export const MOCK_LOTTIE_JSON = {
   op: 60,
   w: 512,
   h: 512,
-  nm: "Test Animation",
+  nm: "Blue Circle",
   ddd: 0,
   assets: [],
   layers: [
@@ -41,7 +41,7 @@ export const MOCK_LOTTIE_JSON = {
           c: { a: 0, k: [0.2, 0.5, 1, 1] },
           o: { a: 0, k: 100 },
           r: 1,
-          nm: "Fill",
+          nm: "Blue Fill",
         },
       ],
       ip: 0,
@@ -51,25 +51,65 @@ export const MOCK_LOTTIE_JSON = {
   ],
 };
 
+export const MOCK_UPDATED_LOTTIE_JSON = {
+  ...MOCK_LOTTIE_JSON,
+  nm: "Red Square",
+  layers: [
+    {
+      ...MOCK_LOTTIE_JSON.layers[0],
+      nm: "Square",
+      shapes: [
+        {
+          ty: "rc",
+          d: 1,
+          s: { a: 0, k: [240, 240] },
+          p: { a: 0, k: [0, 0] },
+          r: { a: 0, k: 0 },
+          nm: "Rectangle",
+        },
+        {
+          ty: "fl",
+          c: { a: 0, k: [1, 0.2, 0.2, 1] },
+          o: { a: 0, k: 100 },
+          r: 1,
+          nm: "Red Fill",
+        },
+      ],
+    },
+  ],
+};
+
 /**
  * Mock the /api/chat endpoint to return a non-streaming JSON response
  * that the ChatPanel can handle via the fallback (non-SSE) path.
  */
 export async function mockLLMRoute(page: Page) {
+  const requests: Array<{ animationId?: string; message?: string }> = [];
+
   await page.route("**/api/chat", async (route: Route) => {
     const method = route.request().method();
     if (method !== "POST") {
       await route.fallback();
       return;
     }
+
+    requests.push(route.request().postDataJSON() as { animationId?: string; message?: string });
+    const response = requests.length === 1
+      ? {
+          reply: "Here's a bouncing circle animation for you!",
+          animationId: "test-animation-id",
+          lottieJson: MOCK_LOTTIE_JSON,
+        }
+      : {
+          reply: "I changed it to a red square.",
+          animationId: "test-animation-id",
+          lottieJson: MOCK_UPDATED_LOTTIE_JSON,
+        };
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        reply: "Here's a bouncing circle animation for you!",
-        animationId: "test-animation-id",
-        lottieJson: MOCK_LOTTIE_JSON,
-      }),
+      body: JSON.stringify(response),
     });
   });
 
@@ -77,6 +117,8 @@ export async function mockLLMRoute(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem("lottie-studio-onboarding-done", "true");
   });
+
+  return { requests };
 }
 
 /**

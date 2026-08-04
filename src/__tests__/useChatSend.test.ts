@@ -359,6 +359,26 @@ describe("useChatSend", () => {
       expect(onAnimationCreated).toHaveBeenCalledWith("new-id", lottie);
     });
 
+    it("updates an existing animation when the fallback response includes Lottie JSON", async () => {
+      const { apiFetch } = await import("@/lib/apiFetch");
+      const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+      const lottie = { v: "5.0", layers: [] };
+      mockApiFetch.mockResolvedValue(makeJSONResponse({
+        reply: "updated",
+        animationId: "anim-1",
+        lottieJson: lottie,
+      }));
+
+      const onAnimationUpdated = vi.fn();
+      const opts = makeOptions({ onAnimationUpdated });
+      const { result } = renderHook(() => useChatSend(opts));
+
+      act(() => { result.current.setInput("make it red"); });
+      await act(async () => { await result.current.handleSend(); });
+
+      expect(onAnimationUpdated).toHaveBeenCalledWith("anim-1", lottie);
+    });
+
     it("handles 429 rate limit with retryAfterSec", async () => {
       const { apiFetch } = await import("@/lib/apiFetch");
       const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;

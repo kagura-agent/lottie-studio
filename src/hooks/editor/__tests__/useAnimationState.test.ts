@@ -479,11 +479,14 @@ describe("useAnimationState", () => {
 
   // ── handleAnimationUpdated ─────────────────────────────────
   describe("handleAnimationUpdated", () => {
-    it("clears preview, captures thumbnail, and saves offline", async () => {
-      const data = { w: 100, h: 100 };
+    it("applies the updated animation before capturing its thumbnail and saving offline", async () => {
+      const data = { nm: "Red Square", w: 100, h: 100 };
       const { result } = renderDefault();
       await act(async () => result.current.handleAnimationUpdated("anim-1", data));
       expect(mockClearPreview).toHaveBeenCalled();
+      expect(result.current.animationData).toEqual(data);
+      expect(result.current.jsonText).toContain("Red Square");
+      expect(mockPushState).toHaveBeenCalledWith(data);
       await new Promise((r) => setTimeout(r, 10));
       expect(mockCaptureAndUploadThumbnail).toHaveBeenCalledWith("anim-1", data);
       expect(mockSaveAnimation).toHaveBeenCalledWith("anim-1", "My Anim", data, { synced: true });

@@ -117,6 +117,7 @@ export default function ChatInputBar({
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={currentAnimationId ? t("placeholderWithAnimation") : t("placeholder")}
+          aria-label="Chat message"
           disabled={isThinking || isStreaming}
           enterKeyHint="send"
           className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 placeholder-zinc-500 border border-zinc-700 focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50 resize-none overflow-y-auto"

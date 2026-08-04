@@ -103,9 +103,14 @@ export function useChatSend(options: UseChatSendOptions) {
         throw new Error(errData.error || `Request failed (${res.status})`);
       }
       const data = await res.json();
+      const lottieJson = data.lottieJson as object | undefined;
       if (!currentAnimationId && data.animationId) {
         setCurrentAnimationId(data.animationId);
-        onAnimationCreated?.(data.animationId, data.lottieJson as object | undefined);
+        onAnimationCreated?.(data.animationId, lottieJson);
+        if (lottieJson) onAnimationUpdated?.(data.animationId, lottieJson);
+      } else if (lottieJson) {
+        const captureId = currentAnimationId || data.animationId;
+        if (captureId) onAnimationUpdated?.(captureId, lottieJson);
       }
       if (existingAssistantMsgId) {
         const msgId = existingAssistantMsgId;
